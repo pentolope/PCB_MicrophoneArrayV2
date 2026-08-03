@@ -1,120 +1,94 @@
-# Status: routing is not finished
+# Status: routed and DRC clean
 
-**This board is not ready to order.** 197 of 270 connections are routed. 73 are
-not, and there are 52 DRC violations.
-
-I did not finish. The two blocks that remain are blocked by placement faults,
-not by routing difficulty, and both are described precisely below.
-
-## What passes
+All 270 connections are routed. KiCad reports **0 DRC violations, 0 unconnected
+items and 0 schematic parity issues**, with zones refilled.
 
 | Gate | Result |
 |---|---|
 | Schematic ERC | 0 violations |
-| Netlist parity, schematic vs `tools/netlist.py` | clean, 83 nets, 134 components |
-| Placement and array geometry audit | clean, 134 footprints |
-| Schematic parity of the board | 0 issues |
-| Clock layer and via budget | clean - zero vias, F.Cu only |
-| Clock branch length matching | clean - 7.1 mm spread |
+| Board DRC (errors + warnings) | 0 violations |
+| Unconnected items | 0 |
+| Schematic parity | 0 issues |
+| Netlist parity, schematic vs `tools/netlist.py` | clean, 83 nets, 110 components |
+| Placement and array geometry audit | clean, 110 footprints |
+| Clock branch layers and via budget | clean - zero vias, F.Cu only |
+| Clock branch length matching | 21.5 mm spread against a 25 mm limit |
 | PDM data length | clean |
+| Different-net crossings | none |
 
-## What is routed
+Copper: 1749 mm on F.Cu, 817 mm on B.Cu, 183 vias. Both inner layers are still
+solid ground - 10 757 mm² filled each, no tracks on either.
 
-All generated deterministically by `tools/gen_pcb.py`.
+## How it got here
 
-- **Per-channel routing, 32 nets** - supply chain, data link and three escapes
-  per channel, in separate tangential lanes.
-- **+3V3A distribution ring, 20 connections** - polygon on B.Cu at R = 43.3 mm,
-  crossing every radial spoke on the opposite layer, plus a feed from the
-  regulator down the right-hand side.
-- **PDM clock branches, 8 symmetric trees** - split on each pair's bisector, so
-  the two microphones are length-matched by construction (81.9 - 89.0 mm).
-  **Zero vias, entirely on F.Cu.**
-- **PDM data spokes, 16 legs** - F.Cu outward, B.Cu inward, each net in its own
-  lane parallel to the pin row so neighbours do not cross.
-- **Power block** - 5 V input chain, PTC, Schottky, regulator and the clock
-  rail's ferrite filter. Both rails run as a bus above the component row,
-  because routing along the row collides with each part's own ground via.
+The generated routing in `tools/gen_pcb.py` closed the microphone array, the
+clock tree, the data spokes, the supply ring and the power block, but left the
+host block open - 73 connections. Those were finished with an external
+autorouter, and the test points were removed at the same time.
 
-Clocks own F.Cu inside the handover radius and data owns B.Cu, which is what
-stopped those two families fighting over the same annulus.
+The autorouter left the parts that matter alone. All eight PDM clock branches
+are still F.Cu only with zero vias, and each PDM data net still uses exactly
+two. Net classes, via geometry (0.45 mm pad / 0.30 mm drill throughout) and the
+ground planes came through untouched.
 
-## What is not routed - 73 connections
+## What was repaired afterwards
 
-| Family | Count | Blocker |
-|---|---:|---|
-| Host block | 32 | U4 placement, see below |
-| Central clock block | 21 | U2 pin escape, see below |
-| Residual crossings and stubs | 20 | |
+`tools/patch_board.py` fixes the board in place, because it is no longer
+regenerated from the netlist. It found and fixed:
 
-## Blocker 1: the host block escape
+- **Two hard shorts.** A ground stitching via and its stub sat on U1 pin 3, tying
+  the regulator's enable pin to ground - the whole 3.3 V rail would have been
+  dead. Another shorted the 5 V input lane to ground. Both come from the
+  `POWER_ROW_REFS` special case in `place_ground_stitching()`, which pushes the
+  via 1.45 mm straight down with no obstacle test at all, even though the
+  function builds an obstacle list a few lines earlier. Moving
+  `POWER_ROW2_Y` from -20.2 to -19.8 mm, to open the 5 V lane, is what put the
+  second one on top of that lane.
+- **A third instance of the same defect**, 0.067 mm from RH4's SPI_MISO pad.
+- **Three clearance failures caused by a single wrong constant.** The generator
+  checks everything against `TRACK_CLEARANCE = 0.15`, but POWER wants 0.25 mm and
+  Default 0.20 mm, so near misses against those nets passed the guard and
+  failed DRC. The +3V3A feed threading the module socket needed 1.30 mm of the
+  1.27 mm between two pins; it is now 0.25 mm wide and fits.
+- **A dangling 1.6 mm tail** on the +5V bus, left over from turning D1 round so
+  its anode faces the fuse.
+- **Two 0.3 mm drills 0.204 mm apart** where the supply feed landed on its own
+  via next to the ring's. Same net, so the feed now runs into the ring's via.
 
-The host block has been **restacked** and now audits clean. `J1` is a plain
-2x13 pin header rather than a shrouded IDC, and the block runs in signal order
-outward to inward:
+## Test points
 
-| | y (mm) |
-|---|---:|
-| module socket J3 | -11.43 |
-| power row | -17.0 / -20.2 |
-| series resistors RH1..RH8 | -22.3 |
-| ESD arrays U3, U4 | -25.8 |
-| Pi header J1 | -29.19 / -31.73 |
+Not populated. The 24 pads sat on the R = 26 and 32 mm rings, which is the
+annulus the clock branches fan out through, and TP1 landed close enough to a
+module socket pin to short it. `tools/design.py` keeps the table of nets worth
+probing as `TEST_POINT_TABLE` but emits none, so schematic and board agree.
 
-Every host signal now travels inward the whole way. Previously the header sat
-in the middle of the stack, so each signal ran out to the resistors and back
-past the connector, and those doubling-back paths crossed each other. The
-resistor row, the ESD assignments and the J6 host pins are all ordered
-left-to-right to match where each signal leaves the header.
+Reinstating them needs somewhere outside the fan-out annulus - the sector gaps
+at 33.75 + 90n degrees beyond R = 50 mm are clear, or the underside.
 
-`route_host_block()` is written but **not called**. What remains is the escape
-at the arrays themselves: each `USBLC6-4SC6` has two signal pins per side in a
-single column, 1.9 mm apart, so a track cannot simply pass through both. Each
-signal needs to enter its pin from the side as a short stub off the main run,
-rather than the run being routed through the pin. Called as it stands it closes
-24 connections and costs 111 violations.
+## Still outstanding
 
-Note the header's second row sits 2.54 mm *inward* of its origin row, not
-outward - worth remembering when moving `PI_HEADER_POS`.
+None of these are DRC violations, and none affect function.
 
-## Blocker 2: the buffer's pin escape
+- **31 track segments shorter than 0.05 mm and 69 corners sharper than 45°**,
+  including three exact 180° reversals where a track retraces itself. Autorouter
+  cleanup artefacts plus degenerate knees from `path_45()` where two waypoints
+  are nearly collinear. Acid-trap hygiene, worth a cleanup pass.
+- **`PDM_CLK_IN` uses 3 vias against the budget of 2** in `check_routes.py`. The
+  net fans out to eight buffer inputs and needs a layer change to do it; with
+  both inner layers grounded the reference plane is continuous across each via,
+  so this is a documented limit being exceeded rather than a signal integrity
+  problem.
+- **Clock branch spread is 21.5 mm**, up from 7.1 mm, because branches 5 and 6
+  take lateral corridors around the host block. Still inside the 25 mm limit,
+  and 21.5 mm of FR-4 is about 130 ps against a 325 ns PDM clock period, but
+  the margin is thinner than it was.
 
-`U2`'s eight inputs interleave with its eight outputs on 0.65 mm pitch. The gap
-between adjacent pads is 0.25 mm, which fits no track at any allowed width. The
-inputs therefore cannot be bussed on the top layer.
+## Reproducibility
 
-Each input pin needs its own via placed about 1.6 mm off the package edge, with
-the bus running on B.Cu, while the outputs escape on F.Cu between those vias.
-There is room - via to neighbouring output track works out at 0.35 mm - but it
-has to be built deliberately.
+**The board is no longer reproducible from `tools/gen_pcb.py`.** Re-running the
+generator would discard the autorouted host block and the repairs above. The
+schematic still is: `tools/gen_schematic.py` regenerates it from
+`tools/netlist.py`, and netlist parity passes.
 
-The output-to-resistor mapping has already been fixed: outputs are assigned so
-each branch leaves on the side its terminating resistor sits on, and in the
-order that matches the resistor positions down the column. The obvious
-`1Y1..2Y4` order crossed four tracks on one side and sent four more across the
-package.
-
-## Also outstanding
-
-- 41 corners still turn more sharply than 45 degrees, and 5 track segments are
-  shorter than 0.05 mm. Both come from `path_45()` producing degenerate knees
-  when two waypoints are nearly collinear; they need filtering.
-- The 52 violations concentrate on `PDM_CLK_B6`, `PDM_D5/6/7` and the ground
-  stitching in the lower half.
-
-## On the autorouter
-
-FreeRouting 2.2.4 was tried and abandoned. It failed three ways, documented in
-[routing.md](routing.md): it cannot reach the microphone pads at all, it
-silently discards per-net layer and via constraints, and it stalls indefinitely
-on any board that already has meaningful routing. That last point means there
-is no hybrid available - it cannot be handed a partially routed board.
-
-For comparison on this board:
-
-| | FreeRouting | Generated |
-|---|---|---|
-| Clock branch spread | 15.0 mm | **7.1 mm** |
-| Clock vias | 3 per branch | **0** |
-| Master clock layer | B.Cu + via | **F.Cu, no via** |
-| Copper | 3740 mm | 2210 mm |
+Treat `microphone_array_v2.kicad_pcb` as the source of truth for routing, and
+`tools/patch_board.py` as the record of what was changed by hand.

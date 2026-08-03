@@ -332,4 +332,15 @@ def _test_point_table():
     return entries
 
 
-TEST_POINTS = _test_point_table()
+# Which nets are worth probing, and where the pads would go if they were
+# populated. They are not: the 1.5 mm pads sat on the R = 26 and 32 mm rings,
+# which is the annulus the clock branches fan out through, and TP1 landed close
+# enough to a module socket pin to short it. They were taken off the board
+# after routing, and this keeps the schematic in step so the BOM and any
+# "update PCB from schematic" match what was actually built.
+#
+# To reinstate them they need somewhere to live outside the fan-out annulus -
+# the four sector gaps at 33.75 + 90n degrees beyond R = 50 mm are clear, or
+# the underside of the board.
+TEST_POINT_TABLE = _test_point_table()
+TEST_POINTS = ()
