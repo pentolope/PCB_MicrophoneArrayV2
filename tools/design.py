@@ -343,4 +343,31 @@ def _test_point_table():
 # the four sector gaps at 33.75 + 90n degrees beyond R = 50 mm are clear, or
 # the underside of the board.
 TEST_POINT_TABLE = _test_point_table()
-TEST_POINTS = ()
+
+
+def _placed_test_points():
+    """Probe pads as actually placed against the routed board.
+
+    tools/place_testpoints.py works out where each one can go - on top of a
+    piece of its own net, so it needs no track of its own - and writes the
+    result to generated/test_points.py. Reading it back here keeps the
+    schematic and the BOM in step with the board. Nets it could not place are
+    simply absent; there is nowhere on the top layer to probe them.
+    """
+    import ast
+    import os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "generated", "test_points.py")
+    if not os.path.exists(path):
+        return ()
+    # Parsed rather than imported: importing would leave a __pycache__ in the
+    # generated directory, and the file is data, not code.
+    with open(path, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and node.targets[0].id == "PLACED_TEST_POINTS":
+            return tuple(tuple(entry) for entry in ast.literal_eval(node.value))
+    return ()
+
+
+TEST_POINTS = _placed_test_points()

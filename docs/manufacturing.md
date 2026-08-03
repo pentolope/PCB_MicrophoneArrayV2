@@ -1,5 +1,36 @@
 # Manufacturing and bring-up
 
+## Release package
+
+`generated/release/`, built by `tools/make_release.py` from one board revision
+in a single run:
+
+| File | Contents |
+|---|---|
+| `microphone_array_v2-revA-fabrication.zip` | 11 Gerbers, 2 Excellon drills, 2 drill maps, X2 job file |
+| `bom.csv` | JLCPCB BOM, 15 lines |
+| `cpl.csv` | JLCPCB pick-and-place, 103 placements, all top side |
+| `positions.csv` | KiCad native position export the CPL is derived from |
+| `schematic.pdf` | full schematic |
+| `renders/` | top and bottom |
+| `MANIFEST.md` | SHA-256 of the archive, board and each data file |
+
+Layer order is carried in the Gerber X2 `FileFunction` attributes - `Copper,L1,Top`,
+`Copper,L2,Inr`, `Copper,L3,Inr`, `Copper,L4,Bot` - so the inner layers being
+named `GND1` and `GND2` rather than `In1.Cu` and `In2.Cu` does not make the
+stackup ambiguous.
+
+Gerbers, drills and the CPL share one origin. Verified rather than assumed:
+`MK1` appears in the CPL at 53.220 mm from the board centre on the +X axis at
+270 degrees, which is exactly where the placement puts it, and the Edge.Cuts
+outline spans the matching 120 mm.
+
+**This is a release candidate, not an approved production file.** The one thing
+that cannot be checked locally is whether each LCSC part's zero orientation in
+JLCPCB's library matches the rotation in `cpl.csv` - their library models, not
+ours. Upload the package and step through their Gerber and pick-and-place
+previews before paying for it.
+
 ## Order options
 
 | Option | Value |
@@ -23,7 +54,7 @@ Four-layer board: L1 top signal / L2 GND / L3 GND / L4 bottom signal.
 Both inner layers are solid ground planes; this is intentional.
 Plug only the routing vias, which are 0.30 mm finished hole with 0.45 mm pads
 and are tented on both sides. Keep every plated through-hole for the two 1x24
-module sockets and the 2x13 IDC header open, and keep the four 3.2 mm NPTH
+module sockets and the 2x13 pin header open, and keep the four 3.2 mm NPTH
 mounting holes open. Follow the supplied layer order and the confirm-production
 file.
 ```

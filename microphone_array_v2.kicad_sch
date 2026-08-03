@@ -11,6 +11,129 @@
 		(comment 2 "Generated from tools/netlist.py - do not hand edit")
 	)
 	(lib_symbols
+		(symbol "Connector:TestPoint"
+		(pin_numbers
+		(hide yes)
+		)
+		(pin_names
+		(offset 0.762)
+		(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "TP"
+		(at 0 6.858 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Value" "TestPoint"
+		(at 0 5.08 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Footprint" ""
+		(at 5.08 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Datasheet" ""
+		(at 5.08 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Description" "test point"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_keywords" "test point tp"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_fp_filters" "Pin* Test*"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(symbol "TestPoint_0_1"
+		(circle
+		(center 0 3.302)
+		(radius 0.762)
+		(stroke
+		(width 0)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		)
+		(symbol "TestPoint_1_1"
+		(pin passive line
+		(at 0 0 90)
+		(length 2.54)
+		(name "1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		)
+		(embedded_fonts no)
+		)
 		(symbol "Device:C"
 		(pin_numbers
 		(hide yes)
@@ -7405,6 +7528,146 @@
 			(type default)
 		)
 		(uuid "d60cd07b-2e8c-7ef5-789d-bc9d00851554")
+	)
+	(wire
+		(pts
+			(xy 398.78 528.32) (xy 398.78 530.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ba3da76b-848c-bbf2-d943-05c9a51c0113")
+	)
+	(wire
+		(pts
+			(xy 398.78 543.56) (xy 398.78 546.1)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "98d954c0-3861-a539-0e19-ea2a5dd8d660")
+	)
+	(wire
+		(pts
+			(xy 398.78 558.8) (xy 398.78 561.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5e0debee-9d3e-4b9d-3bbc-02417d018737")
+	)
+	(wire
+		(pts
+			(xy 398.78 574.04) (xy 398.78 576.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5ac91824-6c45-9de2-c599-1c640eb2394b")
+	)
+	(wire
+		(pts
+			(xy 398.78 589.28) (xy 398.78 591.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "72b34436-02a0-6176-32a6-2a7cb7740219")
+	)
+	(wire
+		(pts
+			(xy 398.78 604.52) (xy 398.78 607.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1efd504c-0e3c-1ac5-3269-9907a343549b")
+	)
+	(wire
+		(pts
+			(xy 398.78 619.76) (xy 398.78 622.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "21c4de71-41a8-bdec-a7cf-7c13460d6403")
+	)
+	(wire
+		(pts
+			(xy 398.78 635) (xy 398.78 637.54)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "467357f6-3f7b-76d1-bbbc-3e3844ec6c7b")
+	)
+	(wire
+		(pts
+			(xy 398.78 665.48) (xy 398.78 668.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "766fd361-7b46-88ab-f457-0b5faff123f5")
+	)
+	(wire
+		(pts
+			(xy 398.78 680.72) (xy 398.78 683.26)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "09154391-23c3-e023-6c80-68d8c2a87e84")
+	)
+	(wire
+		(pts
+			(xy 398.78 695.96) (xy 398.78 698.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a97d8d4e-027b-1cf1-15a8-77be3d69496d")
+	)
+	(wire
+		(pts
+			(xy 398.78 711.2) (xy 398.78 713.74)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "506814ae-a490-7b69-6ced-02edeef921c7")
+	)
+	(wire
+		(pts
+			(xy 398.78 726.44) (xy 398.78 728.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "56befac4-d25e-da98-dc8c-87f51d91e7ff")
+	)
+	(wire
+		(pts
+			(xy 398.78 741.68) (xy 398.78 744.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "18a98689-5069-c7c5-994a-71c38dc014a6")
 	)
 	(wire
 		(pts
@@ -14826,6 +15089,286 @@
 			)
 		)
 	)
+	(global_label "+5V"
+		(shape bidirectional)
+		(at 398.78 530.86 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "88c9a11e-06f9-949d-006b-87237dbe6ba1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 530.86 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "+3V3A"
+		(shape bidirectional)
+		(at 398.78 546.1 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "d9b87da6-46bb-4e75-4dc7-3ba52eb52942")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 546.1 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "+3V3_CLK"
+		(shape bidirectional)
+		(at 398.78 561.34 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f956cb31-e85d-7f1e-da21-c463e95928a2")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 561.34 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "GND"
+		(shape bidirectional)
+		(at 398.78 576.58 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4232302e-c8a7-8b99-bbe6-61598d928b43")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 576.58 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "GND"
+		(shape bidirectional)
+		(at 398.78 591.82 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f326bb2e-ffde-4e38-a43b-a3c3216b454b")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 591.82 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D0"
+		(shape bidirectional)
+		(at 398.78 607.06 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "8a06d86e-5467-6e00-f27b-bfa34b9002f1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 607.06 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D1"
+		(shape bidirectional)
+		(at 398.78 622.3 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "aee44664-899c-1ec2-c97f-b1ba9bec11f0")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 622.3 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D2"
+		(shape bidirectional)
+		(at 398.78 637.54 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ed93f5a8-b812-1c83-8c7b-2fa3e9e98b2d")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 637.54 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D3"
+		(shape bidirectional)
+		(at 398.78 668.02 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "485845d7-92fb-a939-50a3-4e353b4de5c6")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 668.02 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D4"
+		(shape bidirectional)
+		(at 398.78 683.26 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "0bc3a4f8-f0df-4b3b-652e-a6cac8f0c8fe")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 683.26 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D5"
+		(shape bidirectional)
+		(at 398.78 698.5 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "47f6d3e0-8680-aa6b-7414-6e205f26bc05")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 698.5 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D6"
+		(shape bidirectional)
+		(at 398.78 713.74 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "7d9841f2-ac4b-1d79-b36b-9eab857789f3")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 713.74 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "PDM_D7"
+		(shape bidirectional)
+		(at 398.78 728.98 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "cb4fcf4b-81d3-5f7a-e35b-e75b7ca96409")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 728.98 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "HOST_STATUS"
+		(shape bidirectional)
+		(at 398.78 744.22 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "da8eae48-839f-759b-f457-c1470819cb39")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 398.78 744.22 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
 	(global_label "GND"
 		(shape bidirectional)
 		(at 20.32 872.49 270)
@@ -15413,6 +15956,30 @@
 			(justify left bottom)
 		)
 		(uuid "24482a42-8142-0725-a3c7-c6faa209e3f3")
+	)
+	(text "Test points TP1-TP8"
+		(exclude_from_sim no)
+		(at 365.76 517.84 0)
+		(effects
+			(font
+				(size 2 2)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+		(uuid "4ef295af-8317-a702-16b1-f2cdab1165ef")
+	)
+	(text "Test points TP9-TP14"
+		(exclude_from_sim no)
+		(at 365.76 655 0)
+		(effects
+			(font
+				(size 2 2)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+		(uuid "b19479c2-9d41-4011-0a6f-4ab11cb50a3b")
 	)
 	(symbol
 		(lib_id "MicArrayV2:MSM261DHP006")
@@ -26121,6 +26688,902 @@
 			(project "microphone_array_v2"
 				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
 					(reference "H4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 528.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "a84d76fb-361c-1982-adb6-8b433ef4164f")
+		(property "Reference" "TP1"
+			(at 398.78 525.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 398.78 530.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk"
+			(at 398.78 528.32 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 528.32 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on +5V"
+			(at 398.78 528.32 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "72288900-a8bb-b2b8-8fd5-515b13461e33")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 543.56 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "0ecd31b8-6df5-98e3-8a00-dcc9c5567389")
+		(property "Reference" "TP2"
+			(at 398.78 541.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3V3A"
+			(at 398.78 546.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 543.56 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 543.56 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on +3V3A"
+			(at 398.78 543.56 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a9c39c93-2840-92b4-ecc4-98231aa3e400")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 558.8 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "1b831e53-155a-b137-fb53-fc529fa67ad8")
+		(property "Reference" "TP3"
+			(at 398.78 556.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3V3_CLK"
+			(at 398.78 561.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 558.8 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 558.8 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on +3V3_CLK"
+			(at 398.78 558.8 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8fd04c74-35b7-c62e-5d6b-54676af3f88a")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 574.04 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "90940799-e744-f132-135f-3be2643e5ded")
+		(property "Reference" "TP4"
+			(at 398.78 571.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 398.78 576.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 574.04 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 574.04 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on GND"
+			(at 398.78 574.04 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9bc8c11e-b522-cf52-cd79-64f5b2f83c9d")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 589.28 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "c779f88a-a21f-fecf-f344-7bd12adb7c9b")
+		(property "Reference" "TP5"
+			(at 398.78 586.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 398.78 591.82 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 589.28 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 589.28 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on GND"
+			(at 398.78 589.28 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f06866e3-8f33-c445-64d9-3a12575f32e3")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 604.52 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "7c7fcfd9-eaf8-c9b5-5439-c030eb78b903")
+		(property "Reference" "TP6"
+			(at 398.78 601.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D0"
+			(at 398.78 607.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 604.52 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 604.52 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D0"
+			(at 398.78 604.52 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "bed2eaff-aae4-18f3-a0ff-2d71b99b97db")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 619.76 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "bb6f9789-0ed6-4b7e-eefd-8287190c6213")
+		(property "Reference" "TP7"
+			(at 398.78 617.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D1"
+			(at 398.78 622.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 619.76 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 619.76 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D1"
+			(at 398.78 619.76 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3ebeab66-721e-e6cd-2476-291aeddf6af5")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 635 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "3f69938c-1585-5451-933a-312892a1fe45")
+		(property "Reference" "TP8"
+			(at 398.78 632.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D2"
+			(at 398.78 637.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 635 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 635 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D2"
+			(at 398.78 635 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "36875df0-d3d3-1bfc-0f2f-aac9a1d5c8e6")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 665.48 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "55e1efa8-44d2-a5be-113d-b85ca5b3cf15")
+		(property "Reference" "TP9"
+			(at 398.78 662.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D3"
+			(at 398.78 668.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 665.48 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 665.48 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D3"
+			(at 398.78 665.48 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "0a285718-f364-2279-ff17-0e3b72872d32")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 680.72 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "c0b56969-1f3e-0032-f440-efa33c961a26")
+		(property "Reference" "TP10"
+			(at 398.78 678.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D4"
+			(at 398.78 683.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 680.72 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 680.72 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D4"
+			(at 398.78 680.72 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b3937957-9a17-c6bf-ad46-6763e75654b7")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 695.96 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "55fd7597-f92a-3093-ddef-198d4789ae0c")
+		(property "Reference" "TP11"
+			(at 398.78 693.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D5"
+			(at 398.78 698.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 695.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 695.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D5"
+			(at 398.78 695.96 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a80ca8e4-9852-5ffe-7f3b-9c5f42484f9c")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 711.2 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "026ba240-e5a9-e141-051e-6ff32759ebfc")
+		(property "Reference" "TP12"
+			(at 398.78 708.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D6"
+			(at 398.78 713.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 711.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 711.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D6"
+			(at 398.78 711.2 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8231facb-8faf-5a3f-e7b4-9e2c31bed473")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 726.44 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "3c8439bd-7829-6c8c-6e81-060048b39b80")
+		(property "Reference" "TP13"
+			(at 398.78 723.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "PDM_D7"
+			(at 398.78 728.98 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
+			(at 398.78 726.44 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 726.44 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on PDM_D7"
+			(at 398.78 726.44 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b01506b4-4340-e5f7-6c0b-cb6903d9de3d")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 398.78 741.68 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "478e384c-9f28-5c07-12f5-6f38ee9f1304")
+		(property "Reference" "TP14"
+			(at 398.78 739.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "HOST_STATUS"
+			(at 398.78 744.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk"
+			(at 398.78 741.68 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 398.78 741.68 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point on HOST_STATUS"
+			(at 398.78 741.68 0)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ad169ada-481e-3390-72fb-adb3a9d3c4ce")
+		)
+		(instances
+			(project "microphone_array_v2"
+				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
+					(reference "TP14")
 					(unit 1)
 				)
 			)

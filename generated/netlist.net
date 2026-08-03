@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\microphone_array_v2.kicad_sch")
-		(date "2026-08-03T04:41:53")
+		(date "2026-08-03T07:07:29")
 		(tool "Eeschema 10.0.5")
 		(sheet
 			(number "1")
@@ -7907,6 +7907,762 @@
 			)
 		)
 		(comp
+			(ref "TP1")
+			(value "+5V")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk")
+			(description "test point on +5V")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on +5V")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "a84d76fb-361c-1982-adb6-8b433ef4164f")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP2")
+			(value "+3V3A")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on +3V3A")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on +3V3A")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "0ecd31b8-6df5-98e3-8a00-dcc9c5567389")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP3")
+			(value "+3V3_CLK")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on +3V3_CLK")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on +3V3_CLK")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "1b831e53-155a-b137-fb53-fc529fa67ad8")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP4")
+			(value "GND")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on GND")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on GND")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "90940799-e744-f132-135f-3be2643e5ded")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP5")
+			(value "GND")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on GND")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on GND")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "c779f88a-a21f-fecf-f344-7bd12adb7c9b")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP6")
+			(value "PDM_D0")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D0")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D0")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "7c7fcfd9-eaf8-c9b5-5439-c030eb78b903")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP7")
+			(value "PDM_D1")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D1")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D1")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "bb6f9789-0ed6-4b7e-eefd-8287190c6213")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP8")
+			(value "PDM_D2")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D2")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D2")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "3f69938c-1585-5451-933a-312892a1fe45")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP9")
+			(value "PDM_D3")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D3")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D3")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "55e1efa8-44d2-a5be-113d-b85ca5b3cf15")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP10")
+			(value "PDM_D4")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D4")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D4")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "c0b56969-1f3e-0032-f440-efa33c961a26")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP11")
+			(value "PDM_D5")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D5")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D5")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "55fd7597-f92a-3093-ddef-198d4789ae0c")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP12")
+			(value "PDM_D6")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D6")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D6")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "026ba240-e5a9-e141-051e-6ff32759ebfc")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP13")
+			(value "PDM_D7")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+			(description "test point on PDM_D7")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on PDM_D7")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "3c8439bd-7829-6c8c-6e81-060048b39b80")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
+			(ref "TP14")
+			(value "HOST_STATUS")
+			(footprint "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk")
+			(description "test point on HOST_STATUS")
+			(fields
+				(field
+					(name "Footprint") "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk")
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point on HOST_STATUS")
+			)
+			(libsource
+				(lib "Connector")
+				(part "TestPoint")
+				(description "test point")
+			)
+			(property
+				(name "Sheetname")
+				(value "microphone_array_v2")
+			)
+			(property
+				(name "Sheetfile")
+				(value "microphone_array_v2.kicad_sch")
+			)
+			(property
+				(name "exclude_from_bom")
+			)
+			(property
+				(name "ki_keywords")
+				(value "test point tp")
+			)
+			(property
+				(name "ki_fp_filters")
+				(value "Pin* Test*")
+			)
+			(sheetpath
+				(names "/")
+				(tstamps "/")
+			)
+			(tstamps "478e384c-9f28-5c07-12f5-6f38ee9f1304")
+			(units
+				(unit
+					(name "A")
+					(pins
+						(pin
+							(num "1")
+						)
+					)
+				)
+			)
+		)
+		(comp
 			(ref "U1")
 			(value "LP5907MFX-3.3")
 			(footprint "Package_TO_SOT_SMD:SOT-23-5")
@@ -8343,6 +9099,36 @@
 	(groups)
 	(variants)
 	(libparts
+		(libpart
+			(lib "Connector")
+			(part "TestPoint")
+			(description "test point")
+			(footprints
+				(fp "Pin*")
+				(fp "Test*")
+			)
+			(fields
+				(field
+					(name "Reference") "TP")
+				(field
+					(name "Value") "TestPoint")
+				(field
+					(name "Footprint")
+				)
+				(field
+					(name "Datasheet")
+				)
+				(field
+					(name "Description") "test point")
+			)
+			(pins
+				(pin
+					(num "1")
+					(name "1")
+					(type "passive")
+				)
+			)
+		)
 		(libpart
 			(lib "Device")
 			(part "C")
@@ -9288,6 +10074,10 @@
 	)
 	(libraries
 		(library
+			(logical "Connector")
+			(uri "${KICAD10_SYMBOL_DIR}/Connector.kicad_sym")
+		)
+		(library
 			(logical "Device")
 			(uri "${KICAD10_SYMBOL_DIR}/Device.kicad_sym")
 		)
@@ -9421,6 +10211,12 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "TP2")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
 				(ref "U1")
 				(pin "5")
 				(pinfunction "OUT_5")
@@ -9454,6 +10250,12 @@
 			(node
 				(ref "FB1")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP3")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -9504,6 +10306,12 @@
 				(ref "J3")
 				(pin "18")
 				(pinfunction "5V_+5V_18")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP1")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 			(node
@@ -10169,6 +10977,18 @@
 				(pintype "passive")
 			)
 			(node
+				(ref "TP4")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP5")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
+			(node
 				(ref "U1")
 				(pin "2")
 				(pinfunction "GND_2")
@@ -10256,6 +11076,12 @@
 			(node
 				(ref "RH7")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP14")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 		)
@@ -11329,6 +12155,12 @@
 				(pin "2")
 				(pintype "passive")
 			)
+			(node
+				(ref "TP6")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
 		)
 		(net
 			(code "63")
@@ -11348,6 +12180,12 @@
 			(node
 				(ref "RD4")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP7")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 		)
@@ -11371,6 +12209,12 @@
 				(pin "2")
 				(pintype "passive")
 			)
+			(node
+				(ref "TP8")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
 		)
 		(net
 			(code "65")
@@ -11390,6 +12234,12 @@
 			(node
 				(ref "RD8")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP9")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 		)
@@ -11413,6 +12263,12 @@
 				(pin "2")
 				(pintype "passive")
 			)
+			(node
+				(ref "TP10")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
 		)
 		(net
 			(code "67")
@@ -11432,6 +12288,12 @@
 			(node
 				(ref "RD12")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP11")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 		)
@@ -11455,6 +12317,12 @@
 				(pin "2")
 				(pintype "passive")
 			)
+			(node
+				(ref "TP12")
+				(pin "1")
+				(pinfunction "1_1")
+				(pintype "passive")
+			)
 		)
 		(net
 			(code "69")
@@ -11474,6 +12342,12 @@
 			(node
 				(ref "RD16")
 				(pin "2")
+				(pintype "passive")
+			)
+			(node
+				(ref "TP13")
+				(pin "1")
+				(pinfunction "1_1")
 				(pintype "passive")
 			)
 		)

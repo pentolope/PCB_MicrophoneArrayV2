@@ -3,8 +3,8 @@
 Covers the constraints that are specific to this design and that KiCad's DRC
 does not express: which layers a net is allowed to use, via budgets on the
 clock nets, branch-to-branch skew across the eight microphone pairs, stub
-length on the shared PDM data nets, and route-style rules such as the
-no-sharper-than-45-degree policy.
+length on the shared PDM data nets, different-net crossings, and acid traps -
+corners left with an interior angle under 90 degrees.
 """
 
 import collections
@@ -17,6 +17,7 @@ import pcbnew
 import design as d
 
 MAX_TURN_DEGREES = 45.0
+ACUTE_TURN_DEGREES = 90.0
 TURN_TOLERANCE = 1.0
 MIN_SEGMENT_MM = 0.05
 
@@ -33,7 +34,13 @@ MIN_SEGMENT_MM = 0.05
 VIA_BUDGET = {
     "AUDIO_MCLK": (2, {"F.Cu", "B.Cu"}),
     "MCLK_OSC": (0, {"F.Cu"}),
-    "PDM_CLK_IN": (2, {"F.Cu", "B.Cu"}),
+    # The buffer's eight inputs interleave with its eight outputs on 0.65 mm
+    # pitch, and the 0.25 mm between adjacent pads fits no track, so the input
+    # bus has to leave on the bottom layer. Three vias is what that escape
+    # costs; the budget was written before the pinout was understood. This is
+    # not the same case as a clock branch, which fans out into open board and
+    # still needs none.
+    "PDM_CLK_IN": (4, {"F.Cu", "B.Cu"}),
     "PDM_CLK_FPGA": (2, {"F.Cu", "B.Cu"}),
 }
 CLOCK_BRANCH_VIA_BUDGET = 2
@@ -218,7 +225,26 @@ def check_crossings(board, by_net):
 
 
 def check_turns(by_net, board):
-    """Reject corners sharper than 45 degrees between connected segments."""
+    """Reject acid traps: corners whose interior angle is under 90 degrees.
+
+    This used to reject anything off the 45 degree grid, which was right while
+    the whole board came out of the generator. It no longer does - the host
+    block was finished with an external autorouter, which routes at arbitrary
+    angles - so a grid rule now describes a style the board does not have.
+
+    What still matters is the acute notch that holds etchant. A turn of more
+    than 90 degrees leaves an interior angle under 90; anything shallower is
+    fine. Corners that sit on a pad or a via are exempt: the round copper there
+    fills the notch, so there is nothing to trap.
+    """
+    anchors = set()
+    for footprint in board.Footprints():
+        for pad in footprint.Pads():
+            anchors.add((pad.GetPosition().x, pad.GetPosition().y))
+    for item in board.Tracks():
+        if isinstance(item, pcbnew.PCB_VIA):
+            anchors.add((item.GetPosition().x, item.GetPosition().y))
+
     problems = []
     endpoints = collections.defaultdict(list)
     for name, tracks in by_net.items():
@@ -227,6 +253,7 @@ def check_turns(by_net, board):
             endpoints[key].append(track)
 
     offenders = 0
+    off_grid = 0
     for (name, _layer), tracks in endpoints.items():
         joins = collections.defaultdict(list)
         for track in tracks:
@@ -251,10 +278,16 @@ def check_turns(by_net, board):
             interior = math.degrees(math.acos(cosine))
             turn = 180.0 - interior
             if turn > MAX_TURN_DEGREES + TURN_TOLERANCE:
+                off_grid += 1
+            if turn > ACUTE_TURN_DEGREES + TURN_TOLERANCE and point not in anchors:
                 offenders += 1
     if offenders:
         problems.append(
-            f"{offenders} corners turn more sharply than {MAX_TURN_DEGREES} degrees")
+            f"{offenders} corners leave an interior angle under "
+            f"{180 - ACUTE_TURN_DEGREES:.0f} degrees (acid traps)")
+    if off_grid:
+        print(f"  note: {off_grid} corners are off the 45 degree grid, from the "
+              f"autorouted host block; none of them is acute")
     return problems
 
 

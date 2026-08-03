@@ -257,9 +257,14 @@ def build():
         b.add(f"H{i + 1}", "M3", "Mechanical:MountingHole", d.KI_FP["mount"],
               mx, my, 0.0, in_bom=False, description="M3 mounting hole")
 
-    for ref, net, radius, angle, _label in d.TEST_POINTS:
-        tx, ty = d.polar(radius, angle)
-        b.add(ref, net, "Connector:TestPoint", d.KI_FP["testpoint"], tx, ty, 0.0,
+    # Probe pads. Their positions are not on a ring any more - each one sits on
+    # a piece of its own net that is already routed, so it needs no track of
+    # its own, and where that could go depends on the routing rather than on
+    # any formula. tools/place_testpoints.py chooses them against the board and
+    # records the result, which is read back here so the schematic, the BOM and
+    # the board all agree.
+    for ref, net, footprint, tx, ty in d.TEST_POINTS:
+        b.add(ref, net, "Connector:TestPoint", footprint, tx, ty, 0.0,
               in_bom=False, description=f"test point on {net}")
         b.connect(net, (ref, 1))
 

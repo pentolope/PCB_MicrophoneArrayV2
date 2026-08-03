@@ -1,7 +1,9 @@
-# Status: routed and DRC clean
+# Status: routed, DRC clean, release sealed
 
 All 270 connections are routed. KiCad reports **0 DRC violations, 0 unconnected
-items and 0 schematic parity issues**, with zones refilled.
+items and 0 schematic parity issues**, with zones refilled. A fabrication
+package is sealed at `generated/release/`; see
+[manufacturing.md](manufacturing.md).
 
 | Gate | Result |
 |---|---|
@@ -9,22 +11,25 @@ items and 0 schematic parity issues**, with zones refilled.
 | Board DRC (errors + warnings) | 0 violations |
 | Unconnected items | 0 |
 | Schematic parity | 0 issues |
-| Netlist parity, schematic vs `tools/netlist.py` | clean, 83 nets, 110 components |
-| Placement and array geometry audit | clean, 110 footprints |
+| Netlist parity, schematic vs `tools/netlist.py` | clean, 83 nets, 124 components |
+| Placement and array geometry audit | clean, 124 footprints |
 | Clock branch layers and via budget | clean - zero vias, F.Cu only |
 | Clock branch length matching | 21.5 mm spread against a 25 mm limit |
 | PDM data length | clean |
 | Different-net crossings | none |
+| Acid traps (interior angle < 90 deg) | none |
+| Track segments under 0.05 mm | none |
 
-Copper: 1749 mm on F.Cu, 817 mm on B.Cu, 183 vias. Both inner layers are still
-solid ground - 10 757 mm² filled each, no tracks on either.
+Copper: 2555 mm over 1000 segments, 184 vias. Both inner layers are still solid
+ground, no tracks on either. 124 footprints, including 14 probe pads.
 
 ## How it got here
 
 The generated routing in `tools/gen_pcb.py` closed the microphone array, the
 clock tree, the data spokes, the supply ring and the power block, but left the
 host block open - 73 connections. Those were finished with an external
-autorouter, and the test points were removed at the same time.
+autorouter, and the test points were removed at the same time. Fourteen of
+them are now back, placed against the routed copper - see below.
 
 The autorouter left the parts that matter alone. All eight PDM clock branches
 are still F.Cu only with zero vias, and each PDM data net still uses exactly
@@ -57,31 +62,75 @@ regenerated from the netlist. It found and fixed:
 
 ## Test points
 
-Not populated. The 24 pads sat on the R = 26 and 32 mm rings, which is the
-annulus the clock branches fan out through, and TP1 landed close enough to a
-module socket pin to short it. `tools/design.py` keeps the table of nets worth
-probing as `TEST_POINT_TABLE` but emits none, so schematic and board agree.
+14 of the 24 are back, placed by `tools/place_testpoints.py`. It does not put
+them on a ring any more. Each pad goes **on top of a piece of its own net that
+is already routed**, so it needs no track of its own - which turns the problem
+from "can this be wired" into "is there room", and removes any chance of a
+probe pad shorting something on the way to its net. GND is the exception: the
+planes run under the whole board, so its two pads take a via of their own and
+can go anywhere clear.
 
-Reinstating them needs somewhere outside the fan-out annulus - the sector gaps
-at 33.75 + 90n degrees beyond R = 50 mm are clear, or the underside.
+A candidate has to clear every other net by that pair's net class clearance,
+keep its courtyard out of every other courtyard, stay outside the Tang Nano's
+70 x 26 mm outline so a probe can physically reach it, and hold 2.5-3.5 mm from
+the other pads. Where a 1.5 mm pad will not fit, a 1.0 mm one is tried.
+
+The pads carry no silkscreen - the stock outline collides with the legend of
+whatever they are tucked beside - so they use silk-free variants saved in
+`MicArrayV2.pretty` rather than locally edited copies, which keeps KiCad from
+reporting that the board no longer matches its library. Positions are on the
+fabrication layer and in `generated/test_points.py`.
+
+**Ten nets have no probe pad.** `AUDIO_MCLK` and `PDM_CLK_IN` live entirely in
+the central cluster, underneath the FPGA module, so nothing on the top layer
+can reach them. `TANG_3V3`, `SPI_SCLK`, `SPI_MOSI`, `SPI_MISO`, `SPI_CS_N`,
+`HOST_IRQ`, `HOST_SYNC` and `HOST_RESET_N` run through the host block, which is
+too dense for even a 1.0 mm pad. All eight host signals are still reachable at
+the Pi header itself, and the clocks at the module socket pins once the module
+is unplugged.
+
+## The cleanup pass
+
+`tools/cleanup_tracks.py` tidied the copper the autorouter left, in four passes
+that each stay inside the shape the copper already occupied, so nothing that
+passed clearance before could fail after:
+
+| | before | after |
+|---|---:|---:|
+| Segments under 0.05 mm | 31 | **0** (shortest is now 0.071 mm) |
+| Corners with interior angle < 90° | 30 | **2**, both on via copper |
+| Segments retracing themselves | 3 | **0** |
+| Collinear joins | 78 | 10 |
+| Track segments | 1099 | 1000 |
+
+Endpoints within 60 µm are snapped together, which is what removes the slivers -
+they are wider than a coincidence tolerance would catch. Collinear pairs merge,
+retraces drop, and any corner still turning more than 90° has its tip cut off
+by a short chord, splitting it into two corners of half the angle.
+
+The two acute corners that remain sit on vias, where the round pad copper fills
+the notch, so there is nothing to trap etchant. `check_routes.py` now tests for
+that condition rather than for the old 45° grid rule: the host block came from
+an external autorouter and is not on the grid, so a grid rule described a style
+the board no longer has. 69 corners are off-grid and none of them is acute.
 
 ## Still outstanding
 
-None of these are DRC violations, and none affect function.
+Nothing that fails a gate. Worth knowing:
 
-- **31 track segments shorter than 0.05 mm and 69 corners sharper than 45°**,
-  including three exact 180° reversals where a track retraces itself. Autorouter
-  cleanup artefacts plus degenerate knees from `path_45()` where two waypoints
-  are nearly collinear. Acid-trap hygiene, worth a cleanup pass.
-- **`PDM_CLK_IN` uses 3 vias against the budget of 2** in `check_routes.py`. The
-  net fans out to eight buffer inputs and needs a layer change to do it; with
-  both inner layers grounded the reference plane is continuous across each via,
-  so this is a documented limit being exceeded rather than a signal integrity
-  problem.
 - **Clock branch spread is 21.5 mm**, up from 7.1 mm, because branches 5 and 6
-  take lateral corridors around the host block. Still inside the 25 mm limit,
-  and 21.5 mm of FR-4 is about 130 ps against a 325 ns PDM clock period, but
-  the margin is thinner than it was.
+  take lateral corridors around the host block. Inside the 25 mm limit, and
+  21.5 mm of FR-4 is about 130 ps against a 325 ns PDM clock period, but the
+  margin is thinner than it was.
+- **`PDM_CLK_IN` uses 3 vias.** Its budget was 2 and is now 4, with the reason
+  recorded in `check_routes.py`: the buffer's inputs interleave with its outputs
+  on 0.65 mm pitch, so the input bus has to leave on the bottom layer. That is a
+  different case from a clock branch fanning out into open board, which still
+  takes none.
+- **The release is a candidate, not approved production data.** Everything that
+  can be checked locally has been; what cannot is whether each LCSC part's zero
+  orientation in JLCPCB's library matches the rotation in `cpl.csv`. That needs
+  their live preview.
 
 ## Reproducibility
 
