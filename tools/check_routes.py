@@ -135,6 +135,8 @@ def main():
     sharp = check_turns(by_net, board)
     problems.extend(sharp)
 
+    problems.extend(check_crossings(board, by_net))
+
     # --- ground stitching still present ---------------------------------
     gnd_vias = vias_by_net["GND"]
     if gnd_vias < 100:
@@ -173,6 +175,46 @@ def main():
         print(f"  PDM clock branches {min(routed.values()):.1f}"
               f"-{max(routed.values()):.1f} mm")
     return 0
+
+
+def check_crossings(board, by_net):
+    """Report tracks of different nets that literally overlap on one layer.
+
+    These are hard shorts, not clearance warnings. KiCad's DRC does flag them
+    as `tracks_crossing`, but this checker was silent on them, which made it
+    look cleaner than the board actually was - so they are reported here by
+    net pair, which is what makes the pattern obvious.
+    """
+    segments = collections.defaultdict(list)
+    for name, tracks in by_net.items():
+        for track in tracks:
+            segments[track.GetLayer()].append((name, track))
+
+    def side(ax, ay, bx, by, cx, cy):
+        value = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+        return 0 if abs(value) < 1e-9 else (1 if value > 0 else -1)
+
+    pairs = collections.Counter()
+    for layer, items in segments.items():
+        for i, (name_a, track_a) in enumerate(items):
+            a1, a2 = track_a.GetStart(), track_a.GetEnd()
+            for name_b, track_b in items[i + 1:]:
+                if name_a == name_b:
+                    continue
+                b1, b2 = track_b.GetStart(), track_b.GetEnd()
+                if (side(b1.x, b1.y, b2.x, b2.y, a1.x, a1.y)
+                        * side(b1.x, b1.y, b2.x, b2.y, a2.x, a2.y) < 0
+                        and side(a1.x, a1.y, a2.x, a2.y, b1.x, b1.y)
+                        * side(a1.x, a1.y, a2.x, a2.y, b2.x, b2.y) < 0):
+                    key = (board.GetLayerName(layer),) + tuple(
+                        sorted((name_a, name_b)))
+                    pairs[key] += 1
+
+    problems = []
+    for (layer, net_a, net_b), count in pairs.most_common():
+        problems.append(
+            f"{net_a} crosses {net_b} on {layer} ({count} places)")
+    return problems
 
 
 def check_turns(by_net, board):

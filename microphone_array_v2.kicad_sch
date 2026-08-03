@@ -12849,7 +12849,7 @@
 			)
 		)
 	)
-	(global_label "PDM_CLK_Y7"
+	(global_label "PDM_CLK_Y6"
 		(shape bidirectional)
 		(at 297.18 217.17 0)
 		(effects
@@ -12858,7 +12858,7 @@
 			)
 			(justify left)
 		)
-		(uuid "5f3a5666-4234-b5db-223b-b9da1e9857ba")
+		(uuid "719154ca-4060-3a84-4bcb-2a18f8f42ba7")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 297.18 217.17 0)
 			(hide yes)
@@ -12889,7 +12889,7 @@
 			)
 		)
 	)
-	(global_label "PDM_CLK_Y6"
+	(global_label "PDM_CLK_Y7"
 		(shape bidirectional)
 		(at 297.18 222.25 0)
 		(effects
@@ -12898,7 +12898,7 @@
 			)
 			(justify left)
 		)
-		(uuid "b64d2b21-2ff7-fc39-4a32-83493df900f4")
+		(uuid "a17942d5-16b7-73f4-6676-7213b09696b8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 297.18 222.25 0)
 			(hide yes)
@@ -12929,7 +12929,7 @@
 			)
 		)
 	)
-	(global_label "PDM_CLK_Y1"
+	(global_label "PDM_CLK_Y0"
 		(shape bidirectional)
 		(at 297.18 227.33 0)
 		(effects
@@ -12938,7 +12938,7 @@
 			)
 			(justify left)
 		)
-		(uuid "27f46bed-b9cb-e076-f558-0ceb5d033402")
+		(uuid "c51d51d1-cbef-d09c-21ec-f4a0eaed9fd4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 297.18 227.33 0)
 			(hide yes)
@@ -12969,7 +12969,7 @@
 			)
 		)
 	)
-	(global_label "PDM_CLK_Y0"
+	(global_label "PDM_CLK_Y1"
 		(shape bidirectional)
 		(at 297.18 232.41 0)
 		(effects
@@ -12978,7 +12978,7 @@
 			)
 			(justify left)
 		)
-		(uuid "c3f5fcc8-33b7-d4df-f78d-cdc7a18bc023")
+		(uuid "3dd27b51-549b-0057-03aa-be80143f603d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 297.18 232.41 0)
 			(hide yes)

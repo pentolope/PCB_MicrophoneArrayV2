@@ -32,7 +32,12 @@ MIC_PITCH_DEG = 360.0 / MIC_COUNT
 # Mounting holes and ring bulk capacitors sit on angles halfway between
 # microphone channels so they clear the per-channel component clusters.
 MOUNT_RADIUS = 38.0
-MOUNT_ANGLES = (56.25, 123.75, 213.75, 326.25)
+# Mounting holes sit on the gaps *between* microphone pairs. Each pair's clock
+# branch fans out along its own bisector at 11.25 + 45n degrees and its two
+# arms sweep the 22.5 degrees between its microphones, which leaves the sectors
+# centred on 33.75 + 45n free. Two of the old angles were pair bisectors, so
+# branch 1 and branch 7 ran straight into a screw hole.
+MOUNT_ANGLES = (33.75, 123.75, 213.75, 303.75)
 MOUNT_DRILL = 3.2
 BULK_RADIUS = 45.5
 BULK_ANGLES = (33.75, 123.75, 213.75, 303.75)
@@ -68,7 +73,10 @@ TANG_SPAN = (TANG_PINS - 1) * TANG_PITCH  # 58.42 mm
 # header centre.
 PI_HEADER_POS = (0.0, -33.0)
 POWER_ROW_Y = -17.0
-POWER_ROW2_Y = -20.2
+# The second power row was at -20.2, which left only 0.57 mm between the bulk
+# capacitors and the host series resistors - too narrow for the 5 V input feed
+# to pass along on the top layer. Raising it opens that lane to 0.87 mm.
+POWER_ROW2_Y = -19.8
 ESD_ROW_Y = -25.8
 HOST_RESISTOR_ROW_Y = -22.3
 
@@ -302,15 +310,24 @@ _TEST_POINT_NETS_OUTER = [
 ]
 
 
+# Test points sit in groups on the sector bisectors rather than spread evenly
+# round the upper half. The eight PDM clock branches fan out from the centre on
+# the pair bisectors at 11.25 + 45n degrees, and an evenly spaced ring put a
+# 1.5 mm probe pad squarely in three of those corridors. Clustering the pads at
+# 33.75 + 45n leaves a clear 15-degree lane either side of every branch.
+TEST_POINT_SECTORS = (33.75, 78.75, 123.75, 168.75)
+TEST_POINT_SPREAD = 7.5
+
+
 def _test_point_table():
     entries = []
     index = 1
-    for radius, nets, start, end in ((26.0, _TEST_POINT_NETS_INNER, 32.0, 148.0),
-                                     (32.0, _TEST_POINT_NETS_OUTER, 30.0, 150.0)):
-        step = (end - start) / (len(nets) - 1)
+    for radius, nets in ((26.0, _TEST_POINT_NETS_INNER),
+                         (32.0, _TEST_POINT_NETS_OUTER)):
         for position, (net, label) in enumerate(nets):
-            entries.append((f"TP{index}", net, radius,
-                            start + position * step, label))
+            sector = TEST_POINT_SECTORS[position // 3]
+            angle = sector + (position % 3 - 1) * TEST_POINT_SPREAD
+            entries.append((f"TP{index}", net, radius, angle, label))
             index += 1
     return entries
 

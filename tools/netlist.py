@@ -143,9 +143,15 @@ def build():
     # Ordered so each output pin's position down the package matches its
     # resistor's position down the column beside it. The obvious 1Y1..2Y4 order
     # inverts one side and makes all four tracks cross.
-    branch_outputs = ["18", "16", "3", "5", "7", "9", "14", "12"]
-    branch_positions = [(8.0, 4.0), (8.0, 1.5), (-11.5, 4.0), (-11.5, 1.5),
-                        (-11.5, -1.0), (-11.5, -3.5), (8.0, -1.0), (8.0, -3.5)]
+    #
+    # Within a column the resistors are also ordered by the azimuth their
+    # branch has to reach, sweeping from the most downward at the bottom to the
+    # most upward at the top. Getting this backwards on the right-hand column
+    # forced branch 1 (56 degrees, up) to leave below branch 0 (11 degrees) and
+    # cross it on the way out.
+    branch_outputs = ["16", "18", "3", "5", "7", "9", "12", "14"]
+    branch_positions = [(8.0, 1.5), (8.0, 4.0), (-11.5, 4.0), (-11.5, 1.5),
+                        (-11.5, -1.0), (-11.5, -3.5), (8.0, -3.5), (8.0, -1.0)]
     for n, out_pin in enumerate(branch_outputs):
         ref = f"RC{n + 1}"
         rx, ry = branch_positions[n]
@@ -160,7 +166,10 @@ def build():
     row, row2 = d.POWER_ROW_Y, d.POWER_ROW2_Y
     b.add("F1", "500mA", "Device:Fuse", d.KI_FP["fuse1812"], -21.0, row, 0.0,
           part="ptc", description="resettable fuse on the Pi 5 V feed")
-    b.add("D1", "SS14", "Device:D_Schottky", d.KI_FP["sma"], -13.5, row, 0.0,
+    # Cathode to the right, so the anode faces the fuse it is fed from. The
+    # other way round the fuse has to reach across the diode's own output pad
+    # to get to its input.
+    b.add("D1", "SS14", "Device:D_Schottky", d.KI_FP["sma"], -13.5, row, 180.0,
           part="schottky", description="blocks Tang USB-C back-feed into the Pi")
     b.add("C4", "22uF", "Device:C", d.KI_FP["c0805"], -6.5, row, 0.0,
           part="c22u", description="5 V bulk")
