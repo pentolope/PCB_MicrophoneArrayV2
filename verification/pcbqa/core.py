@@ -1,0 +1,385 @@
+"""Board-agnostic core: results, constraint manifest, provenance, gate registry.
+
+Nothing in this package may name a specific board, net, reference designator,
+component, coordinate or threshold. Every value a gate compares against is
+fetched from the project's constraint manifest through `Manifest.get`, which
+records where the value came from so the constraint-parity gate can prove that
+no checker invented its own limit.
+"""
+
+from __future__ import annotations
+
+import datetime
+import hashlib
+import json
+import os
+import subprocess
+import sys
+
+SCHEMA_VERSION = 2
+_MISSING = object()
+
+
+# ---------------------------------------------------------------------------
+# results
+# ---------------------------------------------------------------------------
+
+class Status:
+    PASS = "PASS"
+    FAIL = "FAIL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    ERROR = "ERROR"          # fail-closed: could not evaluate
+
+    BLOCKING = (FAIL, ERROR)
+
+
+class GateResult:
+    """One gate's outcome, machine readable."""
+
+    def __init__(self, gate_id, title):
+        self.gate_id = gate_id
+        self.title = title
+        self.status = None
+        self.reason = ""
+        self.findings = []       # list of dict
+        self.measurements = {}   # name -> value
+        self.limits = {}         # name -> {"value":..., "source":...}
+        self.evidence = []       # list of file paths / hashes
+
+    # -- outcome helpers ---------------------------------------------------
+    def passed(self, reason="", **measurements):
+        self.status = Status.PASS
+        self.reason = reason
+        self.measurements.update(measurements)
+        return self
+
+    def failed(self, reason, **measurements):
+        self.status = Status.FAIL
+        self.reason = reason
+        self.measurements.update(measurements)
+        return self
+
+    def not_applicable(self, reason):
+        self.status = Status.NOT_APPLICABLE
+        self.reason = reason
+        return self
+
+    def errored(self, reason):
+        self.status = Status.ERROR
+        self.reason = reason
+        return self
+
+    # -- detail helpers ----------------------------------------------------
+    def finding(self, **fields):
+        self.findings.append(fields)
+        return self
+
+    def limit(self, name, value, source):
+        self.limits[name] = {"value": value, "source": source}
+        return self
+
+    def evidence_file(self, path, digest=None):
+        self.evidence.append({
+            "path": path,
+            "sha256": digest if digest else (sha256_file(path) if os.path.isfile(path) else None),
+        })
+        return self
+
+    def to_dict(self):
+        return {
+            "gate": self.gate_id,
+            "title": self.title,
+            "status": self.status,
+            "reason": self.reason,
+            "measurements": self.measurements,
+            "limits": self.limits,
+            "finding_count": len(self.findings),
+            "findings": self.findings,
+            "evidence": self.evidence,
+        }
+
+
+# ---------------------------------------------------------------------------
+# provenance
+# ---------------------------------------------------------------------------
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def utcnow():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# constraint manifest
+# ---------------------------------------------------------------------------
+
+class ManifestError(Exception):
+    pass
+
+
+class Manifest:
+    """The single canonical source of every threshold and policy.
+
+    `get("a.b.c")` walks the manifest and records the access so that
+    CFG.THRESHOLD_PARITY can prove each checker used a manifest value and did
+    not fall back to a literal. A miss is an error, never a default.
+    """
+
+    def __init__(self, path):
+        self.path = os.path.abspath(path)
+        with open(self.path, "rb") as fh:
+            raw = fh.read()
+        self.sha256 = sha256_bytes(raw)
+        try:
+            self.data = json.loads(raw.decode("utf-8"))
+        except ValueError as exc:
+            raise ManifestError(f"{self.path}: not valid JSON: {exc}") from exc
+        if self.data.get("schema_version") != SCHEMA_VERSION:
+            raise ManifestError(
+                f"{self.path}: schema_version {self.data.get('schema_version')!r}, "
+                f"this validator implements {SCHEMA_VERSION}")
+        self.root = os.path.dirname(self.path)
+        self.accesses = []       # [(key, value)] for the parity gate
+
+    # -- access ------------------------------------------------------------
+    @staticmethod
+    def _walk(node, key):
+        """Follow a dotted path through dicts and list indices."""
+        for part in key.split("."):
+            if isinstance(node, dict):
+                if part not in node:
+                    return _MISSING
+                node = node[part]
+            elif isinstance(node, (list, tuple)):
+                if not part.lstrip("-").isdigit():
+                    return _MISSING
+                index = int(part)
+                if not -len(node) <= index < len(node):
+                    return _MISSING
+                node = node[index]
+            else:
+                return _MISSING
+        return node
+
+    def get(self, key, default=_MISSING):
+        node = self._walk(self.data, key)
+        if node is _MISSING:
+            if default is _MISSING:
+                raise ManifestError(
+                    f"manifest {self.path}: missing required key {key!r}")
+            self.accesses.append((key, default))
+            return default
+        self.accesses.append((key, node))
+        return node
+
+    def has(self, key):
+        return self._walk(self.data, key) is not _MISSING
+
+    def source_of(self, key):
+        return f"{os.path.basename(self.path)}#{key}@{self.sha256[:12]}"
+
+    def resolve(self, *parts):
+        """A path relative to the manifest's project_root."""
+        base = self.get("project_root")
+        return os.path.abspath(os.path.join(self.root, base, *parts))
+
+
+# ---------------------------------------------------------------------------
+# gate registry
+# ---------------------------------------------------------------------------
+
+_REGISTRY = []
+
+
+def gate(gate_id, title, requires=(), order=100):
+    """Register a gate. `requires` lists manifest keys the gate needs; when any
+    is absent the gate reports NOT_APPLICABLE with the reason instead of
+    silently passing."""
+    def wrap(fn):
+        _REGISTRY.append({
+            "id": gate_id, "title": title, "requires": tuple(requires),
+            "fn": fn, "order": order,
+        })
+        return fn
+    return wrap
+
+
+def registered():
+    return sorted(_REGISTRY, key=lambda e: (e["order"], e["id"]))
+
+
+def run_all(context, only=None):
+    results = []
+    for entry in registered():
+        if only and entry["id"] not in only:
+            continue
+        result = GateResult(entry["id"], entry["title"])
+        missing = [k for k in entry["requires"] if not context.manifest.has(k)]
+        if missing:
+            results.append(result.not_applicable(
+                "manifest does not declare " + ", ".join(sorted(missing))
+                + "; this board does not opt in to this gate"))
+            continue
+        try:
+            entry["fn"](context, result)
+            if result.status is None:
+                result.errored("gate returned without setting a status")
+            # Every limit a gate applied is pooled so the constraint-parity gate,
+            # which runs last, can prove each one came from the manifest.
+            context.cache("applied_limits", dict).update(
+                {f"{entry['id']}.{k}": v for k, v in result.limits.items()})
+        except Exception as exc:                       # fail closed
+            import traceback
+            result.errored(f"{type(exc).__name__}: {exc}")
+            result.finding(traceback=traceback.format_exc().splitlines()[-6:])
+        results.append(result)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# execution context
+# ---------------------------------------------------------------------------
+
+class Context:
+    """Everything a gate may look at. Created once per validation run."""
+
+    def __init__(self, manifest, workdir, kicad_cli=None):
+        self.manifest = manifest
+        self.workdir = workdir
+        os.makedirs(workdir, exist_ok=True)
+        self.kicad_cli = kicad_cli or manifest.get("tools.kicad_cli")
+        self._cache = {}
+        self.tool_versions = {}
+
+    # -- lazily loaded, shared across gates --------------------------------
+    def cache(self, key, factory):
+        if key not in self._cache:
+            self._cache[key] = factory()
+        return self._cache[key]
+
+    def board_path(self):
+        return self.manifest.resolve(self.manifest.get("sources.pcb"))
+
+    def schematic_path(self):
+        return self.manifest.resolve(self.manifest.get("sources.schematic"))
+
+    def project_path(self):
+        return self.manifest.resolve(self.manifest.get("sources.project"))
+
+    def board(self):
+        def load():
+            import pcbnew
+            path = self.board_path()
+            if not os.path.isfile(path):
+                raise ManifestError(f"board not found: {path}")
+            return pcbnew.LoadBoard(path)
+        return self.cache("board", load)
+
+    def run_tool(self, args, timeout=1800):
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        return proc
+
+    def kicad_version(self):
+        def probe():
+            proc = self.run_tool([self.kicad_cli, "--version"], timeout=120)
+            return (proc.stdout or proc.stderr).strip().splitlines()[0]
+        return self.cache("kicad_version", probe)
+
+
+# ---------------------------------------------------------------------------
+# reporting
+# ---------------------------------------------------------------------------
+
+def summarise(results):
+    counts = {}
+    for r in results:
+        counts[r.status] = counts.get(r.status, 0) + 1
+    blocking = [r for r in results if r.status in Status.BLOCKING]
+    return counts, blocking
+
+
+def to_json(results, context, extra=None):
+    counts, blocking = summarise(results)
+    doc = {
+        "schema_version": SCHEMA_VERSION,
+        "generated_utc": utcnow(),
+        "manifest": {
+            "path": context.manifest.path,
+            "sha256": context.manifest.sha256,
+            "board_id": context.manifest.get("board_id"),
+            "constraint_version": context.manifest.get("constraint_version"),
+        },
+        "tooling": {
+            "kicad_cli": context.kicad_cli,
+            "kicad_version": context.tool_versions.get("kicad", "unrecorded"),
+            "python": sys.version.split()[0],
+        },
+        "summary": {
+            "counts": counts,
+            "blocking": [r.gate_id for r in blocking],
+            "verdict": "REJECTED" if blocking else "ACCEPTED",
+        },
+        "gates": [r.to_dict() for r in results],
+    }
+    if extra:
+        doc.update(extra)
+    return doc
+
+
+def to_markdown(doc):
+    lines = [f"# Verification report - {doc['manifest']['board_id']}", ""]
+    lines.append(f"- Manifest: `{os.path.basename(doc['manifest']['path'])}` "
+                 f"sha256 `{doc['manifest']['sha256'][:16]}`")
+    lines.append(f"- Constraint version: `{doc['manifest']['constraint_version']}`")
+    lines.append(f"- KiCad: `{doc['tooling']['kicad_version']}`")
+    lines.append(f"- Generated: {doc['generated_utc']}")
+    lines.append("")
+    lines.append(f"## Verdict: **{doc['summary']['verdict']}**")
+    lines.append("")
+    counts = doc["summary"]["counts"]
+    lines.append("| Status | Gates |")
+    lines.append("|---|---:|")
+    for key in (Status.PASS, Status.FAIL, Status.ERROR, Status.NOT_APPLICABLE):
+        if key in counts:
+            lines.append(f"| {key} | {counts[key]} |")
+    lines.append("")
+    lines.append("## Gate matrix")
+    lines.append("")
+    lines.append("| Gate | Status | Detail |")
+    lines.append("|---|---|---|")
+    for g in doc["gates"]:
+        detail = g["reason"].replace("|", "\\|")
+        if len(detail) > 160:
+            detail = detail[:157] + "..."
+        lines.append(f"| `{g['gate']}` | {g['status']} | {detail} |")
+    lines.append("")
+    for g in doc["gates"]:
+        if g["status"] not in Status.BLOCKING or not g["findings"]:
+            continue
+        lines.append(f"### `{g['gate']}` - {g['title']}")
+        lines.append("")
+        lines.append(f"{g['reason']}")
+        lines.append("")
+        if g["limits"]:
+            lines.append("Limits applied:")
+            for name, lim in g["limits"].items():
+                lines.append(f"- `{name}` = {lim['value']}  (from {lim['source']})")
+            lines.append("")
+        shown = g["findings"][:25]
+        for f in shown:
+            bits = ", ".join(f"{k}={v}" for k, v in f.items())
+            lines.append(f"- {bits}")
+        if len(g["findings"]) > len(shown):
+            lines.append(f"- ... {len(g['findings']) - len(shown)} more")
+        lines.append("")
+    return "\n".join(lines)

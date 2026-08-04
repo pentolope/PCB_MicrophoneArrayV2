@@ -1,0 +1,406 @@
+{
+  "schema_version": 2,
+  "generated_utc": "2026-08-04T12:04:58.174254+00:00",
+  "manifest": {
+    "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\boards\\portability.json",
+    "sha256": "7f5059deb11adae047f84cb6175d91fd0ad3bd58b994b18522d05e92c7b424e4",
+    "board_id": "widget_b",
+    "constraint_version": "widget-b-v1"
+  },
+  "tooling": {
+    "kicad_cli": "C:\\Program Files\\KiCad\\10.0\\bin\\kicad-cli.exe",
+    "kicad_version": "10.0.5",
+    "python": "3.11.5"
+  },
+  "summary": {
+    "counts": {
+      "NOT_APPLICABLE": 14,
+      "PASS": 10
+    },
+    "blocking": [],
+    "verdict": "ACCEPTED"
+  },
+  "gates": [
+    {
+      "gate": "ARCH.CONTENTS",
+      "title": "Production archive contains only approved fabrication data",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare archive.allow, archive.zip; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "ARCH.PROVENANCE",
+      "title": "Archive and packaged artifacts share one source revision",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare archive.manifest; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "BOM.NATIVE_PARITY",
+      "title": "Packaged BOM/CPL derive from the native board",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare artifacts.bom, artifacts.cpl; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "CFG.NO_RIVAL_THRESHOLDS",
+      "title": "No checker outside the manifest defines its own limits",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare constraint_parity.rival_scan; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "CONTRACT.CONNECTOR",
+      "title": "Connector mating contract is consistent everywhere",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare connector_contracts; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "CONTRACT.PLACEMENT",
+      "title": "Component placement and orientation contracts",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare placement_rules; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "DRC.AUTHORITATIVE",
+      "title": "Fresh DRC on the exact final board",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare checks.drc; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "DRC.NO_SUPPRESSED_RULES",
+      "title": "No DRC rule is silently disabled",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare checks.drc.forbidden_severities; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "ERC.AUTHORITATIVE",
+      "title": "Fresh ERC on the exact final schematic",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare checks.erc; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "NET.TOPOLOGY",
+      "title": "Critical-net topology and length matching",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare net_topology.rules; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "PROV.FIXTURE_INTEGRITY",
+      "title": "Frozen fixture is byte-for-byte unmodified",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare fixture.hash_file; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "PROV.REPORT_FRESHNESS",
+      "title": "Committed reports match the current sources",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare reports; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "PROV.SOURCE_AUTHORITY",
+      "title": "KiCad is the sole design authority",
+      "status": "PASS",
+      "reason": "a single, consistent design authority is asserted",
+      "measurements": {
+        "claims_found": {}
+      },
+      "limits": {
+        "authority": {
+          "value": "native_kicad",
+          "source": "portability.json#source_authority.authority@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "ROUTE.ANGLE_STYLE",
+      "title": "Routing obeys the permitted angle style",
+      "status": "PASS",
+      "reason": "every corner is on the permitted geometry",
+      "measurements": {
+        "corners_examined": 1,
+        "off_style_corners": 0,
+        "off_style_sharper_than_permitted_max": 0,
+        "off_style_between_permitted_values": 0
+      },
+      "limits": {
+        "permitted_turn_degrees": {
+          "value": [
+            0.0,
+            45.0
+          ],
+          "source": "portability.json#routing.permitted_turn_degrees@7f5059deb11a"
+        },
+        "angle_tolerance_deg": {
+          "value": 1.0,
+          "source": "portability.json#routing.angle_tolerance_deg@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "ROUTE.GEOMETRY_HYGIENE",
+      "title": "No duplicate, dangling or crossing copper",
+      "status": "PASS",
+      "reason": "no duplicate, dangling or crossing copper",
+      "measurements": {
+        "issues": {}
+      },
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "ROUTE.TINY_SEGMENTS",
+      "title": "No unjustified sub-minimum track fragments",
+      "status": "PASS",
+      "reason": "0 short fragments are all pad/via entry geometry",
+      "measurements": {
+        "segments_total": 3,
+        "below_limit_total": 0,
+        "below_limit_justified_pad_or_via_entry": 0,
+        "below_limit_unjustified": 0
+      },
+      "limits": {
+        "min_segment_mm": {
+          "value": 0.25,
+          "source": "portability.json#routing.min_segment_mm@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "STACK.GERBER_PARITY",
+      "title": "Exported copper layers match the native stackup",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare artifacts.gerber_dir; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "STACK.NATIVE_VS_MANIFEST",
+      "title": "Board stackup matches the frozen constraints",
+      "status": "PASS",
+      "reason": "native stackup agrees with the frozen constraints",
+      "measurements": {
+        "native_stackup": [
+          {
+            "index": 1,
+            "canonical": "F.Cu",
+            "user_name": "F.Cu",
+            "zone_nets": []
+          },
+          {
+            "index": 2,
+            "canonical": "B.Cu",
+            "user_name": "B.Cu",
+            "zone_nets": []
+          }
+        ],
+        "copper_layers": 2
+      },
+      "limits": {
+        "expected_stackup": {
+          "value": [
+            {
+              "role": "signal"
+            },
+            {
+              "role": "signal"
+            }
+          ],
+          "source": "portability.json#stackup.expected@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "VIA.ANNULUS_MASK_OVERLAP",
+      "title": "No via annulus intersects a mask opening",
+      "status": "PASS",
+      "reason": "no via annulus reaches a mask opening",
+      "measurements": {
+        "vias_total": 1,
+        "annulus_contacts": 0,
+        "annulus_strict_overlaps": 0,
+        "annulus_tangencies": 0
+      },
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "VIA.IN_PAD_CONTACT",
+      "title": "No via contacts a pad that receives solder",
+      "status": "PASS",
+      "reason": "no via contacts a solderable pad",
+      "measurements": {
+        "partial_overlap_populated_strict": 0,
+        "partial_tangency_populated": 0,
+        "centres_inside_openings": 0,
+        "centres_inside_populated": 0,
+        "centres_inside_unpopulated": 0,
+        "partial_overlap_populated": 0,
+        "populated_pad_contacts_total": 0
+      },
+      "limits": {
+        "populated_pad_attributes": {
+          "value": [
+            "SMD"
+          ],
+          "source": "portability.json#via_mask.pad_contact.populated_pad_attributes@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "VIA.MASK_CLEARANCE_PROCESS",
+      "title": "Via to mask opening meets the fab process limit",
+      "status": "PASS",
+      "reason": "all 1 vias clear 0.35 mm (annulus_to_opening_mm)",
+      "measurements": {
+        "process": {
+          "name": "generic ink-plugged via process",
+          "rule": "via annulus to nearest mask aperture",
+          "url": "n/a - portability fixture",
+          "retrieved": "2026-08-04",
+          "interpretation": "annulus edge to mask aperture edge on the same side"
+        },
+        "vias_total": 1,
+        "vias_below_limit": 0
+      },
+      "limits": {
+        "process_limit_mm": {
+          "value": 0.35,
+          "source": "portability.json#via_mask.process.limit_mm@7f5059deb11a"
+        },
+        "metric": {
+          "value": "annulus_to_opening_mm",
+          "source": "portability.json#via_mask.metric@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "VIA.MASK_CLEARANCE_TARGET",
+      "title": "Via to mask opening meets the project target",
+      "status": "PASS",
+      "reason": "all 1 vias clear 0.4 mm (annulus_to_opening_mm)",
+      "measurements": {
+        "vias_total": 1,
+        "vias_below_limit": 0
+      },
+      "limits": {
+        "design_target_mm": {
+          "value": 0.4,
+          "source": "portability.json#via_mask.design_target_mm@7f5059deb11a"
+        },
+        "metric": {
+          "value": "annulus_to_opening_mm",
+          "source": "portability.json#via_mask.metric@7f5059deb11a"
+        }
+      },
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "VIA.NATIVE_GERBER_AGREEMENT",
+      "title": "Native and exported mask geometry agree",
+      "status": "NOT_APPLICABLE",
+      "reason": "manifest does not declare artifacts.gerber_dir; this board does not opt in to this gate",
+      "measurements": {},
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    },
+    {
+      "gate": "CFG.THRESHOLD_PARITY",
+      "title": "Every gate limit came from the canonical manifest",
+      "status": "PASS",
+      "reason": "all 10 applied limits trace to the manifest",
+      "measurements": {
+        "limits_applied": 10
+      },
+      "limits": {},
+      "finding_count": 0,
+      "findings": [],
+      "evidence": []
+    }
+  ]
+}

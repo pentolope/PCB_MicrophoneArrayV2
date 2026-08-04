@@ -1,0 +1,54 @@
+{
+  "fixture": "reva",
+  "note": "Rev A is a NEGATIVE fixture. The suite passes by proving the validator rejects it. Statuses below are the intended verdict for each gate; anchor counts are recalculated independently and any difference from the original audit is explained in `anchor_reconciliation`.",
+
+  "verdict": "REJECTED",
+
+  "gates": {
+    "PROV.FIXTURE_INTEGRITY":      "PASS",
+    "PROV.SOURCE_AUTHORITY":       "FAIL",
+    "PROV.REPORT_FRESHNESS":       "FAIL",
+    "ERC.AUTHORITATIVE":           "PASS",
+    "DRC.AUTHORITATIVE":           "PASS",
+    "DRC.NO_SUPPRESSED_RULES":     "FAIL",
+    "STACK.NATIVE_VS_MANIFEST":    "FAIL",
+    "STACK.GERBER_PARITY":         "PASS",
+    "VIA.MASK_CLEARANCE_TARGET":   "FAIL",
+    "VIA.MASK_CLEARANCE_PROCESS":  "FAIL",
+    "VIA.ANNULUS_MASK_OVERLAP":    "FAIL",
+    "VIA.IN_PAD_CONTACT":          "FAIL",
+    "VIA.NATIVE_GERBER_AGREEMENT": "PASS",
+    "NET.TOPOLOGY":                "FAIL",
+    "ROUTE.ANGLE_STYLE":           "FAIL",
+    "ROUTE.TINY_SEGMENTS":         "FAIL",
+    "ROUTE.GEOMETRY_HYGIENE":      "PASS",
+    "CONTRACT.CONNECTOR":          "FAIL",
+    "CONTRACT.PLACEMENT":          "PASS",
+    "BOM.NATIVE_PARITY":           "PASS",
+    "ARCH.CONTENTS":               "FAIL",
+    "ARCH.PROVENANCE":             "FAIL",
+    "CFG.NO_RIVAL_THRESHOLDS":     "FAIL",
+    "CFG.THRESHOLD_PARITY":        "PASS"
+  },
+
+  "anchors": {
+    "VIA.MASK_CLEARANCE_TARGET.vias_total": 184,
+    "VIA.MASK_CLEARANCE_TARGET.vias_below_limit": 70,
+    "VIA.MASK_CLEARANCE_PROCESS.vias_below_limit": 63,
+    "VIA.ANNULUS_MASK_OVERLAP.annulus_strict_overlaps": 23,
+    "VIA.IN_PAD_CONTACT.centres_inside_openings": 11,
+    "VIA.IN_PAD_CONTACT.centres_inside_populated": 9,
+    "VIA.IN_PAD_CONTACT.centres_inside_unpopulated": 2,
+    "VIA.IN_PAD_CONTACT.partial_overlap_populated_strict": 3,
+    "ROUTE.TINY_SEGMENTS.below_limit_total": 88,
+    "ROUTE.ANGLE_STYLE.off_style_sharper_than_permitted_max": 69,
+    "BOM.NATIVE_PARITY.native_populated": 103
+  },
+
+  "anchor_reconciliation": {
+    "populated_pad_contacts": "9 via centres inside a populated pad opening + 3 strict partial overlaps = 12 populated-pad contacts requiring disposition, matching the audit. The validator additionally reports 1 exact tangency (U2.20), which it counts as a contact because a zero-distance annulus retains no ink dam. Total reported contacts is therefore 13; the strict-overlap figure is 12.",
+    "annulus_contacts_24_vs_23": "23 strict overlaps (positive shared area) + 1 exact tangency = 24 contacts. The original audit counted only strict overlaps.",
+    "off_angle_corners_138_vs_69": "The frozen rule permits only 0 and 45 degree turns. 69 corners turn MORE sharply than 45 degrees (the figure the earlier audit reported) and a further 69 turn at angles strictly between 0 and 45 degrees, which the archived rule also forbids. Total 138. The gate reports both figures.",
+    "clearance_70_vs_82": "The earlier audit counted (via, pad) pairs, so a via near two openings was counted twice; this validator counts distinct vias by their nearest opening. 70 distinct vias fall below 0.40 mm."
+  }
+}
