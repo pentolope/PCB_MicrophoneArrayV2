@@ -1,72 +1,74 @@
 # Verification report - microphone_array_v2-revA
 
-- Manifest: `reva.json` sha256 `a3d9896ff60cc5f7`
+- Manifest: `reva.json` sha256 `68a1419a16541bf5`
 - Constraint version: `revA-frozen-2026-08-01`
 - KiCad: `10.0.5`
-- Generated: 2026-08-04T12:07:55.924190+00:00
+- Generated: 2026-08-04T22:40:34.345192+00:00
 
 ## Verdict: **REJECTED**
 
 | Status | Gates |
 |---|---:|
-| PASS | 9 |
-| FAIL | 15 |
+| PASS | 8 |
+| FAIL | 17 |
 
 ## Gate matrix
 
 | Gate | Status | Detail |
 |---|---|---|
 | `ARCH.CONTENTS` | FAIL | 2 archive content problem(s) |
-| `ARCH.PROVENANCE` | FAIL | 2 release-provenance problem(s) |
-| `BOM.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native board and the packaged CPL |
+| `ARCH.PROVENANCE` | FAIL | 3 release-provenance problem(s) |
+| `BOM.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native design and the packaged BOM |
 | `CFG.NO_RIVAL_THRESHOLDS` | FAIL | 2 rival threshold definition(s) outside the canonical manifest |
 | `CONTRACT.CONNECTOR` | FAIL | 15x documentation asserts a superseded interconnect; 2x artifact contradicts the required gender; 1x no document states a required property of the interconnect |
 | `CONTRACT.PLACEMENT` | PASS | every placement contract holds |
-| `DRC.AUTHORITATIVE` | PASS | DRC clean on the exact current source (b5606e1cead8), 0 waived |
-| `DRC.NO_SUPPRESSED_RULES` | FAIL | 5 DRC rule(s) disabled, 0 stored exclusion(s) |
-| `ERC.AUTHORITATIVE` | PASS | ERC clean on the exact current source (81c37d36c771), 0 waived |
-| `NET.TOPOLOGY` | FAIL | 4 critical-net topology violation(s) |
-| `PROV.FIXTURE_INTEGRITY` | PASS | all 84 frozen files match their recorded digests |
+| `CPL.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native board and the packaged CPL |
+| `DRC.AUTHORITATIVE` | FAIL | 1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5 |
+| `DRC.NO_SUPPRESSED_RULES` | FAIL | 5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s) |
+| `ERC.AUTHORITATIVE` | FAIL | 1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4 |
+| `NET.TOPOLOGY` | FAIL | 3 critical-net topology violation(s) |
+| `PROV.FIXTURE_INTEGRITY` | PASS | all 84 frozen files match their canonical digests (text hashed over LF bytes, production output over raw bytes) |
 | `PROV.REPORT_FRESHNESS` | FAIL | 4 committed report(s) cannot be tied to the current sources |
 | `PROV.SOURCE_AUTHORITY` | FAIL | 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data |
 | `ROUTE.ANGLE_STYLE` | FAIL | 138 corners are not on the permitted [0.0, 45.0] degree geometry |
 | `ROUTE.GEOMETRY_HYGIENE` | PASS | no duplicate, dangling or crossing copper |
 | `ROUTE.TINY_SEGMENTS` | FAIL | 57 track fragments below 0.25 mm are not pad or via entries |
-| `STACK.GERBER_PARITY` | PASS | 4 exported copper layers agree with the native stack by X2 file function and payload |
+| `STACK.GERBER_PARITY` | PASS | 4 shipped copper layers match a fresh export by geometric symmetric difference (limit 0.05 mm2) |
 | `STACK.NATIVE_VS_MANIFEST` | FAIL | the frozen constraint manifest and the native board describe different plane assignments; the board is authoritative, so the manifest is the representation t... |
-| `VIA.ANNULUS_MASK_OVERLAP` | FAIL | 23 via annulus/mask-opening contacts (23 strict overlaps + 0 exact tangencies): these vias cannot be tented or plugged |
-| `VIA.IN_PAD_CONTACT` | FAIL | 12 vias contact a pad that receives solder paste (9 centre-inside, 3 partial); solder will wick into the barrel unless a filled/capped process is ordered |
+| `VIA.ANNULUS_MASK_OVERLAP` | FAIL | 24 via annulus/mask-opening contacts (23 strict overlaps + 1 exact tangencies): these vias cannot be tented or plugged |
+| `VIA.IN_PAD_CONTACT` | FAIL | 13 vias contact a pad that receives solder paste (9 centre-inside, 4 partial); solder will wick into the barrel unless a filled/capped process is ordered |
 | `VIA.MASK_CLEARANCE_PROCESS` | FAIL | 63 of 184 vias are closer than 0.35 mm (annulus_to_opening_mm) to a solder-mask opening |
 | `VIA.MASK_CLEARANCE_TARGET` | FAIL | 70 of 184 vias are closer than 0.4 mm (annulus_to_opening_mm) to a solder-mask opening |
-| `VIA.NATIVE_GERBER_AGREEMENT` | PASS | native and exported solder-mask geometry agree on every via |
-| `CFG.THRESHOLD_PARITY` | PASS | all 19 applied limits trace to the manifest |
+| `VIA.NATIVE_GERBER_AGREEMENT` | PASS | all 184 vias match the export object by object: coordinate, drill, annulus, clearance, contact, overlap, centre-inside, both limit classifications and neares... |
+| `CFG.THRESHOLD_PARITY` | PASS | all 36 applied limits are typed constraints traced to the manifest |
 
 ### `ARCH.CONTENTS` - Production archive contains only approved fabrication data
 
 2 archive content problem(s)
 
 Limits applied:
-- `allow` = [{'file_function': 'Copper,L1,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L2,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L3,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L4,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Paste,Top', 'require_payload': False, 'min_count': 1}, {'file_function': 'Paste,Bot', 'require_payload': False, 'min_count': 1}, {'file_function': 'Profile,NP', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/plated', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/nonplated', 'require_payload': True, 'min_count': 1}, {'file_function': 'JobFile', 'require_payload': True, 'min_count': 1}]  (from reva.json#archive.allow@a3d9896ff60c)
+- `archive.allow` = [{'file_function': 'Copper,L1,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L2,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L3,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L4,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Paste,Top', 'require_payload': False, 'min_count': 1}, {'file_function': 'Paste,Bot', 'require_payload': False, 'min_count': 1}, {'file_function': 'Profile,NP', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/plated', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/nonplated', 'require_payload': True, 'min_count': 1}, {'file_function': 'JobFile', 'require_payload': True, 'min_count': 1}] file function [policy] (from reva.json#archive.allow@68a1419a1654)
 
 - entry=microphone_array_v2-NPTH-drl_map.gbr, file_function=Drillmap, issue=drill-map drawings are documentation, not fabrication data, and can be mistaken for a copper or legend layer by an importer
 - entry=microphone_array_v2-PTH-drl_map.gbr, file_function=Drillmap, issue=drill-map drawings are documentation, not fabrication data, and can be mistaken for a copper or legend layer by an importer
 
 ### `ARCH.PROVENANCE` - Archive and packaged artifacts share one source revision
 
-2 release-provenance problem(s)
+3 release-provenance problem(s)
 
 Limits applied:
-- `required_fields` = ['sha256', 'kicad', 'command', 'constraint']  (from reva.json#archive.manifest_required_fields@a3d9896ff60c)
+- `archive.manifest_required_fields` = ['sha256', 'kicad', 'command', 'constraint'] field name [policy] (from reva.json#archive.manifest_required_fields@68a1419a1654)
 
 - field=command, issue=release manifest records no such provenance
 - field=constraint, issue=release manifest records no such provenance
+- artifact=microphone_array_v2.kicad_pcb, issue=recorded digest predates the line-ending normalisation commit; it describes bytes that no longer exist in the tree, recorded=b5606e1cead80d40, actual=f6e5c6b8143f0db3
 
 ### `CFG.NO_RIVAL_THRESHOLDS` - No checker outside the manifest defines its own limits
 
 2 rival threshold definition(s) outside the canonical manifest
 
 Limits applied:
-- `watched_constants` = {'BRANCH_SKEW_LIMIT_MM': {'manifest_key': 'net_topology.rules.0.max_spread_mm'}, 'MIN_SEGMENT_MM': {'manifest_key': 'routing.min_segment_mm'}, 'MAX_TURN_DEGREES': {'manifest_key': 'routing.permitted_turn_degrees.1'}}  (from reva.json#constraint_parity.rival_scan.watched_constants@a3d9896ff60c)
+- `constraint_parity.watched_constants` = {'BRANCH_SKEW_LIMIT_MM': {'manifest_key': 'net_topology.rules.0.max_spread_mm'}, 'MIN_SEGMENT_MM': {'manifest_key': 'routing.min_segment_mm'}, 'MAX_TURN_DEGREES': {'manifest_key': 'routing.permitted_turn_degrees.1'}} constant name [policy] (from reva.json#constraint_parity.rival_scan.watched_constants@68a1419a1654)
 
 - file=tools/check_routes.py, line=22, constant=MIN_SEGMENT_MM, declares=0.05, manifest_key=routing.min_segment_mm, manifest_value=0.25, issue=a second, divergent copy of a canonical limit
 - file=tools/check_routes.py, line=51, constant=BRANCH_SKEW_LIMIT_MM, declares=25.0, manifest_key=net_topology.rules.0.max_spread_mm, manifest_value=5.0, issue=a second, divergent copy of a canonical limit
@@ -94,31 +96,50 @@ Limits applied:
 - issue=documentation asserts a superseded interconnect, label=shrouded/keyed connector, file=docs/manufacturing.md, line=91, text=keyed, reference=J1, contract=HOST_DIRECT_STACK
 - issue=no document states a required property of the interconnect, label=direct board-to-board mating, reference=J1, contract=HOST_DIRECT_STACK
 
-### `DRC.NO_SUPPRESSED_RULES` - No DRC rule is silently disabled
+### `DRC.AUTHORITATIVE` - Fresh DRC on the exact final board
 
-5 DRC rule(s) disabled, 0 stored exclusion(s)
+1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5
 
 Limits applied:
-- `forbidden_severities` = ['ignore']  (from reva.json#checks.drc.forbidden_severities@a3d9896ff60c)
+- `checks.drc.required_flags` = ['--severity-all', '--exit-code-violations', '--all-track-errors', '--schematic-parity'] cli option [policy] (from reva.json#checks.drc.required_flags@68a1419a1654)
+- `checks.drc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.drc.required_severities@68a1419a1654)
 
-- rule=footprint_filters_mismatch, severity=ignore, issue=rule disabled without an approved waiver
-- rule=footprint_type_mismatch, severity=ignore, issue=rule disabled without an approved waiver
-- rule=missing_courtyard, severity=ignore, issue=rule disabled without an approved waiver
-- rule=track_not_centered_on_via, severity=ignore, issue=rule disabled without an approved waiver
-- rule=tuning_profile_track_geometries, severity=ignore, issue=rule disabled without an approved waiver
+- issue=run ignored one or more checks, ignored=['missing_courtyard', 'track_not_centered_on_via', 'tuning_profile_track_geometries', 'footprint_filters_mismatch', 'footprint_type_mismatch']
+
+### `DRC.NO_SUPPRESSED_RULES` - No design rule is silently disabled
+
+5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s)
+
+Limits applied:
+- `checks.drc.forbidden_severities` = ['ignore'] severity [policy] (from reva.json#checks.drc.forbidden_severities@68a1419a1654)
+
+- domain=drc, rule=footprint_filters_mismatch, severity=ignore, issue=rule disabled without an approved waiver
+- domain=drc, rule=footprint_type_mismatch, severity=ignore, issue=rule disabled without an approved waiver
+- domain=drc, rule=missing_courtyard, severity=ignore, issue=rule disabled without an approved waiver
+- domain=drc, rule=track_not_centered_on_via, severity=ignore, issue=rule disabled without an approved waiver
+- domain=drc, rule=tuning_profile_track_geometries, severity=ignore, issue=rule disabled without an approved waiver
+
+### `ERC.AUTHORITATIVE` - Fresh ERC on the exact final schematic
+
+1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4
+
+Limits applied:
+- `checks.erc.required_flags` = ['--severity-all', '--exit-code-violations'] cli option [policy] (from reva.json#checks.erc.required_flags@68a1419a1654)
+- `checks.erc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.erc.required_severities@68a1419a1654)
+
+- issue=run ignored one or more checks, ignored=['single_global_label', 'four_way_junction', 'simulation_model_issue', 'footprint_filter']
 
 ### `NET.TOPOLOGY` - Critical-net topology and length matching
 
-4 critical-net topology violation(s)
+3 critical-net topology violation(s)
 
 Limits applied:
-- `PDM_CLOCK_BRANCHES.max_spread_mm` = 5.0  (from reva.json#net_topology.rules.0.max_spread_mm@a3d9896ff60c)
-- `PDM_CLOCK_BRANCHES.max_vias_per_net` = 0  (from reva.json#net_topology.rules.0.max_vias_per_net@a3d9896ff60c)
-- `PDM_CLOCK_ROOT.max_vias_per_net` = 0  (from reva.json#net_topology.rules.1.max_vias_per_net@a3d9896ff60c)
-- `AUDIO_MCLK.max_vias_per_net` = 0  (from reva.json#net_topology.rules.2.max_vias_per_net@a3d9896ff60c)
+- `net_topology.PDM_CLOCK_BRANCHES.max_spread_mm` = 5.0 mm [policy] (from reva.json#net_topology.rules.0.max_spread_mm@68a1419a1654)
+- `net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.0.max_vias_per_net@68a1419a1654)
+- `net_topology.PDM_CLOCK_ROOT.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.1.max_vias_per_net@68a1419a1654)
+- `net_topology.AUDIO_MCLK.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.2.max_vias_per_net@68a1419a1654)
 
-- issue=branch length spread exceeds the requirement, measured_spread_mm=24.275, limit_mm=5.0, min_mm=55.037, max_mm=79.312, rule=PDM_CLOCK_BRANCHES
-- net=PDM_CLK_IN, issue=load not reachable along copper, loads=['U2.2', 'U2.4', 'U2.6', 'U2.8', 'U2.11', 'U2.13', 'U2.15', 'U2.17'], rule=PDM_CLOCK_ROOT
+- issue=branch length spread exceeds the requirement, measured_spread_mm=24.275, limit_mm=5.0, min_mm=55.037, max_mm=79.312, definition=longest driver-to-load path per net; vias contribute zero, rule=PDM_CLOCK_BRANCHES
 - issue=via budget exceeded, net=PDM_CLK_IN, vias=3, limit=0, rule=PDM_CLOCK_ROOT
 - issue=net uses a layer it is not allowed on, net=PDM_CLK_IN, layers=['B.Cu'], permitted=['F.Cu'], rule=PDM_CLOCK_ROOT
 
@@ -136,7 +157,7 @@ Limits applied:
 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data
 
 Limits applied:
-- `authority` = native_kicad  (from reva.json#source_authority.authority@a3d9896ff60c)
+- `source_authority` = native_kicad policy [policy] (from reva.json#source_authority.authority@68a1419a1654)
 
 - issue=contradictory source-of-truth claims, claims=['native_kicad_is_authority', 'python_model_is_authority'], seen_at=['README.md:56', 'README.md:69', 'README.md:109', 'docs/status.md:137', 'README.md:55', 'docs/manufacturing.md:123', 'docs/manufacturing.md:124', 'docs/manufacturing.md:124']
 - file=tools/make_release.py, line=19, issue=released BOM/CPL data is taken from a Python model instead of the native KiCad project, text=import netlist
@@ -147,8 +168,8 @@ Limits applied:
 138 corners are not on the permitted [0.0, 45.0] degree geometry
 
 Limits applied:
-- `permitted_turn_degrees` = [0.0, 45.0]  (from reva.json#routing.permitted_turn_degrees@a3d9896ff60c)
-- `angle_tolerance_deg` = 1.0  (from reva.json#routing.angle_tolerance_deg@a3d9896ff60c)
+- `routing.permitted_turn_degrees` = [0.0, 45.0] deg [policy] (from reva.json#routing.permitted_turn_degrees@68a1419a1654)
+- `routing.angle_tolerance_deg` = 1.0 deg [policy] (from reva.json#routing.angle_tolerance_deg@68a1419a1654)
 
 - net=PI_SCLK, layer=F.Cu, x_mm=139.8, y_mm=-177.2, turn_deg=135.42
 - net=+5V, layer=F.Cu, x_mm=151.863, y_mm=-166.05, turn_deg=90.05
@@ -182,7 +203,7 @@ Limits applied:
 57 track fragments below 0.25 mm are not pad or via entries
 
 Limits applied:
-- `min_segment_mm` = 0.25  (from reva.json#routing.min_segment_mm@a3d9896ff60c)
+- `routing.min_segment_mm` = 0.25 mm [policy] (from reva.json#routing.min_segment_mm@68a1419a1654)
 
 - net=+3V3_CLK, layer=F.Cu, x_mm=155.1, y_mm=-157.5, length_mm=0.0708
 - net=PDM_D0, layer=B.Cu, x_mm=179.05, y_mm=-140.669, length_mm=0.0758
@@ -216,13 +237,16 @@ Limits applied:
 the frozen constraint manifest and the native board describe different plane assignments; the board is authoritative, so the manifest is the representation that disagrees
 
 Limits applied:
-- `expected_stackup` = [{'role': 'signal'}, {'role': 'plane', 'plane_net': 'GND'}, {'role': 'plane', 'plane_net': '+3V3A'}, {'role': 'signal'}]  (from reva.json#stackup.expected@a3d9896ff60c)
+- `stackup.expected` = [{'role': 'signal'}, {'role': 'plane', 'plane_net': 'GND'}, {'role': 'plane', 'plane_net': '+3V3A'}, {'role': 'signal'}] layer roles [policy] (from reva.json#stackup.expected@68a1419a1654)
 
 - layer_index=3, layer=GND2, expected_plane_net=+3V3A, actual_zone_nets=['GND'], issue=plane net disagreement
 
 ### `VIA.ANNULUS_MASK_OVERLAP` - No via annulus intersects a mask opening
 
-23 via annulus/mask-opening contacts (23 strict overlaps + 0 exact tangencies): these vias cannot be tented or plugged
+24 via annulus/mask-opening contacts (23 strict overlaps + 1 exact tangencies): these vias cannot be tented or plugged
+
+Limits applied:
+- `geometry.contact_mm` = 1e-06 mm [tolerance] (from reva.json#geometry_profile.tolerances.contact_mm.value@68a1419a1654)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, pad=TP4.1, pad_net=GND, contact=overlap, centre_inside=True, annulus_to_opening_mm=0.0
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, pad=U1.2, pad_net=GND, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
@@ -231,6 +255,7 @@ Limits applied:
 - net=PDM_D1, x_mm=179.3449, y_mm=120.6551, side=front, pad=TP7.1, pad_net=PDM_D1, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
 - net=HOST_STATUS, x_mm=152.2, y_mm=171.7, side=front, pad=RH7.2, pad_net=HOST_STATUS, contact=overlap, centre_inside=True, annulus_to_opening_mm=0.0
 - net=HOST_STATUS, x_mm=152.2, y_mm=170.3, side=front, pad=TP14.1, pad_net=HOST_STATUS, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
+- net=+3V3_CLK, x_mm=151.9, y_mm=150.0, side=front, pad=U2.20, pad_net=+3V3_CLK, contact=tangency, centre_inside=False, annulus_to_opening_mm=0.0
 - net=+3V3_CLK, x_mm=142.5, y_mm=147.0, side=front, pad=C8.1, pad_net=+3V3_CLK, contact=overlap, centre_inside=True, annulus_to_opening_mm=0.0
 - net=PDM_D0, x_mm=188.341, y_mm=134.1186, side=front, pad=TP6.1, pad_net=PDM_D0, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
 - net=PI_SCLK, x_mm=139.8, y_mm=177.2, side=front, pad=U3.3, pad_net=PI_SCLK, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
@@ -250,10 +275,11 @@ Limits applied:
 
 ### `VIA.IN_PAD_CONTACT` - No via contacts a pad that receives solder
 
-12 vias contact a pad that receives solder paste (9 centre-inside, 3 partial); solder will wick into the barrel unless a filled/capped process is ordered
+13 vias contact a pad that receives solder paste (9 centre-inside, 4 partial); solder will wick into the barrel unless a filled/capped process is ordered
 
 Limits applied:
-- `populated_pad_attributes` = ['SMD']  (from reva.json#via_mask.pad_contact.populated_pad_attributes@a3d9896ff60c)
+- `via_mask.populated_pad_attributes` = ['SMD'] pad attribute [policy] (from reva.json#via_mask.pad_contact.populated_pad_attributes@68a1419a1654)
+- `via_mask.mask_dam_rule` = contact policy [policy] (from reva.json#via_mask.mask_dam_rule@68a1419a1654)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, pad=TP4.1, pad_net=GND, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=-0.75
 - net=GND, x_mm=157.0, y_mm=128.0, side=front, pad=TP5.1, pad_net=GND, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=-0.75
@@ -269,6 +295,7 @@ Limits applied:
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, pad=U1.2, pad_net=GND, pad_receives_paste=True, class=populated, contact=overlap, centre_to_opening_mm=0.2238
 - net=PDM_D1, x_mm=179.3449, y_mm=120.6551, side=front, pad=TP7.1, pad_net=PDM_D1, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=0.1043
 - net=HOST_STATUS, x_mm=152.2, y_mm=170.3, side=front, pad=TP14.1, pad_net=HOST_STATUS, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=0.0657
+- net=+3V3_CLK, x_mm=151.9, y_mm=150.0, side=front, pad=U2.20, pad_net=+3V3_CLK, pad_receives_paste=True, class=populated, contact=tangency, centre_to_opening_mm=0.225
 - net=PDM_D0, x_mm=188.341, y_mm=134.1186, side=front, pad=TP6.1, pad_net=PDM_D0, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=0.1043
 - net=PI_SCLK, x_mm=139.8, y_mm=177.2, side=front, pad=U3.3, pad_net=PI_SCLK, pad_receives_paste=True, class=populated, contact=overlap, centre_to_opening_mm=0.15
 - net=PDM_D2, x_mm=150.0, y_mm=108.5, side=front, pad=TP8.1, pad_net=PDM_D2, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=0.1043
@@ -284,8 +311,8 @@ Limits applied:
 63 of 184 vias are closer than 0.35 mm (annulus_to_opening_mm) to a solder-mask opening
 
 Limits applied:
-- `process_limit_mm` = 0.35  (from reva.json#via_mask.process.limit_mm@a3d9896ff60c)
-- `metric` = annulus_to_opening_mm  (from reva.json#via_mask.metric@a3d9896ff60c)
+- `process_limit_mm` = 0.35 mm [policy] (from reva.json#via_mask.process.limit_mm@68a1419a1654)
+- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@68a1419a1654)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, nearest_pad=TP4.1, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0, centre_to_opening_mm=-0.75
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, nearest_pad=U1.2, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0738, centre_to_opening_mm=0.2238
@@ -319,8 +346,8 @@ Limits applied:
 70 of 184 vias are closer than 0.4 mm (annulus_to_opening_mm) to a solder-mask opening
 
 Limits applied:
-- `design_target_mm` = 0.4  (from reva.json#via_mask.design_target_mm@a3d9896ff60c)
-- `metric` = annulus_to_opening_mm  (from reva.json#via_mask.metric@a3d9896ff60c)
+- `design_target_mm` = 0.4 mm [policy] (from reva.json#via_mask.design_target_mm@68a1419a1654)
+- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@68a1419a1654)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, nearest_pad=TP4.1, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0, centre_to_opening_mm=-0.75
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, nearest_pad=U1.2, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0738, centre_to_opening_mm=0.2238

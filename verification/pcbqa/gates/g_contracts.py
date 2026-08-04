@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import csv
 import glob
+import hashlib
 import io
 import json
 import os
@@ -13,7 +14,7 @@ import zipfile
 from collections import Counter
 
 from ..core import Status, gate, sha256_file, sha256_bytes
-from .. import gerber
+from .. import gerber, geom
 from ..rules import NetTopologyRule, ConnectorContractRule, PlacementRule
 
 
@@ -42,23 +43,24 @@ def net_topology(ctx, res):
     problems = []
     for index, spec in enumerate(ctx.manifest.get("net_topology.rules")):
         rule = NetTopologyRule(spec)
-        measured, issues = rule.evaluate(board)
+        measured, issues = rule.evaluate(board, geom.pad_copper_polygon)
         issues += rule.check_limits(measured)
         res.measurements[spec["id"]] = {
             "nets": len(measured),
             "per_net": [{"net": m["net"], "max_path_mm": m["max_path_mm"],
                          "min_path_mm": m["min_path_mm"], "vias": m["vias"],
                          "layers": m["layers"], "branch_points": m["branch_points"],
-                         "total_copper_mm": m["total_copper_mm"]} for m in measured],
+                         "total_track_copper_mm": m["total_track_copper_mm"]}
+                        for m in measured],
         }
         maxima = [m["max_path_mm"] for m in measured if m["max_path_mm"] is not None]
         if maxima:
             res.measurements[spec["id"]]["spread_mm"] = round(max(maxima) - min(maxima), 3)
-        for key in ("max_spread_mm", "max_vias_per_net"):
+        for key, units in (("max_spread_mm", "mm"), ("max_vias_per_net", "vias")):
             if key in spec:
-                res.limit(f"{spec['id']}.{key}", spec[key],
-                          ctx.manifest.source_of(
-                              f"net_topology.rules.{index}.{key}"))
+                res.limit(ctx.manifest.constraint(
+                    f"net_topology.rules.{index}.{key}", units=units,
+                    cid=f"net_topology.{spec['id']}.{key}"))
         for issue in issues:
             problems.append({**issue, "rule": spec["id"]})
     for p in problems[:60]:
@@ -122,82 +124,6 @@ def placement_contract(ctx, res):
 
 
 # ---------------------------------------------------------------------------
-# BOM / CPL parity with the native board
-# ---------------------------------------------------------------------------
-
-@gate("BOM.NATIVE_PARITY", "Packaged BOM/CPL derive from the native board",
-      requires=("artifacts.bom", "artifacts.cpl"))
-def bom_parity(ctx, res):
-    import pcbnew
-    bom_path = ctx.manifest.resolve(ctx.manifest.get("artifacts.bom"))
-    cpl_path = ctx.manifest.resolve(ctx.manifest.get("artifacts.cpl"))
-    for p in (bom_path, cpl_path):
-        if not os.path.isfile(p):
-            return res.errored(f"missing packaged artifact: {p}")
-        res.evidence_file(p)
-    fields = ctx.manifest.get("artifacts.cpl_fields")
-    board = ctx.board()
-
-    native = {}
-    for fp in board.Footprints():
-        if fp.IsExcludedFromBOM() or fp.IsDNP():
-            continue
-        pos = fp.GetPosition()
-        native[fp.GetReference()] = {
-            "value": fp.GetValue(),
-            "footprint": fp.GetFPIDAsString(),
-            "side": "Bottom" if fp.IsFlipped() else "Top",
-            "x_mm": round(pos.x / 1e6, 4),
-            "y_mm": round(-pos.y / 1e6, 4),
-            "rotation": round(fp.GetOrientationDegrees() % 360.0, 4),
-        }
-    packaged = {}
-    with open(cpl_path, newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            packaged[row[fields["designator"]]] = row
-    res.measurements["native_populated"] = len(native)
-    res.measurements["packaged_placements"] = len(packaged)
-
-    problems = []
-    for ref in sorted(set(native) | set(packaged)):
-        if ref not in packaged:
-            problems.append({"reference": ref, "issue": "populated on the board but "
-                                                        "absent from the CPL"})
-            continue
-        if ref not in native:
-            problems.append({"reference": ref, "issue": "in the CPL but not populated "
-                                                        "on the board"})
-            continue
-        want, got = native[ref], packaged[ref]
-        if got[fields["side"]].strip().lower() != want["side"].lower():
-            problems.append({"reference": ref, "issue": "side mismatch",
-                             "native": want["side"], "packaged": got[fields["side"]]})
-        for axis, key in (("x_mm", "x"), ("y_mm", "y")):
-            try:
-                delta = abs(float(got[fields[key]]) - want[axis])
-            except (KeyError, ValueError):
-                problems.append({"reference": ref, "issue": f"unparseable {key}"})
-                continue
-            if delta > ctx.manifest.get("artifacts.position_tolerance_mm"):
-                problems.append({"reference": ref, "issue": f"{key} mismatch",
-                                 "native_mm": want[axis], "packaged": got[fields[key]],
-                                 "delta_mm": round(delta, 4)})
-        try:
-            rot = float(got[fields["rotation"]]) % 360.0
-            if abs(((rot - want["rotation"] + 180) % 360) - 180) > 0.1:
-                problems.append({"reference": ref, "issue": "rotation mismatch",
-                                 "native_deg": want["rotation"], "packaged": rot})
-        except (KeyError, ValueError):
-            problems.append({"reference": ref, "issue": "unparseable rotation"})
-    for p in problems[:60]:
-        res.finding(**p)
-    if problems:
-        return res.failed(f"{len(problems)} BOM/CPL disagreements with the native board")
-    return res.passed(f"all {len(native)} populated parts agree between the native "
-                      f"board and the packaged CPL")
-
-
-# ---------------------------------------------------------------------------
 # archive
 # ---------------------------------------------------------------------------
 
@@ -210,7 +136,8 @@ def archive_contents(ctx, res):
     res.evidence_file(zpath)
     allow = ctx.manifest.get("archive.allow")
     deny = ctx.manifest.get("archive.deny", [])
-    res.limit("allow", allow, ctx.manifest.source_of("archive.allow"))
+    res.limit(ctx.manifest.constraint("archive.allow", units="file function",
+                                      cid="archive.allow"))
 
     problems = []
     seen = Counter()
@@ -273,9 +200,9 @@ def archive_provenance(ctx, res):
     if not os.path.isfile(mpath):
         return res.errored(f"release manifest not found: {mpath}")
     res.evidence_file(mpath)
-    required = ctx.manifest.get("archive.manifest_required_fields")
-    res.limit("required_fields", required,
-              ctx.manifest.source_of("archive.manifest_required_fields"))
+    required = res.limit(ctx.manifest.constraint(
+        "archive.manifest_required_fields", units="field name",
+        cid="archive.manifest_required_fields")).value
     text = open(mpath, encoding="utf-8", errors="ignore").read()
     missing = [f for f in required if f.lower() not in text.lower()]
     problems = [{"field": f, "issue": "release manifest records no such provenance"}
@@ -283,6 +210,13 @@ def archive_provenance(ctx, res):
 
     # Recorded hashes must still match the files they describe.
     base = os.path.dirname(mpath)
+    prenorm = {}
+    pre_path = ctx.manifest.get("archive.pre_normalization_digests", None)
+    if pre_path:
+        full = ctx.manifest.resolve(pre_path)
+        if os.path.isfile(full):
+            prenorm = {os.path.basename(k): v for k, v in
+                       json.load(open(full, encoding="utf-8"))["files"].items()}
     stale = []
     for m in re.finditer(r"`([^`]+)`\s*sha256\s*`([0-9a-f]{64})`", text):
         name, digest = m.group(1), m.group(2)
@@ -292,8 +226,21 @@ def archive_provenance(ctx, res):
             if os.path.isfile(cand):
                 actual = sha256_file(cand)
                 if actual != digest:
-                    stale.append({"artifact": name, "issue": "recorded hash no longer "
-                                                             "matches the file",
+                    key = os.path.basename(name)
+                    # Normalisation drift only if the content is byte-identical
+                    # once line endings are put back; anything else is a real
+                    # change to the artifact after its hash was recorded.
+                    raw = open(cand, "rb").read()
+                    as_crlf = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                    same_modulo_eol = (
+                        hashlib.sha256(as_crlf).hexdigest() == digest)
+                    if prenorm.get(key) == digest and same_modulo_eol:
+                        issue = ("recorded digest predates the line-ending "
+                                 "normalisation commit; it describes bytes that no "
+                                 "longer exist in the tree")
+                    else:
+                        issue = "recorded hash no longer matches the file"
+                    stale.append({"artifact": name, "issue": issue,
                                   "recorded": digest[:16], "actual": actual[:16]})
                 break
     problems += stale
@@ -309,35 +256,40 @@ def archive_provenance(ctx, res):
 # constraint / checker parity
 # ---------------------------------------------------------------------------
 
-@gate("CFG.THRESHOLD_PARITY", "Every gate limit came from the canonical manifest",
+@gate("CFG.THRESHOLD_PARITY", "Every gate limit is a typed manifest constraint",
       requires=("constraint_parity",), order=900)
 def threshold_parity(ctx, res):
-    """Compare each limit a gate applied against the manifest value at that key."""
+    """Prove each applied limit resolves to the manifest key it names."""
     applied = ctx.cache("applied_limits", dict)
     res.measurements["limits_applied"] = len(applied)
+    res.measurements["by_kind"] = {}
     problems = []
     for name, record in applied.items():
-        source = record.get("source", "")
-        m = re.match(r"^[^#]+#([^@]+)@", source)
-        if not m:
-            problems.append({"limit": name, "issue": "limit has no manifest provenance",
-                             "source": source})
+        kind = record.get("kind")
+        res.measurements["by_kind"][kind] = res.measurements["by_kind"].get(kind, 0) + 1
+        key = record.get("manifest_key")
+        if not key or not record.get("provenance"):
+            problems.append({"limit": name, "issue": "limit carries no provenance"})
             continue
-        key = m.group(1)
+        if record.get("units") is None:
+            problems.append({"limit": name, "issue": "limit declares no units"})
         if not ctx.manifest.has(key):
             problems.append({"limit": name, "key": key,
                              "issue": "limit cites a manifest key that does not exist"})
             continue
-        canonical = ctx.manifest.get(key)
-        if _leaf(record["value"]) != _leaf(canonical):
+        if _leaf(record["value"]) != _leaf(ctx.manifest.get(key)):
             problems.append({"limit": name, "key": key,
-                             "issue": "gate applied a value that is not the manifest value",
-                             "applied": record["value"], "manifest": canonical})
+                             "issue": "gate applied a value that is not the "
+                                      "manifest value",
+                             "applied": record["value"],
+                             "manifest": ctx.manifest.get(key)})
     for p in problems:
         res.finding(**p)
     if problems:
-        return res.failed(f"{len(problems)} gate limit(s) diverge from the manifest")
-    return res.passed(f"all {len(applied)} applied limits trace to the manifest")
+        return res.failed(f"{len(problems)} gate limit(s) are not typed manifest "
+                          f"constraints")
+    return res.passed(f"all {len(applied)} applied limits are typed constraints "
+                      f"traced to the manifest")
 
 
 def _leaf(value):
@@ -354,8 +306,9 @@ def rival_thresholds(ctx, res):
     spec = ctx.manifest.get("constraint_parity.rival_scan")
     root = ctx.manifest.resolve(".")
     watched = spec["watched_constants"]
-    res.limit("watched_constants", watched, ctx.manifest.source_of(
-        "constraint_parity.rival_scan.watched_constants"))
+    res.limit(ctx.manifest.constraint(
+        "constraint_parity.rival_scan.watched_constants", units="constant name",
+        cid="constraint_parity.watched_constants"))
     problems = []
     for pat in spec["files"]:
         for path in sorted(glob.glob(os.path.join(root, pat), recursive=True)):

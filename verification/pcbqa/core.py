@@ -16,6 +16,8 @@ import os
 import subprocess
 import sys
 
+from .constraints import Constraint, ConstraintError, GeometryProfile
+
 SCHEMA_VERSION = 2
 _MISSING = object()
 
@@ -74,9 +76,13 @@ class GateResult:
         self.findings.append(fields)
         return self
 
-    def limit(self, name, value, source):
-        self.limits[name] = {"value": value, "source": source}
-        return self
+    def limit(self, constraint):
+        """Record a typed constraint this gate applied."""
+        if not isinstance(constraint, Constraint):
+            raise TypeError("gates must apply typed Constraint objects, not raw "
+                            f"values (got {type(constraint).__name__})")
+        self.limits[constraint.id] = constraint.to_dict()
+        return constraint
 
     def evidence_file(self, path, digest=None):
         self.evidence.append({
@@ -188,6 +194,16 @@ class Manifest:
     def source_of(self, key):
         return f"{os.path.basename(self.path)}#{key}@{self.sha256[:12]}"
 
+    def constraint(self, key, units=None, cid=None):
+        """A typed constraint by stable ID. Missing keys raise; no defaults."""
+        value = self.get(key)
+        return Constraint(cid or key, key, value, units,
+                          os.path.basename(self.path), self.sha256)
+
+    def geometry_profile(self):
+        return GeometryProfile(self.get("geometry_profile"),
+                               os.path.basename(self.path), self.sha256)
+
     def resolve(self, *parts):
         """A path relative to the manifest's project_root."""
         base = self.get("project_root")
@@ -285,6 +301,15 @@ class Context:
             return pcbnew.LoadBoard(path)
         return self.cache("board", load)
 
+    def clean_copy(self, into):
+        """A pristine copy of the project, for runs that must not see stale output."""
+        import shutil
+        root = self.manifest.resolve(".")
+        if os.path.isdir(into):
+            shutil.rmtree(into)
+        shutil.copytree(root, into)
+        return into
+
     def run_tool(self, args, timeout=1800):
         proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
         return proc
@@ -373,7 +398,10 @@ def to_markdown(doc):
         if g["limits"]:
             lines.append("Limits applied:")
             for name, lim in g["limits"].items():
-                lines.append(f"- `{name}` = {lim['value']}  (from {lim['source']})")
+                units = f" {lim['units']}" if lim.get("units") else ""
+                lines.append(f"- `{name}` = {lim['value']}{units} "
+                             f"[{lim.get('kind', 'policy')}] "
+                             f"(from {lim.get('provenance', 'unrecorded')})")
             lines.append("")
         shown = g["findings"][:25]
         for f in shown:

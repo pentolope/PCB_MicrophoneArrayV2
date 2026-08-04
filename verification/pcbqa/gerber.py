@@ -122,6 +122,7 @@ class GerberFile:
         self.apertures = {}
         self.macros = {}
         self.shapes = []              # (polygon, polarity_dark)
+        self.flashes = []             # (aperture_code, x, y, polygon) - per object
         self.draw_count = 0
         self.flash_count = 0
         self.region_count = 0
@@ -135,6 +136,15 @@ class GerberFile:
     @property
     def file_polarity(self):
         return self.attributes.get("TF.FilePolarity")
+
+    def circular_flashes(self):
+        """Flashes made with a round aperture, as (x, y, diameter, polygon)."""
+        out = []
+        for code, x, y, shape in self.flashes:
+            kind, dims = self.apertures.get(code, (None, None))
+            if kind == "C":
+                out.append((x, y, dims[0], shape))
+        return out
 
     def is_empty(self):
         return not self.shapes
@@ -257,7 +267,9 @@ class GerberFile:
                 continue
             if code == "3":
                 x, y = nx, ny
-                self.shapes.append((self._flash(current, x, y), polarity_dark))
+                shape = self._flash(current, x, y)
+                self.shapes.append((shape, polarity_dark))
+                self.flashes.append((current, x, y, shape))
                 self.flash_count += 1
         if in_region:
             raise GerberError(f"{self.name}: region left open at end of file")

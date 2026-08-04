@@ -178,8 +178,12 @@ def _board_tenting(board, side):
 class BoardGeometry:
     """Pads, mask openings and vias for one board, built once."""
 
-    def __init__(self, board):
+    def __init__(self, board, contact_tolerance_mm=0.0):
         self.board = board
+        # Two independent polygonisations of the same tangency can differ by a
+        # sub-nanometre gap, so "touching" is a tolerance decision, not an
+        # exact predicate. The value comes from the geometry profile.
+        self.contact_tolerance_mm = contact_tolerance_mm
         self.pads = []          # dicts
         self.vias = []
         self._build()
@@ -260,7 +264,7 @@ class BoardGeometry:
                 # Contact (distance == 0) and strict overlap (positive shared
                 # area) are reported separately: a tangential via still has no
                 # ink dam, but the two counts must not be conflated.
-                "annulus_contacts_opening": bool(annulus.intersects(opening)),
+                "annulus_contacts_opening": bool(d_ann <= self.contact_tolerance_mm),
                 "annulus_overlaps_opening": bool(
                     annulus.intersection(opening).area > 0.0),
             }

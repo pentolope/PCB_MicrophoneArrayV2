@@ -22,7 +22,8 @@
     "constraints.json"
   ],
   "fixture": {
-    "hash_file": "../HASHES.json"
+    "hash_file": "../HASHES.json",
+    "attributes_file": "../../../../.gitattributes"
   },
   "artifacts": {
     "gerber_dir": "generated/release/gerbers",
@@ -35,13 +36,36 @@
       "y": "Mid Y",
       "side": "Layer",
       "rotation": "Rotation"
-    }
+    },
+    "cpl_origin": {
+      "frame": "drill/plot origin at the page origin",
+      "offset_mm": [
+        0.0,
+        0.0
+      ]
+    },
+    "gerber_export_flags": [
+      "--layers",
+      "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts",
+      "--no-protel-ext",
+      "--use-drill-file-origin",
+      "--subtract-soldermask"
+    ]
   },
   "checks": {
     "erc": {
       "flags": [
         "--severity-all",
         "--exit-code-violations"
+      ],
+      "required_flags": [
+        "--severity-all",
+        "--exit-code-violations"
+      ],
+      "required_severities": [
+        "error",
+        "warning",
+        "exclusion"
       ]
     },
     "drc": {
@@ -54,7 +78,18 @@
       "forbidden_severities": [
         "ignore"
       ],
-      "permitted_ignored_rules": []
+      "permitted_ignored_rules": [],
+      "required_flags": [
+        "--severity-all",
+        "--exit-code-violations",
+        "--all-track-errors",
+        "--schematic-parity"
+      ],
+      "required_severities": [
+        "error",
+        "warning",
+        "exclusion"
+      ]
     }
   },
   "reports": {
@@ -87,7 +122,6 @@
   "via_mask": {
     "metric": "annulus_to_opening_mm",
     "design_target_mm": 0.4,
-    "native_gerber_tolerance_mm": 0.01,
     "process": {
       "name": "JLCPCB ordinary ink via plugging (tented/plugged vias)",
       "limit_mm": 0.35,
@@ -102,7 +136,8 @@
       ],
       "require_paste": true
     },
-    "contact_semantics": "annulus_contacts counts zero-distance tangency as contact; annulus_strict_overlaps counts positive shared area only"
+    "contact_semantics": "annulus_contacts counts zero-distance tangency as contact; annulus_strict_overlaps counts positive shared area only",
+    "mask_dam_rule": "contact"
   },
   "routing": {
     "permitted_turn_degrees": [
@@ -376,7 +411,8 @@
         "file_function": "Drillmap",
         "reason": "drill-map drawings are documentation, not fabrication data, and can be mistaken for a copper or legend layer by an importer"
       }
-    ]
+    ],
+    "pre_normalization_digests": "../PRE_NORMALIZATION_HASHES.json"
   },
   "constraint_parity": {
     "rival_scan": {
@@ -396,5 +432,104 @@
       }
     }
   },
-  "waivers": []
+  "waivers": [],
+  "geometry_profile": {
+    "version": "geom-1",
+    "tolerances": {
+      "native_gerber_match_mm": {
+        "value": 0.01,
+        "units": "mm",
+        "why": "Gerber coordinates are emitted at 1e-6 mm; this bounds accumulated rounding when matching an exported flash to a native object."
+      },
+      "polygon_chord_error_mm": {
+        "value": 0.001,
+        "units": "mm",
+        "why": "outward chord error when polygonising arcs; conservative direction only."
+      },
+      "coincidence_mm": {
+        "value": 0.0005,
+        "units": "mm",
+        "why": "two coordinates closer than this are the same point."
+      },
+      "rotation_match_deg": {
+        "value": 0.1,
+        "units": "deg",
+        "why": "CPL rotation is written to 4 dp; this bounds formatting round-trip."
+      },
+      "coordinate_match_mm": {
+        "value": 0.002,
+        "units": "mm",
+        "why": "Gerber coordinates are written at 1e-6 mm; this bounds format round-trip when matching an exported object to a native one."
+      },
+      "dimension_match_mm": {
+        "value": 0.002,
+        "units": "mm",
+        "why": "aperture and drill diameters are written to 6 dp."
+      },
+      "clearance_match_mm": {
+        "value": 0.01,
+        "units": "mm",
+        "why": "native shapes are polygonised outward at 1 um; Gerber apertures are re-polygonised independently, so identical geometry can differ by a few chord errors."
+      },
+      "layer_symmetric_difference_mm2": {
+        "value": 0.05,
+        "units": "mm2",
+        "why": "two independent polygonisations of the same layer differ only by chord error along shared boundaries."
+      },
+      "contact_mm": {
+        "value": 1e-06,
+        "units": "mm",
+        "why": "Two independent polygonisations of the same tangency can leave a sub-nanometre gap. Separation at or below this is treated as contact, i.e. as loss of the solder-mask ink dam."
+      }
+    }
+  },
+  "assembly": {
+    "schematic_fields": [
+      "LCSC",
+      "MPN",
+      "Manufacturer",
+      "Description"
+    ],
+    "required_part_fields": [
+      "LCSC"
+    ],
+    "bom_fields": {
+      "designators": "Designator",
+      "value": "Comment",
+      "footprint": "Footprint",
+      "quantity": "Quantity",
+      "LCSC": "LCSC Part #"
+    }
+  },
+  "release_profile": {
+    "id": "jlcpcb-4layer-assembled",
+    "visual_review_evidence": "generated/release/visual_review.json",
+    "mandatory_gates": [
+      "PROV.FIXTURE_INTEGRITY",
+      "PROV.SOURCE_AUTHORITY",
+      "PROV.REPORT_FRESHNESS",
+      "ERC.AUTHORITATIVE",
+      "DRC.AUTHORITATIVE",
+      "DRC.NO_SUPPRESSED_RULES",
+      "STACK.NATIVE_VS_MANIFEST",
+      "STACK.GERBER_PARITY",
+      "VIA.MASK_CLEARANCE_TARGET",
+      "VIA.MASK_CLEARANCE_PROCESS",
+      "VIA.ANNULUS_MASK_OVERLAP",
+      "VIA.IN_PAD_CONTACT",
+      "VIA.NATIVE_GERBER_AGREEMENT",
+      "NET.TOPOLOGY",
+      "ROUTE.ANGLE_STYLE",
+      "ROUTE.TINY_SEGMENTS",
+      "ROUTE.GEOMETRY_HYGIENE",
+      "CONTRACT.CONNECTOR",
+      "CONTRACT.PLACEMENT",
+      "BOM.NATIVE_PARITY",
+      "CPL.NATIVE_PARITY",
+      "ARCH.CONTENTS",
+      "ARCH.PROVENANCE",
+      "CFG.NO_RIVAL_THRESHOLDS",
+      "CFG.THRESHOLD_PARITY"
+    ]
+  }
 }

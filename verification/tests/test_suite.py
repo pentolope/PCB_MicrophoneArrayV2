@@ -19,7 +19,8 @@ sys.path.insert(0, HERE)
 
 from pcbqa import core                              # noqa: E402
 from pcbqa.core import Context, Manifest, Status     # noqa: E402
-from pcbqa.gates import g_provenance, g_geometry, g_contracts   # noqa: E402,F401
+from pcbqa.gates import (g_provenance, g_checks, g_geometry,  # noqa: F401
+                         g_contracts, g_assembly, g_export_parity)   # noqa: E402,F401
 from tests import build_portability                 # noqa: E402
 
 REVA = os.path.join(HERE, "boards", "reva.json")
@@ -32,6 +33,20 @@ def run_validator(manifest, extra=()):
     proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "validate", manifest,
                            *extra], capture_output=True, text=True, cwd=HERE)
     return proc
+
+
+def _remove(path):
+    """Cleanup that tolerates a file another step already removed."""
+    try:
+        os.unlink(path)
+    except (FileNotFoundError, PermissionError):
+        pass
+
+
+def _write_json(path, doc):
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(doc, fh, indent=2)
+    return path
 
 
 def validate(manifest_path):
@@ -100,15 +115,40 @@ class ReleaseBlocked(unittest.TestCase):
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
         out = os.path.join(HERE, "out", "microphone_array_v2-revA")
-        self.assertFalse(os.path.isdir(os.path.join(out, "release_sealed")),
-                         "a sealed release directory was created despite failures")
+        for forbidden in ("release_sealed", "release_candidate_UNSEALED"):
+            self.assertFalse(os.path.isdir(os.path.join(out, forbidden)),
+                             f"{forbidden} was created despite failures")
         unsafe = os.path.join(out, "release_UNSAFE_diagnostic")
         self.assertTrue(os.path.isdir(unsafe))
         self.assertTrue(os.path.isfile(os.path.join(unsafe, "DO_NOT_ORDER.txt")))
-        for _root, _dirs, files in os.walk(out):
+        # No orderable archive in anything the release itself produced. The
+        # clean source copy is excluded: it is an input, not an output.
+        for root, dirs, files in os.walk(out):
+            dirs[:] = [d for d in dirs if d != "clean_project"]
             for name in files:
                 self.assertFalse(name.lower().endswith(".zip"),
                                  f"release produced an orderable archive: {name}")
+
+    def test_missing_mandatory_gate_blocks_release(self):
+        """A gate that is NOT_APPLICABLE but mandatory must block sealing."""
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc.pop("via_mask")                      # makes four VIA gates N/A
+        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_mandatory.json"), doc)
+        self.addCleanup(_remove, tmp)
+        proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
+                              capture_output=True, text=True, cwd=HERE)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("NOT_APPLICABLE", proc.stdout)
+
+    def test_release_profile_with_no_mandatory_gates_is_refused(self):
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["release_profile"]["mandatory_gates"] = []
+        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_empty_profile.json"), doc)
+        self.addCleanup(_remove, tmp)
+        proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
+                              capture_output=True, text=True, cwd=HERE)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("names no mandatory gates", proc.stdout)
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +278,10 @@ class GenericSourceHygiene(unittest.TestCase):
     def test_no_expected_defect_counts_in_framework_source(self):
         """A generic checker must not encode this board's known answers."""
         anchors = json.load(open(EXPECTED, encoding="utf-8"))["anchors"]
-        values = {v for v in anchors.values() if isinstance(v, int) and v > 3}
+        # Only distinctive counts. Small integers (0, 2, 3, 9, 11, 12) occur
+        # naturally as slot counts and version numbers; flagging them would be
+        # noise, not evidence that a board's answers were hard-coded.
+        values = {v for v in anchors.values() if isinstance(v, int) and v >= 20}
         offenders = []
         for path, text in self._sources():
             try:
@@ -268,6 +311,12 @@ class GenericSourceHygiene(unittest.TestCase):
 class Mutations(unittest.TestCase):
     """Each mutation injects a defect; the suite must notice."""
 
+    @classmethod
+    def setUpClass(cls):
+        results, _ = validate(REVA)
+        cls.baseline_contacts = (results["VIA.ANNULUS_MASK_OVERLAP"]
+                                 ["measurements"]["annulus_contacts"])
+
     def _mutated_manifest(self, mutate):
         doc = json.load(open(REVA, encoding="utf-8"))
         mutate(doc)
@@ -276,7 +325,7 @@ class Mutations(unittest.TestCase):
                                           encoding="utf-8")
         json.dump(doc, tmp, indent=2)
         tmp.close()
-        self.addCleanup(os.unlink, tmp.name)
+        self.addCleanup(_remove, tmp.name)
         return tmp.name
 
     def test_relaxing_a_checker_threshold_without_the_manifest_is_detected(self):
@@ -384,6 +433,159 @@ class Mutations(unittest.TestCase):
         self.assertTrue(mutated.via_mask_report(mutated.vias[0], "front")
                         ["annulus_contacts_opening"],
                         "rotated-pad overlap mutation was not detected")
+
+
+    def _fixture_copy(self, tag):
+        work = tempfile.mkdtemp(prefix="pcbqa_" + tag + "_")
+        project = os.path.join(work, "project")
+        shutil.copytree(os.path.join(HERE, "fixtures", "reva", "project"), project)
+        return project
+
+    def _manifest_for(self, project, tag):
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["project_root"] = os.path.relpath(
+            project, os.path.join(HERE, "boards")).replace(os.sep, "/")
+        doc.pop("fixture", None)
+        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_" + tag + ".json"), doc)
+        self.addCleanup(_remove, tmp)
+        return tmp
+
+    @staticmethod
+    def _via_centres_inside(mask_path, via_points):
+        from shapely.geometry import Point
+        from pcbqa import gerber as gbr
+        mask = gbr.GerberFile(mask_path)
+        count = 0
+        for x, y in via_points:
+            point = Point(x, y)
+            if any(shape.contains(point) for _c, _fx, _fy, shape in mask.flashes):
+                count += 1
+        return count, mask
+
+    def test_moving_a_defect_between_vias_is_detected(self):
+        """Per-object truth moves while every total stays the same.
+
+        Two solder-mask apertures are swapped in the shipped Gerber: a circular
+        one sitting on one via and a rounded-rectangle one sitting on another.
+        The number of apertures, the aperture list and the number of via
+        centres inside an opening are all unchanged - a totals comparison sees
+        nothing - but each of those two vias now faces a different opening with
+        a different clearance, so the per-object comparison must fail.
+        """
+        import pcbnew
+        from pcbqa import geom, gerber as gbr
+
+        project = self._fixture_copy("swap")
+        mask_path = os.path.join(project, "generated", "release", "gerbers",
+                                 "microphone_array_v2-F_Mask.gbr")
+        board = pcbnew.LoadBoard(os.path.join(project,
+                                              "microphone_array_v2.kicad_pcb"))
+        survey = geom.BoardGeometry(board, contact_tolerance_mm=1e-6)
+        via_points = [(v.x, -v.y) for v in survey.vias]
+
+        before, mask = self._via_centres_inside(mask_path, via_points)
+        from shapely.affinity import translate
+        from shapely.geometry import Point
+
+        # A via with generous clearance in the shipped export, and a mask
+        # opening that contains no via centre at all.
+        def nearest_gap(shape_list, x, y):
+            annulus = Point(x, y).buffer(0.225, quad_segs=32)
+            return min(annulus.distance(sh) for sh in shape_list)
+
+        shapes = [f[3] for f in mask.flashes]
+        roomy = None
+        for x, y in via_points:
+            if nearest_gap(shapes, x, y) > 1.0:
+                roomy = (x, y)
+                break
+        self.assertIsNotNone(roomy, "no via with generous clearance to relocate onto")
+
+        spare = None
+        for index, (code, fx, fy, shape) in enumerate(mask.flashes):
+            if any(shape.contains(Point(x, y)) for x, y in via_points):
+                continue
+            half = max(shape.bounds[2] - shape.bounds[0],
+                       shape.bounds[3] - shape.bounds[1]) / 2.0
+            if half < 0.45:                     # must not swallow the via centre
+                spare = (index, fx, fy, shape, half)
+                break
+        self.assertIsNotNone(spare, "no relocatable opening found")
+        index, fx, fy, shape, half = spare
+
+        # Park it 0.5 mm from the via centre: close enough to destroy the
+        # clearance, far enough that the via centre stays outside the opening,
+        # so the count of centres-inside - the only thing a totals comparison
+        # looked at - is untouched.
+        tx, ty = roomy[0] + 0.5, roomy[1]
+        trial = list(shapes)
+        trial[index] = translate(shape, tx - fx, ty - fy)
+        self.assertEqual(sum(1 for x, y in via_points
+                             if any(sh.contains(Point(x, y)) for sh in trial)),
+                         before, "relocation must not change centres-inside")
+
+        text = open(mask_path, encoding="utf-8").read()
+        tok_from = "X%dY%dD03*" % (round(fx * 1e6), round(fy * 1e6))
+        tok_to = "X%dY%dD03*" % (round(tx * 1e6), round(ty * 1e6))
+        self.assertEqual(text.count(tok_from), 1, tok_from)
+        open(mask_path, "w", encoding="utf-8").write(
+            text.replace(tok_from, tok_to, 1))
+
+        after, _ = self._via_centres_inside(mask_path, via_points)
+        self.assertEqual(before, after,
+                         "the mutation was supposed to preserve the totals a "
+                         "counting comparison would look at")
+
+        results, _ = validate(self._manifest_for(project, "swap"))
+        gate = results["VIA.NATIVE_GERBER_AGREEMENT"]
+        self.assertEqual(gate["status"], Status.FAIL,
+                         "per-object gate missed a defect that moved between vias")
+        issues = {f.get("issue", "") for f in gate["findings"]}
+        self.assertTrue(
+            any("clearance disagrees" in i or "different object" in i
+                or "disagrees" in i for i in issues), issues)
+
+    def test_moving_a_via_without_re_exporting_is_detected(self):
+        """A via moved in the board but not re-exported must fail object matching."""
+        import pcbnew
+        project = self._fixture_copy("vmove")
+        board_path = os.path.join(project, "microphone_array_v2.kicad_pcb")
+        board = pcbnew.LoadBoard(board_path)
+        via = next(t for t in board.Tracks() if isinstance(t, pcbnew.PCB_VIA))
+        pos = via.GetPosition()
+        via.SetPosition(pcbnew.VECTOR2I(pos.x + pcbnew.FromMM(0.5), pos.y))
+        board.Save(board_path)
+
+        results, _ = validate(self._manifest_for(project, "vmove"))
+        gate = results["VIA.NATIVE_GERBER_AGREEMENT"]
+        self.assertEqual(gate["status"], Status.FAIL)
+        self.assertTrue(any("no plated drill hit" in f.get("issue", "")
+                            for f in gate["findings"]), gate["findings"])
+
+    def test_editing_a_shipped_gerber_is_detected(self):
+        """A copper layer changed after export must fail per-layer parity."""
+        work = tempfile.mkdtemp(prefix="pcbqa_layer_")
+        project = os.path.join(work, "project")
+        shutil.copytree(os.path.join(HERE, "fixtures", "reva", "project"), project)
+        target = os.path.join(project, "generated", "release", "gerbers",
+                              "microphone_array_v2-F_Cu.gbr")
+        text = open(target, encoding="utf-8").read()
+        cut = text.replace("D03*", "D02*", 1)      # one flash becomes a move
+        self.assertNotEqual(text, cut)
+        open(target, "w", encoding="utf-8").write(cut)
+
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["project_root"] = os.path.relpath(
+            project, os.path.join(HERE, "boards")).replace("\\", "/")
+        doc.pop("fixture", None)
+        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_layer.json"), doc)
+        self.addCleanup(_remove, tmp)
+        results, _ = validate(tmp)
+        gate = results["STACK.GERBER_PARITY"]
+        self.assertEqual(gate["status"], Status.FAIL,
+                         "per-layer parity missed an edited copper layer")
+        self.assertTrue(any("differs from a fresh export" in f.get("issue", "")
+                            for f in gate["findings"]), gate["findings"])
 
     def test_gerber_parser_fails_closed_on_unknown_aperture(self):
         from pcbqa import gerber

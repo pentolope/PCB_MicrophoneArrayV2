@@ -1,0 +1,231 @@
+test_unsupported_geometry_raises (tests.test_geometry.FailClosedTests.test_unsupported_geometry_raises) ... ok
+test_circle_and_oval (tests.test_geometry.PadOutlineTests.test_circle_and_oval) ... ok
+test_flipped_footprint_moves_pad_to_back (tests.test_geometry.PadOutlineTests.test_flipped_footprint_moves_pad_to_back) ... ok
+test_mask_margin_grows_opening (tests.test_geometry.PadOutlineTests.test_mask_margin_grows_opening) ... ok
+test_negative_mask_margin_shrinks_opening (tests.test_geometry.PadOutlineTests.test_negative_mask_margin_shrinks_opening) ... ok
+test_rectangular_pad_area_and_bbox (tests.test_geometry.PadOutlineTests.test_rectangular_pad_area_and_bbox) ... ok
+test_rotated_rectangle_bbox_matches_analytic (tests.test_geometry.PadOutlineTests.test_rotated_rectangle_bbox_matches_analytic)
+A 2x1 pad at 30 degrees has a known axis-aligned bounding box. ... ok
+test_rotation_does_not_change_area (tests.test_geometry.PadOutlineTests.test_rotation_does_not_change_area) ... ok
+test_roundrect_area_between_rect_and_inscribed (tests.test_geometry.PadOutlineTests.test_roundrect_area_between_rect_and_inscribed) ... ok
+test_distance_is_measured_from_the_annulus_edge (tests.test_geometry.ViaMaskDistanceTests.test_distance_is_measured_from_the_annulus_edge) ... ok
+test_overlap_and_centre_inside (tests.test_geometry.ViaMaskDistanceTests.test_overlap_and_centre_inside) ... ok
+test_rotated_pad_overlap_is_detected (tests.test_geometry.ViaMaskDistanceTests.test_rotated_pad_overlap_is_detected)
+A via that clears an axis-aligned pad but not the same pad rotated. ... ok
+test_tangency_is_contact_but_not_strict_overlap (tests.test_geometry.ViaMaskDistanceTests.test_tangency_is_contact_but_not_strict_overlap) ... ok
+test_thresholds_just_below_at_and_above (tests.test_geometry.ViaMaskDistanceTests.test_thresholds_just_below_at_and_above) ... ok
+test_unrotated_equivalent_does_not_overlap (tests.test_geometry.ViaMaskDistanceTests.test_unrotated_equivalent_does_not_overlap) ... ok
+test_framework_declares_no_absolute_project_paths (tests.test_suite.GenericSourceHygiene.test_framework_declares_no_absolute_project_paths) ... ok
+test_no_board_identifier_appears_in_framework_source (tests.test_suite.GenericSourceHygiene.test_no_board_identifier_appears_in_framework_source) ... ok
+test_no_expected_defect_counts_in_framework_source (tests.test_suite.GenericSourceHygiene.test_no_expected_defect_counts_in_framework_source)
+A generic checker must not encode this board's known answers. ... ok
+test_adding_a_new_disallowed_file_to_the_archive_is_detected (tests.test_suite.Mutations.test_adding_a_new_disallowed_file_to_the_archive_is_detected) ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_altered_output_after_hash_recorded_is_detected (tests.test_suite.Mutations.test_altered_output_after_hash_recorded_is_detected)
+Mutate a packaged file and the release manifest hash must mismatch. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_bypassing_a_validation_stage_is_detected (tests.test_suite.Mutations.test_bypassing_a_validation_stage_is_detected)
+Removing a gate's policy makes it NOT_APPLICABLE, and the expectation ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_drill_map_in_the_archive_is_detected (tests.test_suite.Mutations.test_drill_map_in_the_archive_is_detected) ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_editing_a_shipped_gerber_is_detected (tests.test_suite.Mutations.test_editing_a_shipped_gerber_is_detected)
+A copper layer changed after export must fail per-layer parity. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_gerber_parser_fails_closed_on_unknown_aperture (tests.test_suite.Mutations.test_gerber_parser_fails_closed_on_unknown_aperture) ... ok
+test_moving_a_defect_between_vias_is_detected (tests.test_suite.Mutations.test_moving_a_defect_between_vias_is_detected)
+Per-object truth moves while every total stays the same. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_moving_a_via_without_re_exporting_is_detected (tests.test_suite.Mutations.test_moving_a_via_without_re_exporting_is_detected)
+A via moved in the board but not re-exported must fail object matching. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_relaxing_a_checker_threshold_without_the_manifest_is_detected (tests.test_suite.Mutations.test_relaxing_a_checker_threshold_without_the_manifest_is_detected)
+CFG.NO_RIVAL_THRESHOLDS must catch a divergent constant in a checker. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_rotated_pad_via_overlap_mutation_is_detected (tests.test_suite.Mutations.test_rotated_pad_via_overlap_mutation_is_detected)
+Rotating a pad so a previously clear via now overlaps must be caught. ... ok
+test_stale_drc_report_substitution_is_detected (tests.test_suite.Mutations.test_stale_drc_report_substitution_is_detected)
+Swapping in a report that names a different source must be caught. ... Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+ok
+test_threshold_parity_detects_a_gate_that_invents_a_limit (tests.test_suite.Mutations.test_threshold_parity_detects_a_gate_that_invents_a_limit)
+A gate citing a manifest key whose value differs must be caught. ... ok
+Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+test_absent_policy_is_not_applicable_not_silently_passing (tests.test_suite.Portability.test_absent_policy_is_not_applicable_not_silently_passing) ... ok
+test_board_is_structurally_unlike_reva (tests.test_suite.Portability.test_board_is_structurally_unlike_reva) ... ok
+test_cli_accepts_the_other_board (tests.test_suite.Portability.test_cli_accepts_the_other_board) ... ok
+test_generic_gates_run_on_a_structurally_different_board (tests.test_suite.Portability.test_generic_gates_run_on_a_structurally_different_board) ... ok
+test_missing_mandatory_gate_blocks_release (tests.test_suite.ReleaseBlocked.test_missing_mandatory_gate_blocks_release)
+A gate that is NOT_APPLICABLE but mandatory must block sealing. ... ok
+test_release_creates_no_sealed_package (tests.test_suite.ReleaseBlocked.test_release_creates_no_sealed_package) ... ok
+test_release_profile_with_no_mandatory_gates_is_refused (tests.test_suite.ReleaseBlocked.test_release_profile_with_no_mandatory_gates_is_refused) ... ok
+Adding duplicate image handler for 'PNG file'
+Adding duplicate image handler for 'JPEG file'
+Adding duplicate image handler for 'TIFF file'
+Adding duplicate image handler for 'GIF file'
+Adding duplicate image handler for 'PNM file'
+Adding duplicate image handler for 'PCX file'
+Adding duplicate image handler for 'IFF file'
+Adding duplicate image handler for 'Windows icon file'
+Adding duplicate image handler for 'Windows cursor file'
+Adding duplicate image handler for 'Windows animated cursor file'
+Adding duplicate image handler for 'TGA file'
+Adding duplicate image handler for 'XPM file'
+Adding duplicate image handler for 'WebP file'
+test_all_gates_run_after_the_first_failure (tests.test_suite.RevAExpectedFailureMatrix.test_all_gates_run_after_the_first_failure) ... ok
+test_anchor_counts_reproduce_independently (tests.test_suite.RevAExpectedFailureMatrix.test_anchor_counts_reproduce_independently) ... ok
+test_cli_exit_status_is_nonzero (tests.test_suite.RevAExpectedFailureMatrix.test_cli_exit_status_is_nonzero) ... ok
+test_every_gate_has_an_expectation (tests.test_suite.RevAExpectedFailureMatrix.test_every_gate_has_an_expectation) ... ok
+test_gate_statuses_match_expectation (tests.test_suite.RevAExpectedFailureMatrix.test_gate_statuses_match_expectation) ... ok
+test_verdict_is_rejected (tests.test_suite.RevAExpectedFailureMatrix.test_verdict_is_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 43 tests in 710.670s
+
+OK
+EXIT=0

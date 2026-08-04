@@ -38,7 +38,10 @@ Use KiCad's bundled Python (it provides `pcbnew` and `shapely`):
 | `pcbqa/gerber.py` | independent Gerber X2 + Excellon readers, incl. an aperture-macro interpreter |
 | `pcbqa/gates/g_provenance.py` | fixture integrity, source authority, report freshness, ERC/DRC |
 | `pcbqa/gates/g_geometry.py` | stackup, via/mask clearance, routing style |
-| `pcbqa/gates/g_contracts.py` | net topology, connector, placement, BOM/CPL, archive, constraint parity |
+| `pcbqa/gates/g_contracts.py` | net topology, connector, placement, archive, constraint parity |
+| `pcbqa/gates/g_assembly.py` | BOM and CPL parity against the native design |
+| `pcbqa/gates/g_export_parity.py` | per-object via parity and per-layer copper parity |
+| `pcbqa/connectivity.py` | copper graph built from geometric intersection |
 | `pcbqa/rules/__init__.py` | reusable rule types: `NetTopologyRule`, `ConnectorContractRule`, `PlacementRule` |
 | `boards/*.json` | per-board policy. **All** board identity lives here |
 | `fixtures/reva/` | byte-for-byte frozen Rev A + `HASHES.json` |
@@ -114,6 +117,38 @@ value, and documentation consistency (`must_claim` / `must_not_claim`).
 family of references, with an optional local offset so a feature (an acoustic
 port, say) can be measured instead of the footprint origin.
 
+## Export parity, per object
+
+Neither export gate compares totals.
+
+`VIA.NATIVE_GERBER_AGREEMENT` matches **every** via individually. For each one
+it finds the plated drill hit at that coordinate, the circular copper flash of
+the right diameter on each outer layer, and then recomputes the whole mask
+classification from Gerber geometry alone. Native and export must agree on:
+signed clearance, contact, positive-area overlap, centre-inside, the project
+limit class, the process limit class, and the identity of the nearest opening.
+Identity is compared against the *tie set* - every opening as close as the
+nearest to within `clearance_match_mm` - because a via sitting exactly between
+two pads has no single nearest opening and two implementations may legitimately
+pick different members.
+
+`STACK.GERBER_PARITY` re-exports the native board with the flags recorded in
+`artifacts.gerber_export_flags` and compares each shipped copper layer against
+the fresh one by **geometric symmetric difference**, limited by
+`layer_symmetric_difference_mm2`. Matching X2 file functions and non-empty
+payloads are necessary but nowhere near sufficient.
+
+Two mutation tests keep them honest:
+
+- a solder-mask opening is relocated so one via loses its clearance, chosen so
+  the count of via centres inside an opening is provably unchanged - the number
+  the old totals-only gate compared. The per-object gate fails; a counting gate
+  would not have noticed.
+- a via is moved in the board without re-exporting, and object matching fails
+  on the missing drill hit.
+- one flash in a shipped copper Gerber is turned into a move, and per-layer
+  symmetric difference fails.
+
 ## Measurement definitions
 
 Via-to-mask distances are never collapsed into one number. Each via reports:
@@ -124,12 +159,18 @@ Via-to-mask distances are never collapsed into one number. Each via reports:
 | `annulus_to_opening_mm` | via pad edge to mask aperture edge (the process metric) |
 | `centre_to_opening_mm` | via centre to aperture edge, negative when inside |
 | `annulus_to_pad_copper_mm` | via pad edge to pad copper edge |
-| `annulus_contacts_opening` | zero distance, i.e. tangency counts |
+| `annulus_contacts_opening` | separation at or below `geometry_profile.tolerances.contact_mm` |
 | `annulus_overlaps_opening` | positive shared area only |
 
 Curved shapes are polygonised **outward** at 1 µm chord error, so an
 approximation can only under-state clearance, never over-state it. The
 synthetic tests assert that directly.
+
+Contact is a tolerance decision, not an exact predicate: two independent
+polygonisations of the same tangency can differ by a sub-nanometre gap, so
+anything at or below `contact_mm` (1e-6 mm) counts as contact and is treated
+per the configured `via_mask.mask_dam_rule`. Positive-area overlap is reported
+separately, so a tangency is never silently folded into an overlap count.
 
 ## Fail-closed behaviour
 

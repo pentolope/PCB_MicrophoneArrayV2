@@ -89,14 +89,19 @@ class CopperGraph:
 
 
 class NetTopologyRule:
-    """Measure driver-to-load electrical path length across a family of nets."""
+    """Driver-to-load electrical path length across a family of nets.
+
+    Connectivity comes from actual copper intersection (see pcbqa.connectivity),
+    not from endpoint equality, so a track that lands inside a via annulus or
+    part-way along another track is correctly seen as connected.
+    """
 
     def __init__(self, spec):
         self.spec = spec
         self.id = spec["id"]
 
-    def evaluate(self, board):
-        import pcbnew
+    def evaluate(self, board, pad_polygon):
+        from ..connectivity import NetGraph
         net_re = re.compile(self.spec["net_regex"])
         src_re = re.compile(self.spec["source_pad_regex"])
         load_re = re.compile(self.spec["load_pad_regex"])
@@ -104,46 +109,39 @@ class NetTopologyRule:
                        if net_re.match(t.GetNetname() or "")})
         measured, problems = [], []
         for net in nets:
-            graph = CopperGraph(board, net)
+            graph = NetGraph(board, net, pad_polygon)
             sources, loads = [], []
             for fp, pad in iter_pads(board):
                 if pad.GetNetname() != net:
                     continue
                 label = pad_label(fp, pad)
                 if src_re.match(label):
-                    sources.append((label, pad))
+                    sources.append(label)
                 elif load_re.match(label):
-                    loads.append((label, pad))
+                    loads.append(label)
             if not sources or not loads:
                 problems.append({"net": net, "issue": "driver or load pad not found",
-                                 "sources": [s for s, _ in sources],
-                                 "loads": [l for l, _ in loads]})
+                                 "sources": sources, "loads": loads})
                 continue
-            start_nodes = set()
-            for _l, pad in sources:
-                start_nodes |= graph.attach(pad)
-            paths = []
-            for label, pad in loads:
-                target = graph.attach(pad)
-                d = graph.shortest(start_nodes, target) if (start_nodes and target) else None
-                paths.append((label, d))
-            unreachable = [l for l, d in paths if d is None]
-            good = [d for _l, d in paths if d is not None]
+            paths = {l: graph.path_length(sources, l) for l in loads}
+            unreachable = sorted(l for l, d in paths.items() if d is None)
+            good = [d for d in paths.values() if d is not None]
             measured.append({
                 "net": net,
-                "driver_pads": [s for s, _ in sources],
-                "load_pads": [l for l, _ in loads],
-                "path_mm": {l: (None if d is None else round(d, 3)) for l, d in paths},
-                "vias": graph.vias,
-                "layers": sorted(graph.layers),
-                "total_copper_mm": round(sum(t.GetLength() / 1e6
-                                             for t in graph.segments), 3),
+                "driver_pads": sorted(sources),
+                "load_pads": sorted(loads),
+                "path_mm": {l: (None if d is None else round(d, 3))
+                            for l, d in sorted(paths.items())},
+                "vias": graph.vias(),
+                "layers": graph.layers_used(board),
+                "total_track_copper_mm": round(graph.total_track_mm(), 3),
                 "max_path_mm": round(max(good), 3) if good else None,
                 "min_path_mm": round(min(good), 3) if good else None,
-                "branch_points": sum(1 for _n, deg in _degrees(graph).items() if deg > 2),
+                "branch_points": graph.branch_points(),
             })
             if unreachable:
-                problems.append({"net": net, "issue": "load not reachable along copper",
+                problems.append({"net": net,
+                                 "issue": "load not reachable along copper",
                                  "loads": unreachable})
         return measured, problems
 
@@ -157,7 +155,8 @@ class NetTopologyRule:
                     "issue": "branch length spread exceeds the requirement",
                     "measured_spread_mm": round(spread, 3),
                     "limit_mm": self.spec["max_spread_mm"],
-                    "min_mm": round(min(maxima), 3), "max_mm": round(max(maxima), 3)})
+                    "min_mm": round(min(maxima), 3), "max_mm": round(max(maxima), 3),
+                    "definition": "longest driver-to-load path per net; vias contribute zero"})
         if "max_vias_per_net" in self.spec:
             for m in measured:
                 if m["vias"] > self.spec["max_vias_per_net"]:
@@ -173,13 +172,6 @@ class NetTopologyRule:
                                      "net": m["net"], "layers": extra,
                                      "permitted": sorted(allowed)})
         return problems
-
-
-def _degrees(graph):
-    deg = defaultdict(int)
-    for node, edges in graph.adj.items():
-        deg[node] = len(edges)
-    return deg
 
 
 class ConnectorContractRule:

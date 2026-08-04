@@ -42,8 +42,8 @@ def _native_stackup(ctx):
 @gate("STACK.NATIVE_VS_MANIFEST", "Board stackup matches the frozen constraints",
       requires=("stackup.expected",))
 def stack_native(ctx, res):
-    expected = ctx.manifest.get("stackup.expected")
-    res.limit("expected_stackup", expected, ctx.manifest.source_of("stackup.expected"))
+    expected = res.limit(ctx.manifest.constraint(
+        "stackup.expected", units="layer roles", cid="stackup.expected")).value
     stack = _native_stackup(ctx)
     res.measurements["native_stackup"] = stack
     res.measurements["copper_layers"] = len(stack)
@@ -76,43 +76,6 @@ def stack_native(ctx, res):
     return res.passed("native stackup agrees with the frozen constraints")
 
 
-@gate("STACK.GERBER_PARITY", "Exported copper layers match the native stackup",
-      requires=("stackup.expected", "artifacts.gerber_dir"))
-def stack_gerber(ctx, res):
-    directory = ctx.manifest.resolve(ctx.manifest.get("artifacts.gerber_dir"))
-    if not os.path.isdir(directory):
-        return res.errored(f"gerber directory not found: {directory}")
-    layers, drills, _ = gerber.load_layers(directory)
-    stack = _native_stackup(ctx)
-    copper = {}
-    for name, f in layers.items():
-        fn = f.file_function or ""
-        m = re.match(r"Copper,L(\d+)", fn)
-        if m:
-            copper[int(m.group(1))] = (name, f)
-    res.measurements["copper_layers_exported"] = sorted(copper)
-    problems = []
-    if sorted(copper) != list(range(1, len(stack) + 1)):
-        problems.append({"issue": "exported copper layer numbering does not cover "
-                                  "the native stack",
-                         "exported": sorted(copper),
-                         "native_count": len(stack)})
-    for index, entry in enumerate(stack, start=1):
-        if index not in copper:
-            continue
-        name, f = copper[index]
-        area = 0.0 if f.union() is None else f.union().area
-        if area <= 0.0:
-            problems.append({"layer_index": index, "file": name,
-                             "issue": "exported copper layer is empty"})
-    for p in problems:
-        res.finding(**p)
-    if problems:
-        return res.failed(f"{len(problems)} exported/native copper disagreement(s)")
-    return res.passed(f"{len(copper)} exported copper layers agree with the native "
-                      f"stack by X2 file function and payload")
-
-
 # ---------------------------------------------------------------------------
 # via / mask geometry
 # ---------------------------------------------------------------------------
@@ -120,7 +83,8 @@ def stack_gerber(ctx, res):
 def _via_survey(ctx):
     """Per-via nearest mask opening on each side, from the native board."""
     def build():
-        g = geom.BoardGeometry(ctx.board())
+        tol = ctx.manifest.geometry_profile().tolerance("contact_mm").value
+        g = geom.BoardGeometry(ctx.board(), contact_tolerance_mm=tol)
         rows = []
         for via in g.vias:
             row = {"net": via.net, "x_mm": round(via.x, 4), "y_mm": round(via.y, 4),
@@ -143,10 +107,10 @@ def _worst(row, field):
 
 
 def _clearance_gate(ctx, res, limit_key, label):
-    limit = ctx.manifest.get(limit_key)
-    metric = ctx.manifest.get("via_mask.metric")
-    res.limit(label, limit, ctx.manifest.source_of(limit_key))
-    res.limit("metric", metric, ctx.manifest.source_of("via_mask.metric"))
+    constraint = res.limit(ctx.manifest.constraint(limit_key, units="mm", cid=label))
+    metric = res.limit(ctx.manifest.constraint(
+        "via_mask.metric", units="field name", cid="via_mask.metric")).value
+    limit = constraint.value
     _, rows = _via_survey(ctx)
     offenders = []
     for row in rows:
@@ -193,6 +157,7 @@ def via_process(ctx, res):
 @gate("VIA.ANNULUS_MASK_OVERLAP", "No via annulus intersects a mask opening",
       requires=("via_mask",))
 def via_overlap(ctx, res):
+    res.limit(ctx.manifest.geometry_profile().tolerance("contact_mm"))
     _, rows = _via_survey(ctx)
     hits, strict = [], 0
     for row in rows:
@@ -223,8 +188,11 @@ def via_overlap(ctx, res):
       requires=("via_mask.pad_contact",))
 def via_in_pad(ctx, res):
     spec = ctx.manifest.get("via_mask.pad_contact")
-    res.limit("populated_pad_attributes", spec["populated_pad_attributes"],
-              ctx.manifest.source_of("via_mask.pad_contact.populated_pad_attributes"))
+    res.limit(ctx.manifest.constraint(
+        "via_mask.pad_contact.populated_pad_attributes", units="pad attribute",
+        cid="via_mask.populated_pad_attributes"))
+    res.limit(ctx.manifest.constraint(
+        "via_mask.mask_dam_rule", units="policy", cid="via_mask.mask_dam_rule"))
     g, rows = _via_survey(ctx)
     paste = _paste_pads(ctx)
     populated = set(spec["populated_pad_attributes"])
@@ -284,61 +252,6 @@ def _paste_pads(ctx):
     return ctx.cache("paste_pads", build)
 
 
-@gate("VIA.NATIVE_GERBER_AGREEMENT", "Native and exported mask geometry agree",
-      requires=("via_mask", "artifacts.gerber_dir"))
-def via_gerber_agreement(ctx, res):
-    directory = ctx.manifest.resolve(ctx.manifest.get("artifacts.gerber_dir"))
-    tol = ctx.manifest.get("via_mask.native_gerber_tolerance_mm")
-    res.limit("tolerance_mm", tol,
-              ctx.manifest.source_of("via_mask.native_gerber_tolerance_mm"))
-    layers, _, _ = gerber.load_layers(directory)
-    masks = {}
-    for name, f in layers.items():
-        fn = (f.file_function or "").lower()
-        if fn.startswith("soldermask,top"):
-            masks["front"] = (name, f)
-        elif fn.startswith("soldermask,bot"):
-            masks["back"] = (name, f)
-    if not masks:
-        return res.errored("no solder-mask layers found in the export")
-    g, rows = _via_survey(ctx)
-    origin = _gerber_origin(ctx)
-    disagree = []
-    for side, (name, f) in masks.items():
-        union = f.union()
-        if union is None:
-            continue
-        native_count = sum(1 for row in rows
-                           if side in row["sides"]
-                           and row["sides"][side]["centre_inside_opening"])
-        gerber_count = 0
-        for row in rows:
-            gx = row["x_mm"] + origin[0]
-            gy = -row["y_mm"] + origin[1]
-            from shapely.geometry import Point
-            if union.contains(Point(gx, gy)):
-                gerber_count += 1
-        res.measurements[f"{side}_centres_inside_native"] = native_count
-        res.measurements[f"{side}_centres_inside_gerber"] = gerber_count
-        if native_count != gerber_count:
-            disagree.append({"side": side, "gerber": name,
-                             "native_centres_inside": native_count,
-                             "gerber_centres_inside": gerber_count,
-                             "issue": "native and exported mask disagree"})
-        res.evidence_file(os.path.join(directory, name))
-    for d in disagree:
-        res.finding(**d)
-    if disagree:
-        return res.failed("native board and exported Gerbers disagree about which "
-                          "vias sit inside a mask opening")
-    return res.passed("native and exported solder-mask geometry agree on every via")
-
-
-def _gerber_origin(ctx):
-    """Offset from board mm coordinates to Gerber mm coordinates."""
-    return (0.0, 0.0)
-
-
 # ---------------------------------------------------------------------------
 # routing style / topology
 # ---------------------------------------------------------------------------
@@ -369,12 +282,12 @@ def _joins(segs):
 @gate("ROUTE.ANGLE_STYLE", "Routing obeys the permitted angle style",
       requires=("routing.permitted_turn_degrees",))
 def route_angles(ctx, res):
-    permitted = ctx.manifest.get("routing.permitted_turn_degrees")
-    tol = ctx.manifest.get("routing.angle_tolerance_deg")
-    res.limit("permitted_turn_degrees", permitted,
-              ctx.manifest.source_of("routing.permitted_turn_degrees"))
-    res.limit("angle_tolerance_deg", tol,
-              ctx.manifest.source_of("routing.angle_tolerance_deg"))
+    permitted = res.limit(ctx.manifest.constraint(
+        "routing.permitted_turn_degrees", units="deg",
+        cid="routing.permitted_turn_degrees")).value
+    tol = res.limit(ctx.manifest.constraint(
+        "routing.angle_tolerance_deg", units="deg",
+        cid="routing.angle_tolerance_deg")).value
     board, segs, _ = _track_graph(ctx)
     off = []
     for (k, pt), grp in _joins(segs).items():
@@ -415,8 +328,8 @@ def route_angles(ctx, res):
 @gate("ROUTE.TINY_SEGMENTS", "No unjustified sub-minimum track fragments",
       requires=("routing.min_segment_mm",))
 def route_tiny(ctx, res):
-    limit = ctx.manifest.get("routing.min_segment_mm")
-    res.limit("min_segment_mm", limit, ctx.manifest.source_of("routing.min_segment_mm"))
+    limit = res.limit(ctx.manifest.constraint(
+        "routing.min_segment_mm", units="mm", cid="routing.min_segment_mm")).value
     justify = ctx.manifest.get("routing.short_segment_justification", {})
     board, segs, vias = _track_graph(ctx)
     via_pts = {(v.GetPosition().x, v.GetPosition().y) for v in vias}
