@@ -1,8 +1,0 @@
-# Non-stdlib dependencies for pcbqa, pinned to the versions shipped inside the
-# supported KiCad Python environment. Install into that interpreter, not a
-# system Python:
-#
-#   "C:\Program Files\KiCad\10.0\bin\python.exe" -m pip install -r requirements.txt
-#
-# pcbnew is provided by the KiCad installation itself and cannot be pip-installed.
-shapely==2.1.2

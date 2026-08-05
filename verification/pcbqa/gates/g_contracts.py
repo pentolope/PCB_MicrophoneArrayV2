@@ -40,6 +40,10 @@ def _docs(ctx, patterns):
       requires=("net_topology.rules",))
 def net_topology(ctx, res):
     board = ctx.board()
+    # Connectivity is decided by whether copper shapes actually intersect, so
+    # the chord error used to approximate them is part of the answer.
+    geom.configure(res.limit(ctx.manifest.geometry_profile()
+                             .tolerance("polygon_chord_error_mm")).value)
     problems = []
     for index, spec in enumerate(ctx.manifest.get("net_topology.rules")):
         rule = NetTopologyRule(spec)

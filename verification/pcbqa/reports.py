@@ -72,7 +72,8 @@ def parse_erc(doc):
 
 
 def _normalise(item, bucket):
-    first = (item.get("items") or [{}])[0]
+    items = item.get("items") or [{}]
+    first = items[0]
     pos = first.get("pos") or {}
     return {
         "category": bucket,
@@ -80,6 +81,11 @@ def _normalise(item, bucket):
         "rule": item.get("type"),
         "description": (item.get("description") or "")[:200],
         "object": (first.get("description") or "")[:160],
+        # Every affected object, not just the first: a waiver that names one
+        # end of a two-object violation is not an exact waiver.
+        "objects": [(i.get("description") or "")[:160] for i in items],
+        "uuids": [i.get("uuid") for i in items if i.get("uuid")],
+        "excluded": bool(item.get("excluded", False)),
         "x_mm": pos.get("x"),
         "y_mm": pos.get("y"),
     }

@@ -22,7 +22,7 @@
     "ROUTE.GEOMETRY_HYGIENE": "PASS",
     "CONTRACT.CONNECTOR": "FAIL",
     "CONTRACT.PLACEMENT": "PASS",
-    "BOM.NATIVE_PARITY": "PASS",
+    "BOM.NATIVE_PARITY": "FAIL",
     "ARCH.CONTENTS": "FAIL",
     "ARCH.PROVENANCE": "FAIL",
     "CFG.NO_RIVAL_THRESHOLDS": "FAIL",
@@ -40,11 +40,11 @@
     "VIA.IN_PAD_CONTACT.partial_overlap_populated_strict": 3,
     "ROUTE.TINY_SEGMENTS.below_limit_total": 88,
     "ROUTE.ANGLE_STYLE.off_style_sharper_than_permitted_max": 69,
-    "BOM.NATIVE_PARITY.native_populated": 103,
     "VIA.ANNULUS_MASK_OVERLAP.annulus_tangencies": 1,
     "VIA.IN_PAD_CONTACT.populated_pad_contacts_total": 13,
-    "CPL.NATIVE_PARITY.native_populated": 103,
-    "BOM.NATIVE_PARITY.bom_lines": 15
+    "BOM.NATIVE_PARITY.bom_lines": 15,
+    "BOM.NATIVE_PARITY.schematic_populated": 103,
+    "CPL.NATIVE_PARITY.schematic_populated": 103
   },
   "anchor_reconciliation": {
     "populated_pad_contacts": "9 via centres inside a populated pad opening + 3 strict partial overlaps = 12 populated-pad contacts requiring disposition, matching the audit. The validator additionally reports 1 exact tangency (U2.20), which it counts as a contact because a zero-distance annulus retains no ink dam. Total reported contacts is therefore 13; the strict-overlap figure is 12.",
@@ -54,6 +54,7 @@
     "u2_20_resolution": "U2.20 is a boundary case and is now decided by a declared tolerance rather than an exact predicate, because two independent polygonisations of the same tangency can differ by a sub-nanometre gap. geometry_profile.tolerances.contact_mm = 1e-6 mm. Under that rule U2.20 is CONTACT but not positive-area overlap: annulus_strict_overlaps = 23, annulus_tangencies = 1, annulus_contacts = 24. For populated pads that is 9 centre-inside + 3 strict partial overlaps = 12 requiring disposition, plus 1 tangency = 13 contacts. The configured mask_dam_rule is 'contact', so the tangency is treated as loss of the ink dam and blocks. JSON, this matrix and the narrative all use these numbers.",
     "erc_drc_now_fail": "ERC and DRC previously reported PASS. The ERC reader looked for a top-level `violations` key, which KiCad 10 does not emit for ERC (findings live under sheets[].violations), so the gate could never see a finding. Both gates also ignored `ignored_checks`. With the schema parsed correctly, Rev A's runs declare 4 ignored ERC checks and 5 ignored DRC checks, which block. The underlying board still reports zero ERC/DRC findings.",
     "branch_spread_24_275_vs_21_6": "21.58 mm was max-min of TOTAL TRACK COPPER per branch net. 24.275 mm is max-min of the LONGEST DRIVER-TO-LOAD ELECTRICAL PATH per branch net (vias contribute zero length). The gate uses the path definition, stated in pcbqa/connectivity.py; both figures are reported per net as max_path_mm and total_track_copper_mm.",
-    "net_topology_three_findings": "Four findings previously, one of which was a false 'PDM_CLK_IN load not reachable' caused by endpoint-equality connectivity. With geometric copper intersection all loads resolve, leaving three genuine frozen-policy failures: branch spread 24.275 mm > 5 mm, PDM_CLK_IN 3 vias > 0, PDM_CLK_IN uses B.Cu against an F.Cu-only rule."
+    "net_topology_three_findings": "Four findings previously, one of which was a false 'PDM_CLK_IN load not reachable' caused by endpoint-equality connectivity. With geometric copper intersection all loads resolve, leaving three genuine frozen-policy failures: branch spread 24.275 mm > 5 mm, PDM_CLK_IN 3 vias > 0, PDM_CLK_IN uses B.Cu against an F.Cu-only rule.",
+    "BOM.NATIVE_PARITY: PASS -> FAIL under schematic authority": "The earlier gate derived 'native' assembly data from the PCB footprint fields, so the only two things it compared were the board and the packaged BOM - both downstream of the schematic. Reading the authority directly (kicad-cli sch export bom on microphone_array_v2.kicad_sch) shows 103 symbols against 124 board footprints: J1, J2, J3, H1-H4 and TP1-TP14 exist on the board with no schematic symbol behind them. All 21 are marked excluded-from-BOM (J1-J3 additionally DNP) so nothing incorrect reaches the packaged BOM, and the packaged BOM's 15 grouped lines still cover all 103 populated parts correctly. The failure is about authority, not about the order: parts that exist only in the layout are not part of the design the schematic describes. Rev A is frozen and is not being changed to clear this; it is a further reason the fixture must be rejected."
   }
 }

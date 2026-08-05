@@ -1,25 +1,57 @@
 {
   "schema_version": 2,
-  "generated_utc": "2026-08-04T22:44:06.015799+00:00",
+  "generated_utc": "2026-08-05T00:37:56.165290+00:00",
   "manifest": {
     "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\boards\\reva.json",
-    "sha256": "68a1419a16541bf505c453fc523112e8ed77b4c008fff108d48d12a113a8a009",
+    "sha256": "7887b28ebc36c5073248682fbe2fa6115898df637e2619bb154e57d2d7626409",
     "board_id": "microphone_array_v2-revA",
     "constraint_version": "revA-frozen-2026-08-01"
   },
   "tooling": {
+    "environment_ok": true,
     "kicad_cli": "C:\\Program Files\\KiCad\\10.0\\bin\\kicad-cli.exe",
     "kicad_version": "10.0.5",
-    "python": "3.11.5"
+    "components": [
+      {
+        "name": "python",
+        "version": "3.11.5",
+        "path": "C:\\Program Files\\KiCad\\10.0\\bin\\python.exe",
+        "ok": true,
+        "detail": "requires >= 3.11"
+      },
+      {
+        "name": "pcbnew",
+        "version": "10.0.5",
+        "path": "C:\\Program Files\\KiCad\\10.0\\bin\\Lib\\site-packages\\pcbnew.py",
+        "ok": true,
+        "detail": "all required APIs present"
+      },
+      {
+        "name": "shapely",
+        "version": "2.1.2",
+        "path": "C:\\Users\\pentolope\\Documents\\KiCad\\10.0\\3rdparty\\Python311\\site-packages\\shapely\\__init__.py",
+        "ok": true,
+        "detail": "required predicates behave as expected",
+        "ownership": "KiCad add-on; never installed or pinned by this framework"
+      },
+      {
+        "name": "kicad-cli",
+        "version": "10.0.5",
+        "path": "C:\\Program Files\\KiCad\\10.0\\bin\\kicad-cli.exe",
+        "ok": true,
+        "detail": "responds to --version"
+      }
+    ]
   },
   "summary": {
     "counts": {
-      "FAIL": 17,
-      "PASS": 8
+      "FAIL": 18,
+      "PASS": 7
     },
     "blocking": [
       "ARCH.CONTENTS",
       "ARCH.PROVENANCE",
+      "BOM.NATIVE_PARITY",
       "CFG.NO_RIVAL_THRESHOLDS",
       "CONTRACT.CONNECTOR",
       "DRC.AUTHORITATIVE",
@@ -142,7 +174,7 @@
           "units": "file function",
           "kind": "policy",
           "manifest_key": "archive.allow",
-          "provenance": "reva.json#archive.allow@68a1419a1654"
+          "provenance": "reva.json#archive.allow@7887b28ebc36"
         }
       },
       "finding_count": 2,
@@ -185,7 +217,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "archive.manifest_required_fields",
-          "provenance": "reva.json#archive.manifest_required_fields@68a1419a1654"
+          "provenance": "reva.json#archive.manifest_required_fields@7887b28ebc36"
         }
       },
       "finding_count": 3,
@@ -214,12 +246,18 @@
     },
     {
       "gate": "BOM.NATIVE_PARITY",
-      "title": "Packaged BOM matches the native design",
-      "status": "PASS",
-      "reason": "all 103 populated parts agree between the native design and the packaged BOM",
+      "title": "Packaged BOM matches the native schematic",
+      "status": "FAIL",
+      "reason": "21 disagreement(s) between the native schematic, the board and the packaged BOM",
       "measurements": {
         "bom_lines": 15,
-        "native_populated": 103
+        "schematic_symbols": 103,
+        "board_footprints": 124,
+        "schematic_populated": 103,
+        "uncomparable_fields": [
+          "MPN",
+          "Manufacturer"
+        ]
       },
       "limits": {
         "assembly.required_part_fields": {
@@ -230,15 +268,179 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "assembly.required_part_fields",
-          "provenance": "reva.json#assembly.required_part_fields@68a1419a1654"
+          "provenance": "reva.json#assembly.required_part_fields@7887b28ebc36"
+        },
+        "assembly.compared_part_fields": {
+          "id": "assembly.compared_part_fields",
+          "value": [
+            "LCSC",
+            "MPN",
+            "Manufacturer"
+          ],
+          "units": "field name",
+          "kind": "policy",
+          "manifest_key": "assembly.compared_part_fields",
+          "provenance": "reva.json#assembly.compared_part_fields@7887b28ebc36"
         }
       },
-      "finding_count": 0,
-      "findings": [],
+      "finding_count": 21,
+      "findings": [
+        {
+          "reference": "H1",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MountingHole:MountingHole_3.2mm_M3",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "H2",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MountingHole:MountingHole_3.2mm_M3",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "H3",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MountingHole:MountingHole_3.2mm_M3",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "H4",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MountingHole:MountingHole_3.2mm_M3",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "J1",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical",
+          "board_excluded_from_bom": true,
+          "board_dnp": true
+        },
+        {
+          "reference": "J2",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical",
+          "board_excluded_from_bom": true,
+          "board_dnp": true
+        },
+        {
+          "reference": "J3",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical",
+          "board_excluded_from_bom": true,
+          "board_dnp": true
+        },
+        {
+          "reference": "TP1",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP10",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP11",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP12",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP13",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP14",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP2",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP3",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP4",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP5",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP6",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP7",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP8",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        },
+        {
+          "reference": "TP9",
+          "issue": "on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design",
+          "board_footprint": "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk",
+          "board_excluded_from_bom": true,
+          "board_dnp": false
+        }
+      ],
       "evidence": [
         {
           "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\fixtures\\reva\\project\\generated\\release\\bom.csv",
           "sha256": "8dbdc7dc144a9dffc79b9d3d06bb52761a83d726b0eb459fba376d300e39e8a1"
+        },
+        {
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\fixtures\\reva\\project\\microphone_array_v2.kicad_sch",
+          "sha256": "9ceb4ee88d92f9642be2c4e20e72243d6a49a8da67437eac4e717a56bee0a669"
         }
       ]
     },
@@ -265,7 +467,7 @@
           "units": "constant name",
           "kind": "policy",
           "manifest_key": "constraint_parity.rival_scan.watched_constants",
-          "provenance": "reva.json#constraint_parity.rival_scan.watched_constants@68a1419a1654"
+          "provenance": "reva.json#constraint_parity.rival_scan.watched_constants@7887b28ebc36"
         }
       },
       "finding_count": 2,
@@ -501,12 +703,12 @@
     },
     {
       "gate": "CPL.NATIVE_PARITY",
-      "title": "Packaged CPL matches the native board",
+      "title": "Packaged CPL matches the native design",
       "status": "PASS",
-      "reason": "all 103 populated parts agree between the native board and the packaged CPL",
+      "reason": "all 103 populated parts agree between the native design and the packaged CPL",
       "measurements": {
         "cpl_rows": 103,
-        "native_populated": 103,
+        "schematic_populated": 103,
         "coordinate_frame": {
           "frame": "drill/plot origin at the page origin",
           "offset_mm": [
@@ -522,7 +724,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "artifacts.position_tolerance_mm",
-          "provenance": "reva.json#artifacts.position_tolerance_mm@68a1419a1654"
+          "provenance": "reva.json#artifacts.position_tolerance_mm@7887b28ebc36"
         },
         "geometry.rotation_match_deg": {
           "id": "geometry.rotation_match_deg",
@@ -530,7 +732,7 @@
           "units": "deg",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.rotation_match_deg.value",
-          "provenance": "reva.json#geometry_profile.tolerances.rotation_match_deg.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.rotation_match_deg.value@7887b28ebc36"
         },
         "artifacts.cpl_origin": {
           "id": "artifacts.cpl_origin",
@@ -544,7 +746,7 @@
           "units": "frame",
           "kind": "policy",
           "manifest_key": "artifacts.cpl_origin",
-          "provenance": "reva.json#artifacts.cpl_origin@68a1419a1654"
+          "provenance": "reva.json#artifacts.cpl_origin@7887b28ebc36"
         }
       },
       "finding_count": 0,
@@ -562,17 +764,19 @@
       "status": "FAIL",
       "reason": "1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5",
       "measurements": {
-        "command": "pcb drc --format json -o C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone_array_v2-revA\\drc_authoritative.json --severity-all --all-track-errors --schematic-parity --exit-code-violations C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\fixtures\\reva\\project\\microphone_array_v2.kicad_pcb",
+        "command": "kicad-cli.exe pcb drc --format json -o drc_authoritative.json --severity-all --all-track-errors --schematic-parity --exit-code-violations microphone_array_v2.kicad_pcb",
+        "command_sha256": "155565487d9e8b5b0d679145e6138be6dc7e6ab707e3fa96e153245003aa5295",
         "exit_status": 0,
+        "violations_exit_code": 5,
         "source": "microphone_array_v2.kicad_pcb",
         "source_sha256": "f6e5c6b8143f0db3bc17bc00a55c2fa65ef84e223c920a67624f6e9532854181",
         "rules_sha256": "6ed53986b7dc3fb9dbbd45cc99da0b5640fa40b7c71d4bd86698477fe676d5c4",
-        "constraint_manifest_sha256": "68a1419a16541bf505c453fc523112e8ed77b4c008fff108d48d12a113a8a009",
+        "constraint_manifest_sha256": "7887b28ebc36c5073248682fbe2fa6115898df637e2619bb154e57d2d7626409",
         "kicad_version": "10.0.5",
-        "generated_utc": "2026-08-04T22:43:33.744443+00:00",
+        "generated_utc": "2026-08-05T00:37:10.320305+00:00",
         "report_meta": {
           "schema": "https://schemas.kicad.org/drc.v1.json",
-          "date": "2026-08-04T15:43:33",
+          "date": "2026-08-04T17:37:10",
           "kicad_version": "10.0.5",
           "source": "microphone_array_v2.kicad_pcb",
           "ignored_checks": [
@@ -589,9 +793,12 @@
           ],
           "coordinate_units": "mm"
         },
+        "report_findings_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "counts": {},
         "waived": 0,
-        "waivers_available": 0
+        "waivers_live": 0,
+        "waivers_rejected": 0,
+        "waivers_used": []
       },
       "limits": {
         "checks.drc.required_flags": {
@@ -605,7 +812,7 @@
           "units": "cli option",
           "kind": "policy",
           "manifest_key": "checks.drc.required_flags",
-          "provenance": "reva.json#checks.drc.required_flags@68a1419a1654"
+          "provenance": "reva.json#checks.drc.required_flags@7887b28ebc36"
         },
         "checks.drc.required_severities": {
           "id": "checks.drc.required_severities",
@@ -617,7 +824,23 @@
           "units": "severity",
           "kind": "policy",
           "manifest_key": "checks.drc.required_severities",
-          "provenance": "reva.json#checks.drc.required_severities@68a1419a1654"
+          "provenance": "reva.json#checks.drc.required_severities@7887b28ebc36"
+        },
+        "checks.drc.violations_exit_code": {
+          "id": "checks.drc.violations_exit_code",
+          "value": 5,
+          "units": "exit status",
+          "kind": "policy",
+          "manifest_key": "checks.drc.violations_exit_code",
+          "provenance": "reva.json#checks.drc.violations_exit_code@7887b28ebc36"
+        },
+        "geometry.waiver_location_mm": {
+          "id": "geometry.waiver_location_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.waiver_location_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.waiver_location_mm.value@7887b28ebc36"
         }
       },
       "finding_count": 1,
@@ -636,7 +859,7 @@
       "evidence": [
         {
           "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone_array_v2-revA\\drc_authoritative.json",
-          "sha256": "5395fdbd1d49c975e7b1e863353f1143e0a488454a91ca42c8b3c7b7b8144c8f"
+          "sha256": "6d870334cc78d6c619b45298f06e955b717af7db51c8b91a404f17ad3e25a6b6"
         }
       ]
     },
@@ -666,7 +889,7 @@
           "units": "severity",
           "kind": "policy",
           "manifest_key": "checks.drc.forbidden_severities",
-          "provenance": "reva.json#checks.drc.forbidden_severities@68a1419a1654"
+          "provenance": "reva.json#checks.drc.forbidden_severities@7887b28ebc36"
         }
       },
       "finding_count": 5,
@@ -715,17 +938,19 @@
       "status": "FAIL",
       "reason": "1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4",
       "measurements": {
-        "command": "sch erc --format json -o C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone_array_v2-revA\\erc_authoritative.json --severity-all --exit-code-violations C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\fixtures\\reva\\project\\microphone_array_v2.kicad_sch",
+        "command": "kicad-cli.exe sch erc --format json -o erc_authoritative.json --severity-all --exit-code-violations microphone_array_v2.kicad_sch",
+        "command_sha256": "373de9aa5be2a5b90f9e189042a65334bdac4b378120206a251e0b81a3f9cdca",
         "exit_status": 0,
+        "violations_exit_code": 5,
         "source": "microphone_array_v2.kicad_sch",
         "source_sha256": "9ceb4ee88d92f9642be2c4e20e72243d6a49a8da67437eac4e717a56bee0a669",
         "rules_sha256": "6ed53986b7dc3fb9dbbd45cc99da0b5640fa40b7c71d4bd86698477fe676d5c4",
-        "constraint_manifest_sha256": "68a1419a16541bf505c453fc523112e8ed77b4c008fff108d48d12a113a8a009",
+        "constraint_manifest_sha256": "7887b28ebc36c5073248682fbe2fa6115898df637e2619bb154e57d2d7626409",
         "kicad_version": "10.0.5",
-        "generated_utc": "2026-08-04T22:43:37.734743+00:00",
+        "generated_utc": "2026-08-05T00:37:14.434488+00:00",
         "report_meta": {
           "schema": "https://schemas.kicad.org/erc.v1.json",
-          "date": "2026-08-04T15:43:37",
+          "date": "2026-08-04T17:37:14",
           "kicad_version": "10.0.5",
           "source": "microphone_array_v2.kicad_sch",
           "ignored_checks": [
@@ -741,9 +966,12 @@
           ],
           "coordinate_units": "mm"
         },
+        "report_findings_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
         "counts": {},
         "waived": 0,
-        "waivers_available": 0
+        "waivers_live": 0,
+        "waivers_rejected": 0,
+        "waivers_used": []
       },
       "limits": {
         "checks.erc.required_flags": {
@@ -755,7 +983,7 @@
           "units": "cli option",
           "kind": "policy",
           "manifest_key": "checks.erc.required_flags",
-          "provenance": "reva.json#checks.erc.required_flags@68a1419a1654"
+          "provenance": "reva.json#checks.erc.required_flags@7887b28ebc36"
         },
         "checks.erc.required_severities": {
           "id": "checks.erc.required_severities",
@@ -767,7 +995,23 @@
           "units": "severity",
           "kind": "policy",
           "manifest_key": "checks.erc.required_severities",
-          "provenance": "reva.json#checks.erc.required_severities@68a1419a1654"
+          "provenance": "reva.json#checks.erc.required_severities@7887b28ebc36"
+        },
+        "checks.erc.violations_exit_code": {
+          "id": "checks.erc.violations_exit_code",
+          "value": 5,
+          "units": "exit status",
+          "kind": "policy",
+          "manifest_key": "checks.erc.violations_exit_code",
+          "provenance": "reva.json#checks.erc.violations_exit_code@7887b28ebc36"
+        },
+        "geometry.waiver_location_mm": {
+          "id": "geometry.waiver_location_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.waiver_location_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.waiver_location_mm.value@7887b28ebc36"
         }
       },
       "finding_count": 1,
@@ -785,7 +1029,7 @@
       "evidence": [
         {
           "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone_array_v2-revA\\erc_authoritative.json",
-          "sha256": "b81d1beef8067ad218cf3577dcb26d191cb8568dfa7a9571ec5a8d0b1a8c3ec1"
+          "sha256": "b25af2d3ea98effb351949d9f00393dc146c79859e4f7291d2de07b560b36aa2"
         }
       ]
     },
@@ -926,13 +1170,21 @@
         }
       },
       "limits": {
+        "geometry.polygon_chord_error_mm": {
+          "id": "geometry.polygon_chord_error_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36"
+        },
         "net_topology.PDM_CLOCK_BRANCHES.max_spread_mm": {
           "id": "net_topology.PDM_CLOCK_BRANCHES.max_spread_mm",
           "value": 5.0,
           "units": "mm",
           "kind": "policy",
           "manifest_key": "net_topology.rules.0.max_spread_mm",
-          "provenance": "reva.json#net_topology.rules.0.max_spread_mm@68a1419a1654"
+          "provenance": "reva.json#net_topology.rules.0.max_spread_mm@7887b28ebc36"
         },
         "net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net": {
           "id": "net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net",
@@ -940,7 +1192,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.0.max_vias_per_net",
-          "provenance": "reva.json#net_topology.rules.0.max_vias_per_net@68a1419a1654"
+          "provenance": "reva.json#net_topology.rules.0.max_vias_per_net@7887b28ebc36"
         },
         "net_topology.PDM_CLOCK_ROOT.max_vias_per_net": {
           "id": "net_topology.PDM_CLOCK_ROOT.max_vias_per_net",
@@ -948,7 +1200,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.1.max_vias_per_net",
-          "provenance": "reva.json#net_topology.rules.1.max_vias_per_net@68a1419a1654"
+          "provenance": "reva.json#net_topology.rules.1.max_vias_per_net@7887b28ebc36"
         },
         "net_topology.AUDIO_MCLK.max_vias_per_net": {
           "id": "net_topology.AUDIO_MCLK.max_vias_per_net",
@@ -956,7 +1208,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.2.max_vias_per_net",
-          "provenance": "reva.json#net_topology.rules.2.max_vias_per_net@68a1419a1654"
+          "provenance": "reva.json#net_topology.rules.2.max_vias_per_net@7887b28ebc36"
         }
       },
       "finding_count": 3,
@@ -995,7 +1247,7 @@
       "gate": "PROV.FIXTURE_INTEGRITY",
       "title": "Frozen fixture matches its canonical digests",
       "status": "PASS",
-      "reason": "all 84 frozen files match their canonical digests (text hashed over LF bytes, production output over raw bytes)",
+      "reason": "the frozen copy holds exactly the 84 recorded files, each a regular file matching its canonical digest (text hashed over LF bytes, production output over raw bytes)",
       "measurements": {
         "digest_policy": {
           "text": "sha256 over canonical LF bytes; independent of checkout line endings",
@@ -1003,9 +1255,28 @@
           "classified_by": ".gitattributes"
         },
         "normalization_commit": "8205558800c34b7e370552023d8fbc9346418fbb",
-        "files_recorded": 84
+        "files_recorded": 84,
+        "files_present": 84
       },
-      "limits": {},
+      "limits": {
+        "fixture.reject_globs": {
+          "id": "fixture.reject_globs",
+          "value": [
+            "*.lck",
+            "~*",
+            ".#*",
+            "*.bak",
+            "*.tmp",
+            "*~",
+            "*.kicad_pcb-bak",
+            "*.kicad_sch-bak"
+          ],
+          "units": "path glob",
+          "kind": "policy",
+          "manifest_key": "fixture.reject_globs",
+          "provenance": "reva.json#fixture.reject_globs@7887b28ebc36"
+        }
+      },
       "finding_count": 0,
       "findings": [],
       "evidence": [
@@ -1021,20 +1292,37 @@
       "status": "FAIL",
       "reason": "4 committed report(s) cannot be tied to the current sources",
       "measurements": {
+        "source_closure_files": 4,
+        "source_closure_sha256": "109eb2fdf3a6a45f6c428b383fcfe357675e46ddca4db0f115134e05f5cb10bb",
         "source_sha256": {
           "pcb": "f6e5c6b8143f0db3",
           "schematic": "9ceb4ee88d92f964"
         },
         "reports_examined": 4
       },
-      "limits": {},
+      "limits": {
+        "reports.source_closure": {
+          "id": "reports.source_closure",
+          "value": [
+            "*.kicad_sch",
+            "**/*.kicad_sch",
+            "*.kicad_pcb",
+            "*.kicad_pro",
+            "*.kicad_dru"
+          ],
+          "units": "path glob",
+          "kind": "policy",
+          "manifest_key": "reports.source_closure",
+          "provenance": "reva.json#reports.source_closure@7887b28ebc36"
+        }
+      },
       "finding_count": 4,
       "findings": [
         {
           "file": "generated/drc.json",
           "declares_source": "microphone_array_v2.kicad_pcb",
           "date": "2026-08-02T17:48:37",
-          "issue": "older than the design sources it claims to describe"
+          "issue": "records no source hash, so it cannot be tied to a specific revision"
         },
         {
           "file": "generated/drc_pass1.json",
@@ -1052,7 +1340,7 @@
           "file": "generated/erc.json",
           "declares_source": "microphone_array_v2.kicad_sch",
           "date": "2026-08-01T18:50:46",
-          "issue": "older than the design sources it claims to describe"
+          "issue": "records no source hash, so it cannot be tied to a specific revision"
         }
       ],
       "evidence": []
@@ -1075,7 +1363,7 @@
           "units": "policy",
           "kind": "policy",
           "manifest_key": "source_authority.authority",
-          "provenance": "reva.json#source_authority.authority@68a1419a1654"
+          "provenance": "reva.json#source_authority.authority@7887b28ebc36"
         }
       },
       "finding_count": 3,
@@ -1133,7 +1421,7 @@
           "units": "deg",
           "kind": "policy",
           "manifest_key": "routing.permitted_turn_degrees",
-          "provenance": "reva.json#routing.permitted_turn_degrees@68a1419a1654"
+          "provenance": "reva.json#routing.permitted_turn_degrees@7887b28ebc36"
         },
         "routing.angle_tolerance_deg": {
           "id": "routing.angle_tolerance_deg",
@@ -1141,7 +1429,7 @@
           "units": "deg",
           "kind": "policy",
           "manifest_key": "routing.angle_tolerance_deg",
-          "provenance": "reva.json#routing.angle_tolerance_deg@68a1419a1654"
+          "provenance": "reva.json#routing.angle_tolerance_deg@7887b28ebc36"
         }
       },
       "finding_count": 60,
@@ -1600,7 +1888,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "routing.min_segment_mm",
-          "provenance": "reva.json#routing.min_segment_mm@68a1419a1654"
+          "provenance": "reva.json#routing.min_segment_mm@7887b28ebc36"
         }
       },
       "finding_count": 57,
@@ -2067,7 +2355,7 @@
           "units": "cli option",
           "kind": "policy",
           "manifest_key": "artifacts.gerber_export_flags",
-          "provenance": "reva.json#artifacts.gerber_export_flags@68a1419a1654"
+          "provenance": "reva.json#artifacts.gerber_export_flags@7887b28ebc36"
         },
         "geometry.layer_symmetric_difference_mm2": {
           "id": "geometry.layer_symmetric_difference_mm2",
@@ -2075,7 +2363,7 @@
           "units": "mm2",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.layer_symmetric_difference_mm2.value",
-          "provenance": "reva.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@7887b28ebc36"
         }
       },
       "finding_count": 0,
@@ -2142,7 +2430,7 @@
           "units": "layer roles",
           "kind": "policy",
           "manifest_key": "stackup.expected",
-          "provenance": "reva.json#stackup.expected@68a1419a1654"
+          "provenance": "reva.json#stackup.expected@7887b28ebc36"
         }
       },
       "finding_count": 1,
@@ -2177,7 +2465,15 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.contact_mm.value",
-          "provenance": "reva.json#geometry_profile.tolerances.contact_mm.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.contact_mm.value@7887b28ebc36"
+        },
+        "geometry.polygon_chord_error_mm": {
+          "id": "geometry.polygon_chord_error_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36"
         }
       },
       "finding_count": 24,
@@ -2472,7 +2768,7 @@
           "units": "pad attribute",
           "kind": "policy",
           "manifest_key": "via_mask.pad_contact.populated_pad_attributes",
-          "provenance": "reva.json#via_mask.pad_contact.populated_pad_attributes@68a1419a1654"
+          "provenance": "reva.json#via_mask.pad_contact.populated_pad_attributes@7887b28ebc36"
         },
         "via_mask.mask_dam_rule": {
           "id": "via_mask.mask_dam_rule",
@@ -2480,7 +2776,7 @@
           "units": "policy",
           "kind": "policy",
           "manifest_key": "via_mask.mask_dam_rule",
-          "provenance": "reva.json#via_mask.mask_dam_rule@68a1419a1654"
+          "provenance": "reva.json#via_mask.mask_dam_rule@7887b28ebc36"
         }
       },
       "finding_count": 24,
@@ -2799,7 +3095,15 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.process.limit_mm",
-          "provenance": "reva.json#via_mask.process.limit_mm@68a1419a1654"
+          "provenance": "reva.json#via_mask.process.limit_mm@7887b28ebc36"
+        },
+        "geometry.polygon_chord_error_mm": {
+          "id": "geometry.polygon_chord_error_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36"
         },
         "via_mask.metric": {
           "id": "via_mask.metric",
@@ -2807,7 +3111,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "via_mask.metric",
-          "provenance": "reva.json#via_mask.metric@68a1419a1654"
+          "provenance": "reva.json#via_mask.metric@7887b28ebc36"
         }
       },
       "finding_count": 63,
@@ -3461,7 +3765,15 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.design_target_mm",
-          "provenance": "reva.json#via_mask.design_target_mm@68a1419a1654"
+          "provenance": "reva.json#via_mask.design_target_mm@7887b28ebc36"
+        },
+        "geometry.polygon_chord_error_mm": {
+          "id": "geometry.polygon_chord_error_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36"
         },
         "via_mask.metric": {
           "id": "via_mask.metric",
@@ -3469,7 +3781,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "via_mask.metric",
-          "provenance": "reva.json#via_mask.metric@68a1419a1654"
+          "provenance": "reva.json#via_mask.metric@7887b28ebc36"
         }
       },
       "finding_count": 70,
@@ -4202,13 +4514,21 @@
         ]
       },
       "limits": {
+        "geometry.polygon_chord_error_mm": {
+          "id": "geometry.polygon_chord_error_mm",
+          "value": 0.001,
+          "units": "mm",
+          "kind": "tolerance",
+          "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
+          "provenance": "reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36"
+        },
         "geometry.coordinate_match_mm": {
           "id": "geometry.coordinate_match_mm",
           "value": 0.002,
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.coordinate_match_mm.value",
-          "provenance": "reva.json#geometry_profile.tolerances.coordinate_match_mm.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.coordinate_match_mm.value@7887b28ebc36"
         },
         "geometry.dimension_match_mm": {
           "id": "geometry.dimension_match_mm",
@@ -4216,7 +4536,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.dimension_match_mm.value",
-          "provenance": "reva.json#geometry_profile.tolerances.dimension_match_mm.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.dimension_match_mm.value@7887b28ebc36"
         },
         "geometry.clearance_match_mm": {
           "id": "geometry.clearance_match_mm",
@@ -4224,7 +4544,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.clearance_match_mm.value",
-          "provenance": "reva.json#geometry_profile.tolerances.clearance_match_mm.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.clearance_match_mm.value@7887b28ebc36"
         },
         "geometry.contact_mm": {
           "id": "geometry.contact_mm",
@@ -4232,7 +4552,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.contact_mm.value",
-          "provenance": "reva.json#geometry_profile.tolerances.contact_mm.value@68a1419a1654"
+          "provenance": "reva.json#geometry_profile.tolerances.contact_mm.value@7887b28ebc36"
         },
         "via_mask.design_target_mm": {
           "id": "via_mask.design_target_mm",
@@ -4240,7 +4560,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.design_target_mm",
-          "provenance": "reva.json#via_mask.design_target_mm@68a1419a1654"
+          "provenance": "reva.json#via_mask.design_target_mm@7887b28ebc36"
         },
         "via_mask.process.limit_mm": {
           "id": "via_mask.process.limit_mm",
@@ -4248,7 +4568,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.process.limit_mm",
-          "provenance": "reva.json#via_mask.process.limit_mm@68a1419a1654"
+          "provenance": "reva.json#via_mask.process.limit_mm@7887b28ebc36"
         }
       },
       "finding_count": 0,
@@ -4268,12 +4588,12 @@
       "gate": "CFG.THRESHOLD_PARITY",
       "title": "Every gate limit is a typed manifest constraint",
       "status": "PASS",
-      "reason": "all 36 applied limits are typed constraints traced to the manifest",
+      "reason": "all 48 applied limits are typed constraints traced to the manifest",
       "measurements": {
-        "limits_applied": 36,
+        "limits_applied": 48,
         "by_kind": {
-          "policy": 29,
-          "tolerance": 7
+          "policy": 34,
+          "tolerance": 14
         }
       },
       "limits": {},

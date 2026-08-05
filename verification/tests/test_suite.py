@@ -29,6 +29,16 @@ PORTABILITY = os.path.join(HERE, "boards", "portability.json")
 PYTHON = sys.executable
 
 
+def _configure_geometry():
+    """Install the chord error the way a gate would: from the profile."""
+    from pcbqa import geom
+    return geom.configure(Manifest(REVA).geometry_profile()
+                          .tolerance("polygon_chord_error_mm").value)
+
+
+_configure_geometry()
+
+
 def run_validator(manifest, extra=()):
     proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "validate", manifest,
                            *extra], capture_output=True, text=True, cwd=HERE)
@@ -47,6 +57,28 @@ def _write_json(path, doc):
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2)
     return path
+
+
+def temp_manifest(tag, mutate=None, project=None):
+    """A derived manifest in its own temp directory.
+
+    Not in the repository's boards/ directory: the source-hygiene test scans
+    that directory, and two workers mutating manifests at the same time would
+    otherwise read each other's. `project_root` is absolute so the manifest can
+    live anywhere.
+    """
+    doc = json.load(open(REVA, encoding="utf-8"))
+    doc["project_root"] = os.path.abspath(
+        project if project else os.path.join(HERE, "fixtures", "reva", "project"))
+    if project:
+        # A copy is not the frozen inventory, but canonical hashing still
+        # needs the line-ending policy, so keep that and drop only the
+        # inventory this copy cannot satisfy.
+        doc["fixture"] = {"attributes_file": os.path.abspath(os.path.join(HERE, "..", ".gitattributes"))}
+    if mutate:
+        mutate(doc)
+    work = tempfile.mkdtemp(prefix="pcbqa_mf_" + tag + "_")
+    return _write_json(os.path.join(work, "manifest.json"), doc)
 
 
 def validate(manifest_path):
@@ -121,30 +153,37 @@ class ReleaseBlocked(unittest.TestCase):
         unsafe = os.path.join(out, "release_UNSAFE_diagnostic")
         self.assertTrue(os.path.isdir(unsafe))
         self.assertTrue(os.path.isfile(os.path.join(unsafe, "DO_NOT_ORDER.txt")))
-        # No orderable archive in anything the release itself produced. The
-        # clean source copy is excluded: it is an input, not an output.
-        for root, dirs, files in os.walk(out):
-            dirs[:] = [d for d in dirs if d != "clean_project"]
-            for name in files:
-                self.assertFalse(name.lower().endswith(".zip"),
-                                 f"release produced an orderable archive: {name}")
+        # A blocked release must publish nothing orderable. The clean run's
+        # own workspace is scratch - it necessarily builds an archive in order
+        # to validate one - so what matters is that no archive reaches any
+        # directory the release publishes.
+        published = [os.path.join(out, d) for d in
+                     ("release_sealed", "release_candidate_UNSEALED",
+                      "release_UNSAFE_diagnostic")]
+        for directory in published:
+            for _root, _dirs, files in os.walk(directory):
+                for name in files:
+                    self.assertFalse(
+                        name.lower().endswith(".zip"),
+                        f"release published an orderable archive: {name}")
+        text = open(os.path.join(unsafe, "DO_NOT_ORDER.txt"),
+                    encoding="utf-8").read()
+        self.assertIn("NOT A RELEASE", text)
+        self.assertIn("No sealed or orderable package was produced", text)
 
     def test_missing_mandatory_gate_blocks_release(self):
         """A gate that is NOT_APPLICABLE but mandatory must block sealing."""
-        doc = json.load(open(REVA, encoding="utf-8"))
-        doc.pop("via_mask")                      # makes four VIA gates N/A
-        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_mandatory.json"), doc)
-        self.addCleanup(_remove, tmp)
+        tmp = temp_manifest("mandatory",
+                            lambda doc: doc.pop("via_mask"))   # four VIA gates N/A
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("NOT_APPLICABLE", proc.stdout)
 
     def test_release_profile_with_no_mandatory_gates_is_refused(self):
-        doc = json.load(open(REVA, encoding="utf-8"))
-        doc["release_profile"]["mandatory_gates"] = []
-        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_empty_profile.json"), doc)
-        self.addCleanup(_remove, tmp)
+        def _empty(doc):
+            doc["release_profile"]["mandatory_gates"] = []
+        tmp = temp_manifest("empty_profile", _empty)
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
@@ -251,6 +290,13 @@ class GenericSourceHygiene(unittest.TestCase):
             "KiCad", "bin", "exe", "https", "jlcpcb", "com", "capabilities",
             "pcb", "sha256", "kicad", "command", "constraint", "native_kicad",
             "Copper", "Top", "Bot", "Inr", "Soldermask", "Legend", "Paste",
+            # KiCad API and CLI vocabulary. These appear in manifests because
+            # the manifest documents which KiCad behaviour a tolerance depends
+            # on; they name the tool, not this board.
+            "ERROR_OUTSIDE", "DNP", "EXCLUDE_FROM_BOM", "QUANTITY", "LCSC",
+            "MPN", "Reference", "Value", "Footprint", "Quantity", "Comment",
+            "Manufacturer", "Description", "PosX", "PosY", "Rot", "Side",
+            "Ref", "JobFile", "Drill", "Profile", "NP", "Drillmap",
             "Profile", "Drill", "plated", "nonplated", "JobFile", "Drillmap",
             "annulus_to_opening_mm", "pinsocket", "receptacle", "pinheader",
             "plug", "radial", "README", "docs", "constraints", "tools",
@@ -318,15 +364,7 @@ class Mutations(unittest.TestCase):
                                  ["measurements"]["annulus_contacts"])
 
     def _mutated_manifest(self, mutate):
-        doc = json.load(open(REVA, encoding="utf-8"))
-        mutate(doc)
-        tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,
-                                          dir=os.path.join(HERE, "boards"),
-                                          encoding="utf-8")
-        json.dump(doc, tmp, indent=2)
-        tmp.close()
-        self.addCleanup(_remove, tmp.name)
-        return tmp.name
+        return temp_manifest("mut", mutate)
 
     def test_relaxing_a_checker_threshold_without_the_manifest_is_detected(self):
         """CFG.NO_RIVAL_THRESHOLDS must catch a divergent constant in a checker."""
@@ -442,13 +480,13 @@ class Mutations(unittest.TestCase):
         return project
 
     def _manifest_for(self, project, tag):
-        doc = json.load(open(REVA, encoding="utf-8"))
-        doc["project_root"] = os.path.relpath(
-            project, os.path.join(HERE, "boards")).replace(os.sep, "/")
-        doc.pop("fixture", None)
-        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_" + tag + ".json"), doc)
-        self.addCleanup(_remove, tmp)
-        return tmp
+        """A manifest beside the project copy it describes.
+
+        Never in the repository's boards/ directory: two workers running two
+        mutations at once would otherwise write the same file, and the loser
+        would validate the winner's board.
+        """
+        return temp_manifest(tag, project=project)
 
     @staticmethod
     def _via_centres_inside(mask_path, via_points):
@@ -574,12 +612,7 @@ class Mutations(unittest.TestCase):
         self.assertNotEqual(text, cut)
         open(target, "w", encoding="utf-8").write(cut)
 
-        doc = json.load(open(REVA, encoding="utf-8"))
-        doc["project_root"] = os.path.relpath(
-            project, os.path.join(HERE, "boards")).replace("\\", "/")
-        doc.pop("fixture", None)
-        tmp = _write_json(os.path.join(HERE, "boards", "_tmp_layer.json"), doc)
-        self.addCleanup(_remove, tmp)
+        tmp = temp_manifest("layer", project=project)
         results, _ = validate(tmp)
         gate = results["STACK.GERBER_PARITY"]
         self.assertEqual(gate["status"], Status.FAIL,

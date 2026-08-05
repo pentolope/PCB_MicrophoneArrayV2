@@ -1,16 +1,16 @@
 # Verification report - microphone_array_v2-revA
 
-- Manifest: `reva.json` sha256 `68a1419a16541bf5`
+- Manifest: `reva.json` sha256 `7887b28ebc36c507`
 - Constraint version: `revA-frozen-2026-08-01`
 - KiCad: `10.0.5`
-- Generated: 2026-08-04T22:44:06.015799+00:00
+- Generated: 2026-08-05T00:37:56.165290+00:00
 
 ## Verdict: **REJECTED**
 
 | Status | Gates |
 |---|---:|
-| PASS | 8 |
-| FAIL | 17 |
+| PASS | 7 |
+| FAIL | 18 |
 
 ## Gate matrix
 
@@ -18,16 +18,16 @@
 |---|---|---|
 | `ARCH.CONTENTS` | FAIL | 2 archive content problem(s) |
 | `ARCH.PROVENANCE` | FAIL | 3 release-provenance problem(s) |
-| `BOM.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native design and the packaged BOM |
+| `BOM.NATIVE_PARITY` | FAIL | 21 disagreement(s) between the native schematic, the board and the packaged BOM |
 | `CFG.NO_RIVAL_THRESHOLDS` | FAIL | 2 rival threshold definition(s) outside the canonical manifest |
 | `CONTRACT.CONNECTOR` | FAIL | 15x documentation asserts a superseded interconnect; 2x artifact contradicts the required gender; 1x no document states a required property of the interconnect |
 | `CONTRACT.PLACEMENT` | PASS | every placement contract holds |
-| `CPL.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native board and the packaged CPL |
+| `CPL.NATIVE_PARITY` | PASS | all 103 populated parts agree between the native design and the packaged CPL |
 | `DRC.AUTHORITATIVE` | FAIL | 1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5 |
 | `DRC.NO_SUPPRESSED_RULES` | FAIL | 5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s) |
 | `ERC.AUTHORITATIVE` | FAIL | 1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4 |
 | `NET.TOPOLOGY` | FAIL | 3 critical-net topology violation(s) |
-| `PROV.FIXTURE_INTEGRITY` | PASS | all 84 frozen files match their canonical digests (text hashed over LF bytes, production output over raw bytes) |
+| `PROV.FIXTURE_INTEGRITY` | PASS | the frozen copy holds exactly the 84 recorded files, each a regular file matching its canonical digest (text hashed over LF bytes, production output over raw... |
 | `PROV.REPORT_FRESHNESS` | FAIL | 4 committed report(s) cannot be tied to the current sources |
 | `PROV.SOURCE_AUTHORITY` | FAIL | 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data |
 | `ROUTE.ANGLE_STYLE` | FAIL | 138 corners are not on the permitted [0.0, 45.0] degree geometry |
@@ -40,14 +40,14 @@
 | `VIA.MASK_CLEARANCE_PROCESS` | FAIL | 63 of 184 vias are closer than 0.35 mm (annulus_to_opening_mm) to a solder-mask opening |
 | `VIA.MASK_CLEARANCE_TARGET` | FAIL | 70 of 184 vias are closer than 0.4 mm (annulus_to_opening_mm) to a solder-mask opening |
 | `VIA.NATIVE_GERBER_AGREEMENT` | PASS | all 184 vias match the export object by object: coordinate, drill, annulus, clearance, contact, overlap, centre-inside, both limit classifications and neares... |
-| `CFG.THRESHOLD_PARITY` | PASS | all 36 applied limits are typed constraints traced to the manifest |
+| `CFG.THRESHOLD_PARITY` | PASS | all 48 applied limits are typed constraints traced to the manifest |
 
 ### `ARCH.CONTENTS` - Production archive contains only approved fabrication data
 
 2 archive content problem(s)
 
 Limits applied:
-- `archive.allow` = [{'file_function': 'Copper,L1,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L2,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L3,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L4,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Paste,Top', 'require_payload': False, 'min_count': 1}, {'file_function': 'Paste,Bot', 'require_payload': False, 'min_count': 1}, {'file_function': 'Profile,NP', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/plated', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/nonplated', 'require_payload': True, 'min_count': 1}, {'file_function': 'JobFile', 'require_payload': True, 'min_count': 1}] file function [policy] (from reva.json#archive.allow@68a1419a1654)
+- `archive.allow` = [{'file_function': 'Copper,L1,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L2,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L3,Inr', 'require_payload': True, 'min_count': 1}, {'file_function': 'Copper,L4,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Soldermask,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Top', 'require_payload': True, 'min_count': 1}, {'file_function': 'Legend,Bot', 'require_payload': True, 'min_count': 1}, {'file_function': 'Paste,Top', 'require_payload': False, 'min_count': 1}, {'file_function': 'Paste,Bot', 'require_payload': False, 'min_count': 1}, {'file_function': 'Profile,NP', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/plated', 'require_payload': True, 'min_count': 1}, {'file_function': 'Drill/nonplated', 'require_payload': True, 'min_count': 1}, {'file_function': 'JobFile', 'require_payload': True, 'min_count': 1}] file function [policy] (from reva.json#archive.allow@7887b28ebc36)
 
 - entry=microphone_array_v2-NPTH-drl_map.gbr, file_function=Drillmap, issue=drill-map drawings are documentation, not fabrication data, and can be mistaken for a copper or legend layer by an importer
 - entry=microphone_array_v2-PTH-drl_map.gbr, file_function=Drillmap, issue=drill-map drawings are documentation, not fabrication data, and can be mistaken for a copper or legend layer by an importer
@@ -57,18 +57,48 @@ Limits applied:
 3 release-provenance problem(s)
 
 Limits applied:
-- `archive.manifest_required_fields` = ['sha256', 'kicad', 'command', 'constraint'] field name [policy] (from reva.json#archive.manifest_required_fields@68a1419a1654)
+- `archive.manifest_required_fields` = ['sha256', 'kicad', 'command', 'constraint'] field name [policy] (from reva.json#archive.manifest_required_fields@7887b28ebc36)
 
 - field=command, issue=release manifest records no such provenance
 - field=constraint, issue=release manifest records no such provenance
 - artifact=microphone_array_v2.kicad_pcb, issue=recorded digest predates the line-ending normalisation commit; it describes bytes that no longer exist in the tree, recorded=b5606e1cead80d40, actual=f6e5c6b8143f0db3
+
+### `BOM.NATIVE_PARITY` - Packaged BOM matches the native schematic
+
+21 disagreement(s) between the native schematic, the board and the packaged BOM
+
+Limits applied:
+- `assembly.required_part_fields` = ['LCSC'] field name [policy] (from reva.json#assembly.required_part_fields@7887b28ebc36)
+- `assembly.compared_part_fields` = ['LCSC', 'MPN', 'Manufacturer'] field name [policy] (from reva.json#assembly.compared_part_fields@7887b28ebc36)
+
+- reference=H1, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MountingHole:MountingHole_3.2mm_M3, board_excluded_from_bom=True, board_dnp=False
+- reference=H2, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MountingHole:MountingHole_3.2mm_M3, board_excluded_from_bom=True, board_dnp=False
+- reference=H3, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MountingHole:MountingHole_3.2mm_M3, board_excluded_from_bom=True, board_dnp=False
+- reference=H4, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MountingHole:MountingHole_3.2mm_M3, board_excluded_from_bom=True, board_dnp=False
+- reference=J1, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical, board_excluded_from_bom=True, board_dnp=True
+- reference=J2, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical, board_excluded_from_bom=True, board_dnp=True
+- reference=J3, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical, board_excluded_from_bom=True, board_dnp=True
+- reference=TP1, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP10, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP11, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP12, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP13, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP14, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP2, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP3, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP4, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP5, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP6, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP7, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP8, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
+- reference=TP9, issue=on the board but in no schematic symbol; the schematic is the assembly authority, so this part is not part of the design, board_footprint=MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk, board_excluded_from_bom=True, board_dnp=False
 
 ### `CFG.NO_RIVAL_THRESHOLDS` - No checker outside the manifest defines its own limits
 
 2 rival threshold definition(s) outside the canonical manifest
 
 Limits applied:
-- `constraint_parity.watched_constants` = {'BRANCH_SKEW_LIMIT_MM': {'manifest_key': 'net_topology.rules.0.max_spread_mm'}, 'MIN_SEGMENT_MM': {'manifest_key': 'routing.min_segment_mm'}, 'MAX_TURN_DEGREES': {'manifest_key': 'routing.permitted_turn_degrees.1'}} constant name [policy] (from reva.json#constraint_parity.rival_scan.watched_constants@68a1419a1654)
+- `constraint_parity.watched_constants` = {'BRANCH_SKEW_LIMIT_MM': {'manifest_key': 'net_topology.rules.0.max_spread_mm'}, 'MIN_SEGMENT_MM': {'manifest_key': 'routing.min_segment_mm'}, 'MAX_TURN_DEGREES': {'manifest_key': 'routing.permitted_turn_degrees.1'}} constant name [policy] (from reva.json#constraint_parity.rival_scan.watched_constants@7887b28ebc36)
 
 - file=tools/check_routes.py, line=22, constant=MIN_SEGMENT_MM, declares=0.05, manifest_key=routing.min_segment_mm, manifest_value=0.25, issue=a second, divergent copy of a canonical limit
 - file=tools/check_routes.py, line=51, constant=BRANCH_SKEW_LIMIT_MM, declares=25.0, manifest_key=net_topology.rules.0.max_spread_mm, manifest_value=5.0, issue=a second, divergent copy of a canonical limit
@@ -101,8 +131,10 @@ Limits applied:
 1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5
 
 Limits applied:
-- `checks.drc.required_flags` = ['--severity-all', '--exit-code-violations', '--all-track-errors', '--schematic-parity'] cli option [policy] (from reva.json#checks.drc.required_flags@68a1419a1654)
-- `checks.drc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.drc.required_severities@68a1419a1654)
+- `checks.drc.required_flags` = ['--severity-all', '--exit-code-violations', '--all-track-errors', '--schematic-parity'] cli option [policy] (from reva.json#checks.drc.required_flags@7887b28ebc36)
+- `checks.drc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.drc.required_severities@7887b28ebc36)
+- `checks.drc.violations_exit_code` = 5 exit status [policy] (from reva.json#checks.drc.violations_exit_code@7887b28ebc36)
+- `geometry.waiver_location_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.waiver_location_mm.value@7887b28ebc36)
 
 - issue=run ignored one or more checks, ignored=['missing_courtyard', 'track_not_centered_on_via', 'tuning_profile_track_geometries', 'footprint_filters_mismatch', 'footprint_type_mismatch']
 
@@ -111,7 +143,7 @@ Limits applied:
 5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s)
 
 Limits applied:
-- `checks.drc.forbidden_severities` = ['ignore'] severity [policy] (from reva.json#checks.drc.forbidden_severities@68a1419a1654)
+- `checks.drc.forbidden_severities` = ['ignore'] severity [policy] (from reva.json#checks.drc.forbidden_severities@7887b28ebc36)
 
 - domain=drc, rule=footprint_filters_mismatch, severity=ignore, issue=rule disabled without an approved waiver
 - domain=drc, rule=footprint_type_mismatch, severity=ignore, issue=rule disabled without an approved waiver
@@ -124,8 +156,10 @@ Limits applied:
 1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4
 
 Limits applied:
-- `checks.erc.required_flags` = ['--severity-all', '--exit-code-violations'] cli option [policy] (from reva.json#checks.erc.required_flags@68a1419a1654)
-- `checks.erc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.erc.required_severities@68a1419a1654)
+- `checks.erc.required_flags` = ['--severity-all', '--exit-code-violations'] cli option [policy] (from reva.json#checks.erc.required_flags@7887b28ebc36)
+- `checks.erc.required_severities` = ['error', 'warning', 'exclusion'] severity [policy] (from reva.json#checks.erc.required_severities@7887b28ebc36)
+- `checks.erc.violations_exit_code` = 5 exit status [policy] (from reva.json#checks.erc.violations_exit_code@7887b28ebc36)
+- `geometry.waiver_location_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.waiver_location_mm.value@7887b28ebc36)
 
 - issue=run ignored one or more checks, ignored=['single_global_label', 'four_way_junction', 'simulation_model_issue', 'footprint_filter']
 
@@ -134,10 +168,11 @@ Limits applied:
 3 critical-net topology violation(s)
 
 Limits applied:
-- `net_topology.PDM_CLOCK_BRANCHES.max_spread_mm` = 5.0 mm [policy] (from reva.json#net_topology.rules.0.max_spread_mm@68a1419a1654)
-- `net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.0.max_vias_per_net@68a1419a1654)
-- `net_topology.PDM_CLOCK_ROOT.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.1.max_vias_per_net@68a1419a1654)
-- `net_topology.AUDIO_MCLK.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.2.max_vias_per_net@68a1419a1654)
+- `geometry.polygon_chord_error_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36)
+- `net_topology.PDM_CLOCK_BRANCHES.max_spread_mm` = 5.0 mm [policy] (from reva.json#net_topology.rules.0.max_spread_mm@7887b28ebc36)
+- `net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.0.max_vias_per_net@7887b28ebc36)
+- `net_topology.PDM_CLOCK_ROOT.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.1.max_vias_per_net@7887b28ebc36)
+- `net_topology.AUDIO_MCLK.max_vias_per_net` = 0 vias [policy] (from reva.json#net_topology.rules.2.max_vias_per_net@7887b28ebc36)
 
 - issue=branch length spread exceeds the requirement, measured_spread_mm=24.275, limit_mm=5.0, min_mm=55.037, max_mm=79.312, definition=longest driver-to-load path per net; vias contribute zero, rule=PDM_CLOCK_BRANCHES
 - issue=via budget exceeded, net=PDM_CLK_IN, vias=3, limit=0, rule=PDM_CLOCK_ROOT
@@ -147,17 +182,20 @@ Limits applied:
 
 4 committed report(s) cannot be tied to the current sources
 
-- file=generated/drc.json, declares_source=microphone_array_v2.kicad_pcb, date=2026-08-02T17:48:37, issue=older than the design sources it claims to describe
+Limits applied:
+- `reports.source_closure` = ['*.kicad_sch', '**/*.kicad_sch', '*.kicad_pcb', '*.kicad_pro', '*.kicad_dru'] path glob [policy] (from reva.json#reports.source_closure@7887b28ebc36)
+
+- file=generated/drc.json, declares_source=microphone_array_v2.kicad_pcb, date=2026-08-02T17:48:37, issue=records no source hash, so it cannot be tied to a specific revision
 - file=generated/drc_pass1.json, declares_source=merged17.kicad_pcb, date=2026-08-02T00:41:52, issue=declares a source file that is not a current design source
 - file=generated/drc_routed.json, declares_source=merged17.kicad_pcb, date=2026-08-02T00:41:57, issue=declares a source file that is not a current design source
-- file=generated/erc.json, declares_source=microphone_array_v2.kicad_sch, date=2026-08-01T18:50:46, issue=older than the design sources it claims to describe
+- file=generated/erc.json, declares_source=microphone_array_v2.kicad_sch, date=2026-08-01T18:50:46, issue=records no source hash, so it cannot be tied to a specific revision
 
 ### `PROV.SOURCE_AUTHORITY` - KiCad is the sole design authority
 
 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data
 
 Limits applied:
-- `source_authority` = native_kicad policy [policy] (from reva.json#source_authority.authority@68a1419a1654)
+- `source_authority` = native_kicad policy [policy] (from reva.json#source_authority.authority@7887b28ebc36)
 
 - issue=contradictory source-of-truth claims, claims=['native_kicad_is_authority', 'python_model_is_authority'], seen_at=['README.md:56', 'README.md:69', 'README.md:109', 'docs/status.md:137', 'README.md:55', 'docs/manufacturing.md:123', 'docs/manufacturing.md:124', 'docs/manufacturing.md:124']
 - file=tools/make_release.py, line=19, issue=released BOM/CPL data is taken from a Python model instead of the native KiCad project, text=import netlist
@@ -168,8 +206,8 @@ Limits applied:
 138 corners are not on the permitted [0.0, 45.0] degree geometry
 
 Limits applied:
-- `routing.permitted_turn_degrees` = [0.0, 45.0] deg [policy] (from reva.json#routing.permitted_turn_degrees@68a1419a1654)
-- `routing.angle_tolerance_deg` = 1.0 deg [policy] (from reva.json#routing.angle_tolerance_deg@68a1419a1654)
+- `routing.permitted_turn_degrees` = [0.0, 45.0] deg [policy] (from reva.json#routing.permitted_turn_degrees@7887b28ebc36)
+- `routing.angle_tolerance_deg` = 1.0 deg [policy] (from reva.json#routing.angle_tolerance_deg@7887b28ebc36)
 
 - net=PI_SCLK, layer=F.Cu, x_mm=139.8, y_mm=-177.2, turn_deg=135.42
 - net=+5V, layer=F.Cu, x_mm=151.863, y_mm=-166.05, turn_deg=90.05
@@ -203,7 +241,7 @@ Limits applied:
 57 track fragments below 0.25 mm are not pad or via entries
 
 Limits applied:
-- `routing.min_segment_mm` = 0.25 mm [policy] (from reva.json#routing.min_segment_mm@68a1419a1654)
+- `routing.min_segment_mm` = 0.25 mm [policy] (from reva.json#routing.min_segment_mm@7887b28ebc36)
 
 - net=+3V3_CLK, layer=F.Cu, x_mm=155.1, y_mm=-157.5, length_mm=0.0708
 - net=PDM_D0, layer=B.Cu, x_mm=179.05, y_mm=-140.669, length_mm=0.0758
@@ -237,7 +275,7 @@ Limits applied:
 the frozen constraint manifest and the native board describe different plane assignments; the board is authoritative, so the manifest is the representation that disagrees
 
 Limits applied:
-- `stackup.expected` = [{'role': 'signal'}, {'role': 'plane', 'plane_net': 'GND'}, {'role': 'plane', 'plane_net': '+3V3A'}, {'role': 'signal'}] layer roles [policy] (from reva.json#stackup.expected@68a1419a1654)
+- `stackup.expected` = [{'role': 'signal'}, {'role': 'plane', 'plane_net': 'GND'}, {'role': 'plane', 'plane_net': '+3V3A'}, {'role': 'signal'}] layer roles [policy] (from reva.json#stackup.expected@7887b28ebc36)
 
 - layer_index=3, layer=GND2, expected_plane_net=+3V3A, actual_zone_nets=['GND'], issue=plane net disagreement
 
@@ -246,7 +284,8 @@ Limits applied:
 24 via annulus/mask-opening contacts (23 strict overlaps + 1 exact tangencies): these vias cannot be tented or plugged
 
 Limits applied:
-- `geometry.contact_mm` = 1e-06 mm [tolerance] (from reva.json#geometry_profile.tolerances.contact_mm.value@68a1419a1654)
+- `geometry.contact_mm` = 1e-06 mm [tolerance] (from reva.json#geometry_profile.tolerances.contact_mm.value@7887b28ebc36)
+- `geometry.polygon_chord_error_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, pad=TP4.1, pad_net=GND, contact=overlap, centre_inside=True, annulus_to_opening_mm=0.0
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, pad=U1.2, pad_net=GND, contact=overlap, centre_inside=False, annulus_to_opening_mm=0.0
@@ -278,8 +317,8 @@ Limits applied:
 13 vias contact a pad that receives solder paste (9 centre-inside, 4 partial); solder will wick into the barrel unless a filled/capped process is ordered
 
 Limits applied:
-- `via_mask.populated_pad_attributes` = ['SMD'] pad attribute [policy] (from reva.json#via_mask.pad_contact.populated_pad_attributes@68a1419a1654)
-- `via_mask.mask_dam_rule` = contact policy [policy] (from reva.json#via_mask.mask_dam_rule@68a1419a1654)
+- `via_mask.populated_pad_attributes` = ['SMD'] pad attribute [policy] (from reva.json#via_mask.pad_contact.populated_pad_attributes@7887b28ebc36)
+- `via_mask.mask_dam_rule` = contact policy [policy] (from reva.json#via_mask.mask_dam_rule@7887b28ebc36)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, pad=TP4.1, pad_net=GND, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=-0.75
 - net=GND, x_mm=157.0, y_mm=128.0, side=front, pad=TP5.1, pad_net=GND, pad_receives_paste=False, class=unpopulated, contact=overlap, centre_to_opening_mm=-0.75
@@ -311,8 +350,9 @@ Limits applied:
 63 of 184 vias are closer than 0.35 mm (annulus_to_opening_mm) to a solder-mask opening
 
 Limits applied:
-- `process_limit_mm` = 0.35 mm [policy] (from reva.json#via_mask.process.limit_mm@68a1419a1654)
-- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@68a1419a1654)
+- `process_limit_mm` = 0.35 mm [policy] (from reva.json#via_mask.process.limit_mm@7887b28ebc36)
+- `geometry.polygon_chord_error_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36)
+- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@7887b28ebc36)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, nearest_pad=TP4.1, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0, centre_to_opening_mm=-0.75
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, nearest_pad=U1.2, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0738, centre_to_opening_mm=0.2238
@@ -346,8 +386,9 @@ Limits applied:
 70 of 184 vias are closer than 0.4 mm (annulus_to_opening_mm) to a solder-mask opening
 
 Limits applied:
-- `design_target_mm` = 0.4 mm [policy] (from reva.json#via_mask.design_target_mm@68a1419a1654)
-- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@68a1419a1654)
+- `design_target_mm` = 0.4 mm [policy] (from reva.json#via_mask.design_target_mm@7887b28ebc36)
+- `geometry.polygon_chord_error_mm` = 0.001 mm [tolerance] (from reva.json#geometry_profile.tolerances.polygon_chord_error_mm.value@7887b28ebc36)
+- `via_mask.metric` = annulus_to_opening_mm field name [policy] (from reva.json#via_mask.metric@7887b28ebc36)
 
 - net=GND, x_mm=154.0, y_mm=126.0, side=front, nearest_pad=TP4.1, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0, centre_to_opening_mm=-0.75
 - net=GND, x_mm=150.9762, y_mm=167.1563, side=front, nearest_pad=U1.2, annulus_to_opening_mm=0.0, drill_to_opening_mm=0.0738, centre_to_opening_mm=0.2238

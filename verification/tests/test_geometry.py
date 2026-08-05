@@ -16,7 +16,13 @@ sys.path.insert(0, HERE)
 
 import pcbnew                                     # noqa: E402
 from pcbqa import geom                            # noqa: E402
+from pcbqa.core import Manifest                   # noqa: E402
 from tests import synth                           # noqa: E402
+
+# Polygonisation refuses to guess a chord error, so these unit tests install
+# the same one a gate would - from a board's geometry profile.
+geom.configure(Manifest(os.path.join(HERE, "boards", "reva.json"))
+               .geometry_profile().tolerance("polygon_chord_error_mm").value)
 
 
 class PadOutlineTests(unittest.TestCase):
@@ -191,3 +197,32 @@ class FailClosedTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChordErrorIsAConfiguredTolerance(unittest.TestCase):
+    """The declared tolerance is applied, not decorative."""
+
+    def tearDown(self):
+        geom.configure(Manifest(os.path.join(HERE, "boards", "reva.json"))
+                       .geometry_profile()
+                       .tolerance("polygon_chord_error_mm").value)
+
+    def test_an_unconfigured_chord_error_refuses_to_approximate(self):
+        geom._POLYGON_ERROR_IU = None
+        with self.assertRaises(geom.UnsupportedGeometry):
+            geom.polygon_error_iu()
+
+    def test_a_coarser_tolerance_produces_a_measurably_larger_outline(self):
+        board = synth.new_board()
+        _f, pad = synth.add_pad_footprint(
+            board, "P1", 100, 100, pcbnew.PAD_SHAPE_CIRCLE, (2.0, 2.0))
+        geom.configure(0.001)
+        fine = geom.pad_copper_polygon(pad, pcbnew.F_Cu)
+        geom.configure(0.05)
+        coarse = geom.pad_copper_polygon(pad, pcbnew.F_Cu)
+        self.assertNotAlmostEqual(fine.area, coarse.area, places=4,
+                                  msg="the chord error had no effect at all")
+        # Outward approximation: coarser means larger, never smaller, so an
+        # approximation can never over-state a clearance.
+        self.assertGreater(coarse.area, fine.area)
+        self.assertGreater(coarse.area, math.pi)

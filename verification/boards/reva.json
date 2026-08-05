@@ -23,7 +23,18 @@
   ],
   "fixture": {
     "hash_file": "../HASHES.json",
-    "attributes_file": "../../../../.gitattributes"
+    "attributes_file": "../../../../.gitattributes",
+    "reject_globs": [
+      "*.lck",
+      "~*",
+      ".#*",
+      "*.bak",
+      "*.tmp",
+      "*~",
+      "*.kicad_pcb-bak",
+      "*.kicad_sch-bak"
+    ],
+    "inventory_policy": "exact: every recorded file must be present and unchanged, and every present file must be recorded"
   },
   "artifacts": {
     "gerber_dir": "generated/release/gerbers",
@@ -66,7 +77,13 @@
         "error",
         "warning",
         "exclusion"
-      ]
+      ],
+      "violations_exit_code": 5,
+      "exit_code_meanings": {
+        "0": "the check ran and found nothing",
+        "5": "the check ran and found violations (--exit-code-violations)",
+        "other": "the check did not run to completion; this is a tool failure, not a verdict on the design"
+      }
     },
     "drc": {
       "flags": [
@@ -89,7 +106,13 @@
         "error",
         "warning",
         "exclusion"
-      ]
+      ],
+      "violations_exit_code": 5,
+      "exit_code_meanings": {
+        "0": "the check ran and found nothing",
+        "5": "the check ran and found violations (--exit-code-violations)",
+        "other": "the check did not run to completion; this is a tool failure, not a verdict on the design"
+      }
     }
   },
   "reports": {
@@ -99,7 +122,16 @@
     "source_field": "source",
     "date_field": "date",
     "require_source_hash": true,
-    "tolerance_seconds": 0
+    "tolerance_seconds": 0,
+    "source_closure": [
+      "*.kicad_sch",
+      "**/*.kicad_sch",
+      "*.kicad_pcb",
+      "*.kicad_pro",
+      "*.kicad_dru"
+    ],
+    "source_hash_field": "source_sha256",
+    "closure_field": "source_closure_sha256"
   },
   "stackup": {
     "expected": [
@@ -436,20 +468,11 @@
   "geometry_profile": {
     "version": "geom-1",
     "tolerances": {
-      "native_gerber_match_mm": {
-        "value": 0.01,
-        "units": "mm",
-        "why": "Gerber coordinates are emitted at 1e-6 mm; this bounds accumulated rounding when matching an exported flash to a native object."
-      },
       "polygon_chord_error_mm": {
         "value": 0.001,
         "units": "mm",
-        "why": "outward chord error when polygonising arcs; conservative direction only."
-      },
-      "coincidence_mm": {
-        "value": 0.0005,
-        "units": "mm",
-        "why": "two coordinates closer than this are the same point."
+        "why": "outward chord error when polygonising arcs; conservative direction only.",
+        "provenance": "maximum chord error when a curve is approximated by a polygon, applied outward (pcbnew ERROR_OUTSIDE) so an approximation can never over-state a clearance. Removed constants: native_gerber_match_mm and coincidence_mm were declared but never applied; coordinate_match_mm and contact_mm carry those roles."
       },
       "rotation_match_deg": {
         "value": 0.1,
@@ -480,6 +503,11 @@
         "value": 1e-06,
         "units": "mm",
         "why": "Two independent polygonisations of the same tangency can leave a sub-nanometre gap. Separation at or below this is treated as contact, i.e. as loss of the solder-mask ink dam."
+      },
+      "waiver_location_mm": {
+        "value": 0.001,
+        "units": "mm",
+        "provenance": "waiver matching: a finding must be at the coordinate the reviewer approved. One micrometre is below KiCad's own report rounding, so a genuinely relocated finding never matches an old waiver."
       }
     }
   },
@@ -499,7 +527,50 @@
       "footprint": "Footprint",
       "quantity": "Quantity",
       "LCSC": "LCSC Part #"
-    }
+    },
+    "schematic_export": {
+      "description": "How the authoritative assembly data is read out of the native schematic. One row per symbol, no grouping, no reference ranges: this is the design authority, not a report.",
+      "fields": [
+        "Reference",
+        "Value",
+        "Footprint",
+        "${DNP}",
+        "${EXCLUDE_FROM_BOM}",
+        "LCSC",
+        "MPN",
+        "Manufacturer",
+        "Description"
+      ],
+      "labels": [
+        "Reference",
+        "Value",
+        "Footprint",
+        "DNP",
+        "ExcludeFromBOM",
+        "LCSC",
+        "MPN",
+        "Manufacturer",
+        "Description"
+      ],
+      "reference_label": "Reference",
+      "value_label": "Value",
+      "footprint_label": "Footprint",
+      "dnp_label": "DNP",
+      "exclude_label": "ExcludeFromBOM",
+      "true_tokens": [
+        "1",
+        "true",
+        "yes",
+        "x",
+        "dnp"
+      ],
+      "flags": []
+    },
+    "compared_part_fields": [
+      "LCSC",
+      "MPN",
+      "Manufacturer"
+    ]
   },
   "release_profile": {
     "id": "jlcpcb-4layer-assembled",
@@ -531,5 +602,99 @@
       "CFG.NO_RIVAL_THRESHOLDS",
       "CFG.THRESHOLD_PARITY"
     ]
+  },
+  "release_generation": {
+    "description": "Every command a clean-room release runs, and the field names the artifacts it generates actually carry. Nothing here is inferred by the code: a board that does not declare this block cannot obtain a release.",
+    "lock_file_globs": [
+      "*.lck",
+      "~*.lck",
+      ".#*",
+      "*-lock",
+      "*.kicad_prl-lock"
+    ],
+    "purge_globs": [
+      "generated/**",
+      "generated"
+    ],
+    "violations_exit_code": 5,
+    "erc": {
+      "output": "erc.json"
+    },
+    "drc": {
+      "output": "drc.json"
+    },
+    "drill": {
+      "flags": [
+        "--format",
+        "excellon",
+        "--excellon-separate-th",
+        "--drill-origin",
+        "plot"
+      ]
+    },
+    "bom": {
+      "output": "bom.csv",
+      "fields": [
+        "${QUANTITY}",
+        "Reference",
+        "Value",
+        "Footprint",
+        "LCSC"
+      ],
+      "labels": [
+        "Quantity",
+        "Designator",
+        "Comment",
+        "Footprint",
+        "LCSC Part #"
+      ],
+      "group_by": [
+        "Value",
+        "Footprint",
+        "LCSC"
+      ],
+      "flags": [
+        "--exclude-dnp",
+        "--ref-range-delimiter",
+        ""
+      ],
+      "field_map": {
+        "designators": "Designator",
+        "value": "Comment",
+        "footprint": "Footprint",
+        "quantity": "Quantity",
+        "LCSC": "LCSC Part #"
+      }
+    },
+    "cpl": {
+      "output": "cpl.csv",
+      "flags": [
+        "--format",
+        "csv",
+        "--units",
+        "mm",
+        "--side",
+        "both",
+        "--exclude-dnp"
+      ],
+      "field_map": {
+        "designator": "Ref",
+        "x": "PosX",
+        "y": "PosY",
+        "side": "Side",
+        "rotation": "Rot"
+      },
+      "origin": {
+        "frame": "absolute page origin",
+        "offset_mm": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "archive": {
+      "zip": "microphone_array_v2-revA-fabrication.zip",
+      "manifest": "MANIFEST.md"
+    }
   }
 }

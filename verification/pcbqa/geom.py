@@ -63,13 +63,35 @@ def _polyset_to_polygons(polyset):
     return unary_union(out)
 
 
-# 1 um chord error, approximated OUTWARD. Both choices are deliberate: an
-# inscribed polygon under-states a pad and would therefore over-state the
-# clearance to it, which is the unsafe direction for a fabrication check.
-POLYGON_ERROR_IU = 1000
+# How finely a curve is approximated, and in which direction. Approximating
+# OUTWARD is deliberate: an inscribed polygon under-states a pad and would
+# therefore over-state the clearance to it, which is the unsafe direction for a
+# fabrication check. The chord error itself is a board-level tolerance and
+# comes from the geometry profile, never from a literal in this module.
+_POLYGON_ERROR_IU = None
 
 
-def _effective_polygon(item, layer, error_iu=POLYGON_ERROR_IU):
+def configure(polygon_chord_error_mm):
+    """Install the chord error from a board's geometry profile."""
+    global _POLYGON_ERROR_IU
+    if not polygon_chord_error_mm or polygon_chord_error_mm <= 0:
+        raise UnsupportedGeometry(
+            "polygon chord error must be a positive length in mm")
+    _POLYGON_ERROR_IU = int(round(polygon_chord_error_mm * 1e6))
+    return _POLYGON_ERROR_IU
+
+
+def polygon_error_iu():
+    if _POLYGON_ERROR_IU is None:
+        raise UnsupportedGeometry(
+            "no polygon chord error has been configured; the geometry profile "
+            "must declare `polygon_chord_error_mm` before any shape is "
+            "approximated")
+    return _POLYGON_ERROR_IU
+
+
+def _effective_polygon(item, layer, error_iu=None):
+    error_iu = polygon_error_iu() if error_iu is None else error_iu
     """Ask KiCad for the item's effective shape on a layer, as a polygon."""
     polyset = pcbnew.SHAPE_POLY_SET()
     try:

@@ -2,10 +2,10 @@ UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE
 
 board: microphone_array_v2-revA
 release profile: jlcpcb-4layer-assembled
+clean run: C:\Users\pentolope\Documents\GitHub\PCB_MicrophoneArrayV2\verification\out\microphone_array_v2-revA\clean_run
 
 blocking:
   PROV.SOURCE_AUTHORITY: FAIL - 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data
-  PROV.REPORT_FRESHNESS: FAIL - 4 committed report(s) cannot be tied to the current sources
   ERC.AUTHORITATIVE: FAIL - 1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4
   DRC.AUTHORITATIVE: FAIL - 1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5
   DRC.NO_SUPPRESSED_RULES: FAIL - 5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s)
@@ -18,8 +18,7 @@ blocking:
   ROUTE.ANGLE_STYLE: FAIL - 138 corners are not on the permitted [0.0, 45.0] degree geometry
   ROUTE.TINY_SEGMENTS: FAIL - 57 track fragments below 0.25 mm are not pad or via entries
   CONTRACT.CONNECTOR: FAIL - 15x documentation asserts a superseded interconnect; 2x artifact contradicts the required gender; 1x no docume
-  ARCH.CONTENTS: FAIL - 2 archive content problem(s)
-  ARCH.PROVENANCE: FAIL - 3 release-provenance problem(s)
+  BOM.NATIVE_PARITY: FAIL - 21 disagreement(s) between the native schematic, the board and the packaged BOM
   CFG.NO_RIVAL_THRESHOLDS: FAIL - 2 rival threshold definition(s) outside the canonical manifest
 
 No sealed or orderable package was produced.

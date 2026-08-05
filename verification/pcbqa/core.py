@@ -316,8 +316,18 @@ class Context:
 
     def kicad_version(self):
         def probe():
-            proc = self.run_tool([self.kicad_cli, "--version"], timeout=120)
-            return (proc.stdout or proc.stderr).strip().splitlines()[0]
+            # Recording which tool ran must never be the thing that breaks a
+            # gate: a tool too broken to state its version is a finding for
+            # the gate to report, not an exception to crash on.
+            try:
+                proc = self.run_tool([self.kicad_cli, "--version"], timeout=120)
+            except Exception as exc:                       # noqa: BLE001
+                return f"UNAVAILABLE: {type(exc).__name__}: {exc}"
+            lines = (proc.stdout or proc.stderr or "").strip().splitlines()
+            if not lines:
+                return f"UNREPORTED: {self.kicad_cli} exited {proc.returncode} " \
+                       f"without printing a version"
+            return lines[0]
         return self.cache("kicad_version", probe)
 
 
@@ -333,6 +343,22 @@ def summarise(results):
     return counts, blocking
 
 
+def _tooling(context):
+    from . import preflight
+    ok, rows = preflight.environment(context.kicad_cli)
+    return {
+        "environment_ok": ok,
+        "kicad_cli": context.kicad_cli,
+        "kicad_version": context.tool_versions.get("kicad", "unrecorded"),
+        "components": [
+            {"name": r["name"], "version": r["version"], "path": r.get("path"),
+             "ok": r["ok"], "detail": r["detail"],
+             **({"ownership": r["ownership"]} if r.get("ownership") else {})}
+            for r in rows
+        ],
+    }
+
+
 def to_json(results, context, extra=None):
     counts, blocking = summarise(results)
     doc = {
@@ -344,11 +370,12 @@ def to_json(results, context, extra=None):
             "board_id": context.manifest.get("board_id"),
             "constraint_version": context.manifest.get("constraint_version"),
         },
-        "tooling": {
-            "kicad_cli": context.kicad_cli,
-            "kicad_version": context.tool_versions.get("kicad", "unrecorded"),
-            "python": sys.version.split()[0],
-        },
+        # Every report records not just which versions were used but where
+        # each module was loaded from. Two KiCad installs, or a Shapely
+        # supplied by an add-on rather than the one you expected, produce
+        # different geometry; a version string alone cannot tell you which
+        # environment produced a result.
+        "tooling": _tooling(context),
         "summary": {
             "counts": counts,
             "blocking": [r.gate_id for r in blocking],

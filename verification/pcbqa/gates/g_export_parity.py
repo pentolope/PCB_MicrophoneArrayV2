@@ -23,7 +23,7 @@ import shutil
 from shapely.geometry import Point
 
 from ..core import gate
-from .. import gerber
+from .. import geom, gerber
 
 
 # Gerber space is the KiCad page with Y mirrored. Native geometry keeps page
@@ -104,6 +104,8 @@ def via_export_parity(ctx, res):
         return res.errored("gerber directory not found: " + directory)
 
     profile = ctx.manifest.geometry_profile()
+    geom.configure(res.limit(
+        profile.tolerance("polygon_chord_error_mm")).value)
     coord_tol = res.limit(profile.tolerance("coordinate_match_mm")).value
     dim_tol = res.limit(profile.tolerance("dimension_match_mm")).value
     dist_tol = res.limit(profile.tolerance("clearance_match_mm")).value

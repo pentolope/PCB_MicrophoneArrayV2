@@ -83,7 +83,12 @@ def stack_native(ctx, res):
 def _via_survey(ctx):
     """Per-via nearest mask opening on each side, from the native board."""
     def build():
-        tol = ctx.manifest.geometry_profile().tolerance("contact_mm").value
+        profile = ctx.manifest.geometry_profile()
+        # The chord error is a board tolerance, so it is installed from the
+        # profile before anything is polygonised. Gates that apply it also
+        # record it as a limit, which is what proves it came from the manifest.
+        geom.configure(profile.tolerance("polygon_chord_error_mm").value)
+        tol = profile.tolerance("contact_mm").value
         g = geom.BoardGeometry(ctx.board(), contact_tolerance_mm=tol)
         rows = []
         for via in g.vias:
@@ -108,6 +113,10 @@ def _worst(row, field):
 
 def _clearance_gate(ctx, res, limit_key, label):
     constraint = res.limit(ctx.manifest.constraint(limit_key, units="mm", cid=label))
+    # The clearances below were measured from polygons approximated at this
+    # chord error, so it is part of the result and is declared as such.
+    res.limit(ctx.manifest.geometry_profile()
+              .tolerance("polygon_chord_error_mm"))
     metric = res.limit(ctx.manifest.constraint(
         "via_mask.metric", units="field name", cid="via_mask.metric")).value
     limit = constraint.value
@@ -158,6 +167,8 @@ def via_process(ctx, res):
       requires=("via_mask",))
 def via_overlap(ctx, res):
     res.limit(ctx.manifest.geometry_profile().tolerance("contact_mm"))
+    res.limit(ctx.manifest.geometry_profile()
+              .tolerance("polygon_chord_error_mm"))
     _, rows = _via_survey(ctx)
     hits, strict = [], 0
     for row in rows:
