@@ -132,10 +132,14 @@ def cmd_release(manifest_path):
             type(exc).__name__, exc))
         return 1
     finally:
-        # Unconditional, and in this order: the staged package dies first,
-        # then anything orderable that reached the output tree by any route.
+        # Unconditional, and in this order: the staged package and any
+        # half-assembled candidate die first, then anything orderable that
+        # reached the output tree by any route. `succeeded` is set by
+        # commit_candidate and only by commit_candidate, so a failure between
+        # "archive built" and "candidate in place" sweeps like any other.
         run.discard_staging()
-        if not run.promoted:
+        run.discard_pending()
+        if not run.succeeded:
             swept = run.sweep_output_tree(base)
             if swept:
                 print("Removed {} orderable archive(s) from a release that did "
@@ -198,25 +202,7 @@ def _release_attempt(run, manifest, profile, mandatory, base,
     print("  package staged outside the output tree: " + run.staging)
 
     if blockers:
-        os.makedirs(unsafe)
-        lines = ["UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE", "",
-                 "board: " + str(manifest.get("board_id")),
-                 "release profile: " + str(profile.get("id")),
-                 "clean run: " + run.root, "",
-                 "No fabrication archive was promoted; the staged package has "
-                 "been destroyed.", "", "blocking:"]
-        for gate_id, status, why in blockers:
-            lines.append("  {}: {} - {}".format(gate_id, status, why))
-        lines += ["", "No sealed or orderable package was produced.", ""]
-        with open(os.path.join(unsafe, "DO_NOT_ORDER.txt"), "w",
-                  encoding="utf-8") as fh:
-            fh.write(chr(10).join(lines))
-        with open(os.path.join(unsafe, "clean_room.json"), "w",
-                  encoding="utf-8") as fh:
-            json.dump(run.summary(), fh, indent=2)
-        if jpath:
-            shutil.copy2(jpath, os.path.join(unsafe, "validation.json"))
-            shutil.copy2(mpath, os.path.join(unsafe, "validation.md"))
+        _write_unsafe(unsafe, run, manifest, profile, blockers, jpath, mpath)
         print(chr(10) + "RELEASE BLOCKED by {} condition(s):".format(
             len(blockers)))
         for gate_id, status, why in blockers[:25]:
@@ -226,26 +212,79 @@ def _release_attempt(run, manifest, profile, mandatory, base,
         print("Fabrication archive created: NO")
         return 1
 
-    # Every mandatory gate passed. Only now does anything orderable exist.
-    os.makedirs(candidate)
-    promoted = run.promote(os.path.join(candidate, "fabrication"))
-    shutil.copytree(run.reports, os.path.join(candidate, "reports"))
-    shutil.copy2(jpath, os.path.join(candidate, "validation.json"))
-    with open(os.path.join(candidate, "clean_room.json"), "w",
-              encoding="utf-8") as fh:
-        json.dump(run.summary(), fh, indent=2)
-    with open(os.path.join(candidate, "UNSEALED.txt"), "w", encoding="utf-8") as fh:
-        fh.write("Release CANDIDATE, not sealed." + chr(10) + chr(10)
-                 + "Every artifact here was generated in this run from a clean "
-                   "project copy with all prior output purged, and every "
-                   "mandatory gate passed against those artifacts before the "
-                   "package was moved out of staging. Sealing additionally "
-                   "requires recorded visual-review evidence ({}).".format(
-                       profile.get("visual_review_evidence")) + chr(10))
+    # Every mandatory gate passed. Assemble the candidate in full outside the
+    # output tree; a failure anywhere below leaves the output tree untouched.
+    try:
+        pending = run.stage_candidate()
+        shutil.copytree(run.reports, os.path.join(pending, "reports"))
+        shutil.copy2(jpath, os.path.join(pending, "validation.json"))
+        with open(os.path.join(pending, "clean_room.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump(run.summary(), fh, indent=2)
+        with open(os.path.join(pending, "UNSEALED.txt"), "w",
+                  encoding="utf-8") as fh:
+            fh.write(_unsealed_text(profile))
+        promoted = run.commit_candidate(candidate)   # last operation, atomic
+    except BaseException as exc:
+        # Includes KeyboardInterrupt. Whatever went wrong, this attempt did
+        # not produce a release, and the only thing it may leave behind is a
+        # diagnostic saying so.
+        run.discard_pending()
+        run.sweep_output_tree(base)
+        _write_unsafe(unsafe, run, manifest, profile,
+                      [("release:promotion", "ERROR",
+                        "{}: {}".format(type(exc).__name__, exc))],
+                      jpath, mpath)
+        print(chr(10) + "RELEASE BLOCKED: promotion failed after every gate "
+                        "passed ({}: {})".format(type(exc).__name__, exc))
+        print("Unsafe diagnostic output only: " + unsafe)
+        print("Sealed package created: NO")
+        print("Fabrication archive created: NO")
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        return 1
+
     print(chr(10) + "Unsealed release candidate: " + candidate)
     print("Promoted from staging: " + ", ".join(promoted))
     print("Sealed package created: NO (sealing requires visual-review evidence)")
     return 0
+
+
+def _unsealed_text(profile):
+    return ("Release CANDIDATE, not sealed." + chr(10) + chr(10)
+            + "Every artifact here was generated in this run from a clean "
+              "project copy with all prior output purged, and every mandatory "
+              "gate passed against those artifacts before the candidate was "
+              "assembled. The whole candidate was built in temporary storage "
+              "and moved here in one operation, so this directory is never "
+              "partially written. Sealing additionally requires recorded "
+              "visual-review evidence ({}).".format(
+                  profile.get("visual_review_evidence")) + chr(10))
+
+
+def _write_unsafe(unsafe, run, manifest, profile, blockers, jpath, mpath):
+    """The only thing an unsuccessful attempt may leave behind."""
+    if os.path.isdir(unsafe):
+        shutil.rmtree(unsafe)
+    os.makedirs(unsafe)
+    lines = ["UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE", "",
+             "board: " + str(manifest.get("board_id")),
+             "release profile: " + str(profile.get("id")),
+             "clean run: " + run.root, "",
+             "No fabrication archive was promoted; the staged package has "
+             "been destroyed.", "", "blocking:"]
+    for gate_id, status, why in blockers:
+        lines.append("  {}: {} - {}".format(gate_id, status, why))
+    lines += ["", "No sealed or orderable package was produced.", ""]
+    with open(os.path.join(unsafe, "DO_NOT_ORDER.txt"), "w",
+              encoding="utf-8") as fh:
+        fh.write(chr(10).join(lines))
+    with open(os.path.join(unsafe, "clean_room.json"), "w",
+              encoding="utf-8") as fh:
+        json.dump(run.summary(), fh, indent=2)
+    if jpath:
+        shutil.copy2(jpath, os.path.join(unsafe, "validation.json"))
+        shutil.copy2(mpath, os.path.join(unsafe, "validation.md"))
 
 
 def cmd_selftest(argv):

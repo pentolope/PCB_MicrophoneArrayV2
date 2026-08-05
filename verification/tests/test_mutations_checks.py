@@ -124,10 +124,13 @@ class ToolFailureIsNotAVerdict(unittest.TestCase):
                "date": "2026-08-04T00:00:00", "kicad_version": "10.0.5",
                "source": "s.kicad_sch", "ignored_checks": [],
                "included_severities": ["error"],
-               "sheets": [{"path": "/", "violations": [
+               "coordinate_units": "mm",
+               "sheets": [{"uuid_path": "/11111111-2222-3333-4444-555555555555",
+                           "path": "/", "violations": [
                    {"type": "pin_not_connected", "severity": "error",
                     "description": "Pin not connected",
-                    "items": [{"description": "U1 pin 3",
+                    "items": [{"uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                               "description": "U1 pin 3",
                                "pos": {"x": 1.0, "y": 2.0}}]}]}]}
         findings, _meta = reports.parse_erc(doc)
         self.assertEqual(len(findings), 1)

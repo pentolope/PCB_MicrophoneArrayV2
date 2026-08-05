@@ -234,50 +234,105 @@ class UnusableInputsAreErrors(_Base):
         self.assertIn("not readable JSON", result.reason)
 
     def test_an_unsupported_schema_marker_is_refused(self):
-        doc = {"$schema": "https://schemas.kicad.org/drc.v9.json",
-               "date": "d", "kicad_version": "10.0.5", "source": "b.kicad_pcb",
-               "ignored_checks": [], "included_severities": ["error"],
-               "violations": [], "unconnected_items": [], "schematic_parity": []}
+        doc = drc_report(schema="https://schemas.kicad.org/drc.v9.json")
         with self.assertRaises(reports.ReportSchemaError):
             reports.parse_drc(doc)
-        doc["$schema"] = "https://schemas.kicad.org/drc.v1.json"
-        self.assertEqual(reports.parse_drc(doc)[0], [])
+        self.assertEqual(reports.parse_drc(drc_report())[0], [])
 
     def test_an_unsupported_kicad_major_version_is_refused(self):
-        doc = {"$schema": "https://schemas.kicad.org/drc.v1.json",
-               "date": "d", "kicad_version": "11.0.0", "source": "b.kicad_pcb",
-               "ignored_checks": [], "included_severities": ["error"],
-               "violations": [], "unconnected_items": [], "schematic_parity": []}
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(drc_report(kicad_version="11.0.0"))
+        # And a version string the schema's own pattern rejects.
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(drc_report(kicad_version="ten"))
+
+    def test_a_missing_required_report_field_is_refused(self):
+        for field in ("source", "date", "kicad_version", "violations",
+                      "unconnected_items", "schematic_parity",
+                      "coordinate_units", "included_severities",
+                      "ignored_checks"):
+            doc = drc_report()
+            doc.pop(field)
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="missing {} was accepted".format(field)):
+                reports.parse_drc(doc)
+
+    def test_a_missing_required_violation_or_item_field_is_refused(self):
+        for field in ("type", "description", "severity", "items"):
+            doc = drc_report(violations=[_violation()])
+            doc["violations"][0].pop(field)
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="violation without {} accepted".format(field)):
+                reports.parse_drc(doc)
+        for field in ("uuid", "description", "pos"):
+            doc = drc_report(violations=[_violation()])
+            doc["violations"][0]["items"][0].pop(field)
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="item without {} accepted".format(field)):
+                reports.parse_drc(doc)
+        for axis in ("x", "y"):
+            doc = drc_report(violations=[_violation()])
+            doc["violations"][0]["items"][0]["pos"].pop(axis)
+            with self.assertRaises(reports.ReportSchemaError):
+                reports.parse_drc(doc)
+
+    def test_an_invalid_uuid_is_refused(self):
+        for bad in ("not-a-uuid", "11111111-2222-3333-4444", "", 17,
+                    "11111111222233334444555555555555"):
+            doc = drc_report(violations=[_violation()])
+            doc["violations"][0]["items"][0]["uuid"] = bad
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="uuid {!r} accepted".format(bad)):
+                reports.parse_drc(doc)
+
+    def test_an_invalid_severity_is_refused(self):
+        for bad in ("catastrophic", "exclusion", "", None):
+            doc = drc_report(violations=[_violation()])
+            doc["violations"][0]["severity"] = bad
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="severity {!r} accepted".format(bad)):
+                reports.parse_drc(doc)
+
+    def test_invalid_coordinate_units_are_refused(self):
+        for bad in ("metres", "MM", "", 1):
+            with self.assertRaises(reports.ReportSchemaError,
+                                   msg="units {!r} accepted".format(bad)):
+                reports.parse_drc(drc_report(coordinate_units=bad))
+
+    def test_a_disallowed_extra_field_is_refused(self):
+        """Both schemas declare additionalProperties: false."""
+        doc = drc_report()
+        doc["invented_by_someone"] = True
         with self.assertRaises(reports.ReportSchemaError):
             reports.parse_drc(doc)
 
-    def test_a_missing_section_is_refused(self):
-        base = {"$schema": "https://schemas.kicad.org/drc.v1.json",
-                "date": "d", "kicad_version": "10.0.5", "source": "b.kicad_pcb",
-                "ignored_checks": [], "included_severities": ["error"],
-                "violations": [], "unconnected_items": [],
-                "schematic_parity": []}
-        for section in ("violations", "unconnected_items", "schematic_parity",
-                        "included_severities", "ignored_checks", "source"):
-            doc = dict(base)
-            doc.pop(section)
-            with self.assertRaises(reports.ReportSchemaError,
-                                   msg="missing {} was accepted".format(section)):
-                reports.parse_drc(doc)
+        doc = drc_report(violations=[_violation()])
+        doc["violations"][0]["confidence"] = 0.9
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(doc)
 
-    def test_a_malformed_finding_is_refused(self):
-        base = {"$schema": "https://schemas.kicad.org/drc.v1.json",
-                "date": "d", "kicad_version": "10.0.5", "source": "b.kicad_pcb",
-                "ignored_checks": [], "included_severities": ["error"],
-                "unconnected_items": [], "schematic_parity": []}
-        for bad in ({"severity": "error"},                 # no rule type
-                    {"type": "", "severity": "error"},     # empty rule type
-                    {"type": "clearance", "severity": "catastrophic"},
-                    {"type": "clearance", "items": "not-a-list"},
-                    "not-an-object"):
-            with self.assertRaises(reports.ReportSchemaError,
-                                   msg="{!r} was accepted".format(bad)):
-                reports.parse_drc(dict(base, violations=[bad]))
+        doc = drc_report(violations=[_violation()])
+        doc["violations"][0]["items"][0]["layer"] = "F.Cu"
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(doc)
+
+    def test_a_wrong_field_type_is_refused(self):
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(drc_report(violations={}))
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(drc_report(source=42))
+        doc = drc_report(violations=[_violation()])
+        doc["violations"][0]["items"][0]["pos"]["x"] = "12.5"
+        with self.assertRaises(reports.ReportSchemaError):
+            reports.parse_drc(doc)
+
+    def test_our_own_provenance_annotations_do_not_break_validation(self):
+        """The release binds hashes into reports it generated; ours, not KiCad's."""
+        doc = drc_report()
+        doc["source_sha256"] = "a" * 64
+        doc["source_closure_sha256"] = "b" * 64
+        doc["source_closure"] = {"x.kicad_pcb": "c" * 64}
+        self.assertEqual(reports.parse_drc(doc)[0], [])
 
     def test_an_invocation_failure_is_an_error_and_is_never_waived(self):
         box = self._cli_that(
@@ -313,6 +368,168 @@ class UnusableInputsAreErrors(_Base):
         self.assertEqual(result.status, Status.ERROR)
         self.assertIn("produced no report", result.reason)
 
+
+
+# ---------------------------------------------------------------------------
+# synthetic reports, built to satisfy the official schema by default so that
+# each test can break exactly one thing
+# ---------------------------------------------------------------------------
+
+UUID = "11111111-2222-3333-4444-555555555555"
+
+
+def _violation(x=25.4, y=50.8, rule="clearance", severity="error",
+               description="Clearance violation"):
+    return {"type": rule, "description": description, "severity": severity,
+            "items": [{"uuid": UUID, "description": "Track [Net] on F.Cu",
+                       "pos": {"x": x, "y": y}}]}
+
+
+def drc_report(**over):
+    doc = {"$schema": "https://schemas.kicad.org/drc.v1.json",
+           "source": "board.kicad_pcb",
+           "date": "2026-08-04T12:00:00+00:00",
+           "kicad_version": "10.0.5",
+           "coordinate_units": "mm",
+           "included_severities": ["error", "warning", "exclusion"],
+           "ignored_checks": [],
+           "violations": [], "unconnected_items": [], "schematic_parity": []}
+    if "schema" in over:
+        doc["$schema"] = over.pop("schema")
+    doc.update(over)
+    return doc
+
+
+def erc_report(**over):
+    doc = {"$schema": "https://schemas.kicad.org/erc.v1.json",
+           "source": "sheet.kicad_sch",
+           "date": "2026-08-04T12:00:00+00:00",
+           "kicad_version": "10.0.5",
+           "coordinate_units": "mm",
+           "included_severities": ["error", "warning", "exclusion"],
+           "ignored_checks": [],
+           "sheets": [{"uuid_path": "/" + UUID, "path": "/", "violations": []}]}
+    if "schema" in over:
+        doc["$schema"] = over.pop("schema")
+    doc.update(over)
+    return doc
+
+
+class CoordinatesAreCanonicalMillimetres(unittest.TestCase):
+    """Nothing is stored, compared or waived in the units it arrived in."""
+
+    def test_equivalent_reports_in_mm_in_and_mils_agree(self):
+        one_inch = [
+            reports.parse_drc(drc_report(
+                coordinate_units="mm",
+                violations=[_violation(x=25.4, y=50.8)]))[0][0],
+            reports.parse_drc(drc_report(
+                coordinate_units="in",
+                violations=[_violation(x=1.0, y=2.0)]))[0][0],
+            reports.parse_drc(drc_report(
+                coordinate_units="mils",
+                violations=[_violation(x=1000.0, y=2000.0)]))[0][0],
+        ]
+        for finding in one_inch:
+            self.assertAlmostEqual(finding["x_mm"], 25.4, places=9)
+            self.assertAlmostEqual(finding["y_mm"], 50.8, places=9)
+        self.assertEqual({f["source_units"] for f in one_inch},
+                         {"mm", "in", "mils"},
+                         "the units read must still be recorded, just not used "
+                         "as if they were millimetres")
+
+    def test_an_inch_report_is_never_labelled_millimetres(self):
+        finding = reports.parse_drc(drc_report(
+            coordinate_units="in",
+            violations=[_violation(x=1.0, y=1.0)]))[0][0]
+        self.assertNotEqual(finding["x_mm"], 1.0,
+                            "an inch value was stored under x_mm unconverted")
+        self.assertAlmostEqual(finding["x_mm"], 25.4, places=9)
+
+    def test_a_waiver_at_the_wrong_physical_place_does_not_match(self):
+        """The same numbers in different units are different places."""
+        finding = reports.parse_drc(drc_report(
+            coordinate_units="in",
+            violations=[_violation(x=1.0, y=2.0)]))[0][0]
+        waiver = {"gate": DRC_GATE, "rule": "clearance", "category": "violations",
+                  "objects": ["Track [Net] on F.Cu"],
+                  "location_mm": [1.0, 2.0],          # the raw inch numbers
+                  "reason": "r", "reviewed_by": "someone",
+                  "reviewed_utc": "2026-08-01T00:00:00",
+                  "approved_source_sha256": "a" * 64,
+                  "approved_rules_sha256": "b" * 64,
+                  "approved_command_sha256": "c" * 64,
+                  "approved_report_sha256": "d" * 64}
+        self.assertIsNone(g_checks._waived(finding, [waiver], 0.001),
+                          "a waiver written in the report's raw units matched a "
+                          "finding 24.4 mm away")
+        waiver["location_mm"] = [25.4, 50.8]
+        self.assertIsNotNone(g_checks._waived(finding, [waiver], 0.001))
+
+
+class NonFiniteCoordinatesAreRejected(unittest.TestCase):
+    """NaN compares false against everything, including every tolerance."""
+
+    def test_a_nan_coordinate_is_an_error_and_cannot_be_waived(self):
+        doc = drc_report(violations=[_violation(x=float("nan"), y=1.0)])
+        with self.assertRaises(reports.ReportSchemaError) as caught:
+            reports.parse_drc(doc)
+        self.assertIn("finite", str(caught.exception))
+
+    def test_infinities_are_rejected(self):
+        for bad in (float("inf"), float("-inf")):
+            with self.assertRaises(reports.ReportSchemaError):
+                reports.parse_drc(drc_report(violations=[_violation(x=bad)]))
+
+    def test_nan_is_rejected_at_load_before_anything_reads_it(self):
+        for text in ('{"a": NaN}', '{"a": Infinity}', '{"a": -Infinity}'):
+            with self.assertRaises(ValueError):
+                reports.loads(text)
+        self.assertEqual(reports.loads('{"a": 1.5}'), {"a": 1.5})
+
+    def test_a_nan_finding_never_reaches_waiver_matching(self):
+        """Validation happens first, so there is nothing to waive."""
+        waiver = {"gate": DRC_GATE, "rule": "clearance", "category": "violations",
+                  "objects": ["Track [Net] on F.Cu"], "location_mm": [0.0, 0.0],
+                  "reason": "r", "reviewed_by": "s",
+                  "reviewed_utc": "2026-08-01T00:00:00",
+                  "approved_source_sha256": "a" * 64,
+                  "approved_rules_sha256": "b" * 64,
+                  "approved_command_sha256": "c" * 64,
+                  "approved_report_sha256": "d" * 64}
+        finding = _violation(x=float("nan"), y=float("nan"))
+        normalised = {"category": "violations", "rule": "clearance",
+                      "objects": ["Track [Net] on F.Cu"],
+                      "x_mm": float("nan"), "y_mm": float("nan")}
+        # Even if such a finding somehow reached the matcher, it must not match.
+        self.assertIsNone(g_checks._waived(normalised, [waiver], 1e9))
+        del finding
+
+
+class GenuineReportsStillParse(unittest.TestCase):
+    """The frozen fixture's own reports are real KiCad 10 output."""
+
+    def test_the_genuine_drc_and_erc_reports_validate(self):
+        base = os.path.join(HERE, "fixtures", "reva", "project", "generated")
+        drc = reports.load_report(os.path.join(base, "drc.json"))
+        erc = reports.load_report(os.path.join(base, "erc.json"))
+        drc_findings, drc_meta = reports.parse_drc(drc)
+        erc_findings, erc_meta = reports.parse_erc(erc)
+        self.assertGreater(len(drc_findings), 0)
+        self.assertEqual(drc_meta["coordinate_units"], "mm")
+        self.assertEqual(erc_meta["coordinate_units"], "mm")
+        for finding in drc_findings:
+            self.assertIsNotNone(finding["x_mm"])
+            self.assertEqual(finding["source_units"], "mm")
+        self.assertIsInstance(erc_findings, list)
+
+    def test_the_vendored_drc_schema_needed_a_trailing_comma_removed(self):
+        """Upstream drc.v1.json is not valid JSON; we say so rather than fix it."""
+        from pcbqa import schema as schema_mod
+        self.assertEqual(
+            schema_mod.load_schema("drc")["__tolerated_trailing_commas__"], 1)
+        self.assertEqual(
+            schema_mod.load_schema("erc")["__tolerated_trailing_commas__"], 0)
 
 if __name__ == "__main__":
     unittest.main()

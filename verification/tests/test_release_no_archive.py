@@ -165,6 +165,152 @@ class FailedReleaseLeavesNothingOrderable(unittest.TestCase):
         self.assertIn("staged package has been destroyed", text)
 
 
+class PromotionIsTransactional(unittest.TestCase):
+    """A candidate exists in the output tree, or it does not. Never half.
+
+    Promotion used to write the candidate directory in place: make the
+    directory, copy the fabrication package in, then copy reports, then write
+    metadata. Anything that threw after the first copy left a directory
+    containing a complete, orderable ZIP - and, because promotion had
+    "started", the cleanup path skipped it.
+
+    These tests force every gate to PASS so the promotion path actually runs.
+    That is a statement about the release machinery, not about any board: the
+    point is what happens between "all gates passed" and "candidate on disk".
+    """
+
+    def _fixture(self):
+        work = tempfile.mkdtemp(prefix="pcbqa_promo_")
+        self.addCleanup(shutil.rmtree, work, True)
+        project = os.path.join(work, "project")
+        shutil.copytree(FIXTURE, project)
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["board_id"] = "promotion-fixture"
+        doc["project_root"] = project
+        doc["fixture"] = {"attributes_file": os.path.abspath(
+            os.path.join(HERE, "..", ".gitattributes"))}
+        manifest_path = os.path.join(work, "manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        return work, manifest_path, os.path.join(work, "out", doc["board_id"])
+
+    def _release(self, work, manifest_path, inject=None):
+        """Run the real release with every gate forced to PASS."""
+        real_run_all = core.run_all
+
+        def all_pass(context, only=None):
+            results = real_run_all(context, only=only)
+            for result in results:
+                if result.status != Status.NOT_APPLICABLE:
+                    result.passed(result.reason or "forced for this test")
+            return results
+
+        real_commit = cleanroom.CleanRun.commit_candidate
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        core.run_all = all_pass
+        if inject is not None:
+            cleanroom.CleanRun.commit_candidate = inject
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                code = run_cli.cmd_release(manifest_path)
+        finally:
+            core.run_all = real_run_all
+            cleanroom.CleanRun.commit_candidate = real_commit
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        return code, captured.getvalue()
+
+    # -- the control: it really does succeed when nothing is injected ------
+    def test_the_release_succeeds_and_produces_a_candidate(self):
+        work, manifest_path, base = self._fixture()
+        code, output = self._release(work, manifest_path)
+        self.assertEqual(code, 0, output[-3000:])
+        candidate = os.path.join(base, "release_candidate_UNSEALED")
+        self.assertTrue(os.path.isdir(candidate), output[-2000:])
+        archives = cleanroom.orderable_archives(candidate)
+        self.assertEqual(len(archives), 1,
+                         "a successful release must produce exactly one "
+                         "orderable archive: {}".format(archives))
+        for name in ("UNSEALED.txt", "validation.json", "clean_room.json",
+                     "reports", "fabrication"):
+            self.assertTrue(os.path.exists(os.path.join(candidate, name)),
+                            "candidate is missing " + name)
+        summary = json.load(open(os.path.join(candidate, "clean_room.json"),
+                                 encoding="utf-8"))
+        # This snapshot is written *before* the commit, by design: the commit
+        # must be the last operation, so nothing inside the candidate can
+        # record that it happened. The evidence that it did is the candidate
+        # being here at all, under its final name, with a zero exit status.
+        self.assertFalse(summary["release_succeeded"])
+        self.assertFalse(os.path.exists(summary["staging_root"]),
+                         "staging outlived a successful release")
+        self.assertIn("Unsealed release candidate", output)
+
+    # -- injected failure after the ZIP is staged, before promotion ends ---
+    def _assert_nothing_orderable(self, base, work, code, output):
+        self.assertNotEqual(code, 0, output[-2000:])
+        self.assertFalse(
+            os.path.exists(os.path.join(base, "release_candidate_UNSEALED")),
+            "a candidate directory survived a failed promotion")
+        self.assertFalse(os.path.exists(os.path.join(base, "release_sealed")))
+        out_root = os.path.join(work, "out")
+        found = cleanroom.orderable_archives(out_root)
+        self.assertEqual(found, [],
+                         "failed promotion left {} orderable archive(s): "
+                         "{}".format(len(found), found))
+        self.assertTrue(
+            os.path.isfile(os.path.join(base, "release_UNSAFE_diagnostic",
+                                        "DO_NOT_ORDER.txt")),
+            "the unsafe diagnostic must still be there")
+
+    def test_an_exception_during_promotion_leaves_nothing_orderable(self):
+        work, manifest_path, base = self._fixture()
+
+        def explode(self_run, destination):
+            # The fabrication package has already been copied into the pending
+            # candidate by stage_candidate() at this point - the exact window
+            # that used to leave an orderable ZIP behind.
+            assert self_run.pending and os.path.isdir(
+                os.path.join(self_run.pending, "fabrication"))
+            raise RuntimeError("injected failure during promotion")
+
+        code, output = self._release(work, manifest_path, inject=explode)
+        self._assert_nothing_orderable(base, work, code, output)
+        self.assertIn("injected failure during promotion", output)
+
+    def test_an_interrupt_during_promotion_leaves_nothing_orderable(self):
+        work, manifest_path, base = self._fixture()
+
+        def interrupt(self_run, destination):
+            raise KeyboardInterrupt()
+
+        code, output = self._release(work, manifest_path, inject=interrupt)
+        self.assertEqual(code, 130)
+        self._assert_nothing_orderable(base, work, code, output)
+
+    def test_a_partial_promotion_is_swept(self):
+        """Even if a candidate directory somehow lands, it does not survive."""
+        work, manifest_path, base = self._fixture()
+
+        def half(self_run, destination):
+            os.makedirs(destination, exist_ok=True)
+            shutil.copytree(os.path.join(self_run.pending, "fabrication"),
+                            os.path.join(destination, "fabrication"))
+            raise RuntimeError("injected failure after a partial copy")
+
+        code, output = self._release(work, manifest_path, inject=half)
+        self._assert_nothing_orderable(base, work, code, output)
+
+    def test_success_is_recorded_only_by_a_completed_commit(self):
+        work, manifest_path, base = self._fixture()
+        run = cleanroom.CleanRun.__new__(cleanroom.CleanRun)
+        self.assertFalse(getattr(run, "succeeded", False),
+                         "release_succeeded must not default to true")
+
+
 class SweepIsABackstopNotThePrimaryMechanism(unittest.TestCase):
     """Staging is what keeps the promise; the sweep is belt and braces."""
 

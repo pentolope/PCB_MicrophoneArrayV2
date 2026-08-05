@@ -18,6 +18,7 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
+import math
 import os
 
 from ..core import Status, gate, sha256_file, utcnow
@@ -267,6 +268,13 @@ def _waived(finding, waivers, tol):
         x, y = finding.get("x_mm"), finding.get("y_mm")
         if x is None or y is None:
             continue
+        # A non-finite coordinate makes every comparison below false, which
+        # means `abs(nan - wx) > tol` is false and the waiver would *match*.
+        # Schema validation rejects such a report before it gets here; this is
+        # the second lock on the same door, because the failure mode is a
+        # silent waiver rather than a visible error.
+        if not (math.isfinite(x) and math.isfinite(y)):
+            continue
         wx, wy = w["location_mm"]
         if abs(x - wx) > tol or abs(y - wy) > tol:
             continue
@@ -352,8 +360,10 @@ def _run(ctx, res, kind, gate_id):
                 kind.upper(), proc.returncode, (proc.stderr or "").strip()[:300]))
     res.evidence_file(out_json)
     try:
-        with open(out_json, encoding="utf-8") as fh:
-            doc = json.load(fh)
+        # Strict: NaN and Infinity are not JSON, and a report carrying one is
+        # rejected here rather than producing a coordinate that compares false
+        # against every tolerance and every waiver.
+        doc = reports.load_report(out_json)
     except (ValueError, OSError) as exc:
         return res.errored("{} report is not readable JSON: {}".format(
             kind.upper(), exc))
@@ -361,11 +371,15 @@ def _run(ctx, res, kind, gate_id):
         findings, meta = (reports.parse_erc(doc) if kind == "erc"
                           else reports.parse_drc(doc))
     except reports.ReportSchemaError as exc:
+        # Before any waiver is looked at: a report we cannot validate must not
+        # be waivable into a pass.
         return res.errored("unsupported {} report schema: {}".format(
             kind.upper(), exc))
 
     report_hash = _report_digest(findings)
     res.measurements["report_meta"] = meta
+    res.measurements["coordinate_units"] = meta["coordinate_units"]
+    res.measurements["locations_stored_in"] = "mm"
     res.measurements["report_findings_sha256"] = report_hash
 
     problems = []

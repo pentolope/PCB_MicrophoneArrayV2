@@ -48,6 +48,11 @@ AUTHORITATIVE_KEYS = (
 ORDERABLE_SUFFIXES = (".zip", ".7z", ".rar", ".tar", ".tgz", ".tar.gz",
                       ".tar.bz2", ".tar.xz", ".gz")
 
+# Directory names that mean "this is a release you could act on". Any of these
+# left behind by an unsuccessful attempt is removed whole.
+CANDIDATE_DIR_NAMES = ("release_candidate_UNSEALED", "release_sealed",
+                       ".release_candidate_incoming")
+
 
 def orderable_archives(root):
     """Every archive-shaped file under `root`, recursively."""
@@ -156,7 +161,13 @@ class CleanRun:
         # called once every mandatory gate has passed.
         self.staging = tempfile.mkdtemp(prefix="pcbqa_release_staging_")
         self.release = self.staging
+        # The candidate is assembled here too, and moved into the output tree
+        # in a single final operation. Assembling it in place would mean that
+        # a failure part-way through - an exception, a timeout, Ctrl+C - left a
+        # directory that looks like a release and contains a real archive.
+        self.pending = None
         self.promoted = False
+        self.succeeded = False
         atexit.register(self.discard_staging)
         self.reports = os.path.join(self.root, "reports")
         self.log = []
@@ -492,13 +503,55 @@ class CleanRun:
         """Both roots this attempt legitimately writes to."""
         return _inside(path, self.root) or _inside(path, self.staging)
 
-    def promote(self, destination):
-        """Move the staged package into the output tree. Success only."""
+    def stage_candidate(self):
+        """Begin assembling the candidate, outside the output tree.
+
+        Returns a directory to fill. Nothing in the output tree changes until
+        `commit_candidate` is called, so a failure at any point during
+        assembly leaves the output tree exactly as it was.
+        """
+        self.discard_pending()
+        self.pending = tempfile.mkdtemp(prefix="pcbqa_release_pending_")
+        atexit.register(self.discard_pending)
+        shutil.copytree(self.staging, os.path.join(self.pending, "fabrication"))
+        return self.pending
+
+    def commit_candidate(self, destination):
+        """Move the finished candidate into place. The last operation.
+
+        A rename is atomic on the same volume, which is the case that matters:
+        the candidate directory either exists complete or does not exist. When
+        the temporary directory is on another volume the move degrades to a
+        copy, so that case is detected and the copy is made into a hidden name
+        and renamed, keeping the final step atomic either way.
+        """
+        if self.pending is None or not os.path.isdir(self.pending):
+            raise CleanRoomError("no candidate has been staged")
         if os.path.isdir(destination):
             shutil.rmtree(destination)
-        shutil.copytree(self.staging, destination)
+        parent = os.path.dirname(destination)
+        os.makedirs(parent, exist_ok=True)
+        try:
+            os.rename(self.pending, destination)
+        except OSError:
+            # Different volume: copy beside the target, then rename.
+            interim = os.path.join(parent, ".release_candidate_incoming")
+            if os.path.isdir(interim):
+                shutil.rmtree(interim)
+            shutil.copytree(self.pending, interim)
+            os.rename(interim, destination)
+            shutil.rmtree(self.pending, ignore_errors=True)
+        self.pending = None
         self.promoted = True
+        self.succeeded = True
         return sorted(os.listdir(destination))
+
+    def discard_pending(self):
+        """Destroy a half-assembled candidate. Safe to call repeatedly."""
+        pending = getattr(self, "pending", None)
+        if pending and os.path.isdir(pending):
+            shutil.rmtree(pending, ignore_errors=True)
+        self.pending = None
 
     def discard_staging(self):
         """Destroy the staged package. Safe to call repeatedly."""
@@ -517,6 +570,13 @@ class CleanRun:
         for root in (self.root,) + tuple(extra_roots):
             if not root or not os.path.isdir(root):
                 continue
+            # A part-built candidate directory is itself orderable-looking,
+            # whatever it does or does not contain.
+            for name in CANDIDATE_DIR_NAMES:
+                path = os.path.join(root, name)
+                if os.path.isdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                    removed.append(path)
             for path in orderable_archives(root):
                 try:
                     os.unlink(path)
@@ -529,7 +589,9 @@ class CleanRun:
         return {
             "run_root": self.root,
             "staging_root": self.staging,
+            "pending_root": self.pending,
             "promoted": self.promoted,
+            "release_succeeded": self.succeeded,
             "origin": self.origin_root,
             "purged": self.removed,
             "steps": self.log,
