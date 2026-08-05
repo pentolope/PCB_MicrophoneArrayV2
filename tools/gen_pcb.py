@@ -1730,9 +1730,17 @@ def add_silkscreen(board):
     text("-X", *d.to_kicad(-16.0, 0.0), size=1.4)
 
     # Short legend for each test point, pushed radially outward from its pad.
-    for _ref, _net, radius, angle, label in d.TEST_POINTS:
-        lx, ly = d.polar(radius + 2.5, angle)
-        text(label, *d.to_kicad(lx, ly), size=1.0, thickness=0.15)
+    # tools/place_testpoints.py records each pad as (ref, net, footprint, x, y)
+    # in design-frame cartesian coordinates - it chooses positions against the
+    # routed copper, so a polar description would not survive a reroute.
+    for _ref, net, _footprint, x, y in d.TEST_POINTS:
+        radius = math.hypot(x, y)
+        if radius < 1e-6:
+            lx, ly = x, y + 2.5
+        else:
+            scale = (radius + 2.5) / radius
+            lx, ly = x * scale, y * scale
+        text(net, *d.to_kicad(lx, ly), size=1.0, thickness=0.15)
 
     text("16-CH PDM MIC ARRAY  rev A", *d.to_kicad(0.0, 18.0), size=1.4)
     text("PORTS FACE UP - DO NOT WASH", *d.to_kicad(0.0, 15.5), size=1.2)
