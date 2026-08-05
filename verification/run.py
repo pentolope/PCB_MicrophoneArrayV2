@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 
@@ -80,6 +81,39 @@ def cmd_validate(manifest_path, quiet=False):
     return (1 if doc["summary"]["blocking"] else 0), doc, ctx
 
 
+BOARD_ID_PATTERN = r'"board_id"\s*:\s*"([^"]+)"'
+
+
+def managed_output_dir(manifest_path):
+    """Where this board's release output lives, resolved without trusting much.
+
+    Called before the gates are imported and before the manifest is
+    constructed, because both of those can fail and a release that fails is
+    still a release that must not leave an old candidate behind. A manifest too
+    broken to parse is still usually readable enough to say which board it is
+    about, so the board id is taken from strict JSON when that works and from
+    the raw text when it does not.
+
+    Returns None only when no board can be identified, in which case there is
+    no managed directory to clean.
+    """
+    try:
+        with open(manifest_path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+    board_id = None
+    try:
+        board_id = json.loads(text).get("board_id")
+    except ValueError:
+        match = re.search(BOARD_ID_PATTERN, text)
+        if match:
+            board_id = match.group(1)
+    if not isinstance(board_id, str) or not board_id.strip():
+        return None
+    return os.path.join(_output_base(), "out", board_id)
+
+
 def cmd_release(manifest_path):
     """Clean-room release.
 
@@ -91,22 +125,25 @@ def cmd_release(manifest_path):
     *outside* the output tree and moved in by a single rename, which is the
     last operation of a successful run.
 
-    The cleanup contract is established before anything else, including before
-    the preconditions are checked. A release refused for a missing profile is
-    still a release that failed, and it must not leave yesterday's candidate
-    sitting in the output directory looking current.
+    The cleanup contract is established first - before the optional gate
+    modules are imported, before the manifest is constructed, and before it is
+    validated. Every one of those can fail, and each failure is still a failed
+    release: it must not leave yesterday's candidate sitting in the output
+    directory looking current.
     """
-    from pcbqa import cleanroom, core
-    from pcbqa.core import Context, Manifest
-    _load_gates()
+    from pcbqa import cleanroom
 
-    manifest = Manifest(manifest_path)
-    base = os.path.join(_output_base(), "out", manifest.get("board_id"))
-    os.makedirs(base, exist_ok=True)
-
-    # Set before the first `return`, cleared only by a completed promotion.
+    base = managed_output_dir(manifest_path)
     state = {"succeeded": False, "run": None}
     try:
+        if base is None:
+            print("RELEASE BLOCKED: cannot identify the board this manifest "
+                  "describes, so nothing can be released from it")
+            return 1
+        os.makedirs(base, exist_ok=True)
+        _load_gates()                       # optional, and able to fail
+        from pcbqa.core import Manifest
+        manifest = Manifest(manifest_path)  # validates schema_version, JSON
         return _release_preconditions_and_attempt(manifest, base, state)
     except KeyboardInterrupt:
         print(chr(10) + "RELEASE ABANDONED: interrupted before it could "
@@ -121,14 +158,14 @@ def cmd_release(manifest_path):
         if run is not None:
             run.discard_staging()
             run.discard_pending()
-        if not state["succeeded"]:
+        if not state["succeeded"] and base is not None:
             swept = cleanroom.purge_managed_output(base)
             if swept:
                 print("Removed {} orderable artifact(s) from a release that "
                       "did not succeed".format(len(swept)))
-        left = cleanroom.orderable_archives(base)
-        if left:
-            print("WARNING: orderable archive(s) remain: {}".format(left))
+            left = cleanroom.orderable_archives(base)
+            if left:
+                print("WARNING: orderable archive(s) remain: {}".format(left))
 
 
 def _release_preconditions_and_attempt(manifest, base, state):

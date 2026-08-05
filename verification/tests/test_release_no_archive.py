@@ -325,6 +325,138 @@ class EarlyRejectionStillCleansUp(unittest.TestCase):
 
 
 
+class FailuresBeforeTheManifestStillCleanUp(unittest.TestCase):
+    """Cleanup is established before anything that can fail is attempted.
+
+    Importing the gate modules and constructing the manifest are both able to
+    raise, and both used to happen before the cleanup contract existed. A
+    release that died in either place returned nonzero having touched nothing -
+    leaving an earlier candidate, complete with its archive, sitting under its
+    published name.
+    """
+
+    def _fixture(self, board_id, manifest_text=None):
+        work = tempfile.mkdtemp(prefix="pcbqa_pre_")
+        self.addCleanup(shutil.rmtree, work, True)
+        project = os.path.join(work, "project")
+        shutil.copytree(FIXTURE, project)
+        manifest_path = os.path.join(work, "manifest.json")
+        if manifest_text is None:
+            doc = json.load(open(REVA, encoding="utf-8"))
+            doc["board_id"] = board_id
+            doc["project_root"] = project
+            doc["fixture"] = {"attributes_file": os.path.abspath(
+                os.path.join(HERE, "..", ".gitattributes"))}
+            with open(manifest_path, "w", encoding="utf-8") as fh:
+                json.dump(doc, fh, indent=2)
+        else:
+            with open(manifest_path, "w", encoding="utf-8") as fh:
+                fh.write(manifest_text)
+        base = os.path.join(work, "out", board_id)
+        os.makedirs(base, exist_ok=True)
+        return work, manifest_path, base
+
+    @staticmethod
+    def _plant(base):
+        fabrication = os.path.join(base, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication, exist_ok=True)
+        archive = os.path.join(fabrication, "yesterday-fabrication.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("board-F_Cu.gbr", "G04 from an earlier run*\n")
+        return archive
+
+    def _run(self, work, manifest_path):
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                code = run_cli.cmd_release(manifest_path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        return code, captured.getvalue()
+
+    def _assert_clean(self, work, base):
+        self.assertEqual(cleanroom.orderable_archives(os.path.join(work, "out")),
+                         [], "an orderable archive survived")
+        for name in cleanroom.CANDIDATE_DIR_NAMES:
+            self.assertFalse(os.path.exists(os.path.join(base, name)),
+                             "{} survived".format(name))
+
+    def test_a_gate_import_failure_removes_a_prior_candidate(self):
+        work, manifest_path, base = self._fixture("pre-import-failure")
+        archive = self._plant(base)
+        self.assertTrue(os.path.isfile(archive))
+
+        real = run_cli._load_gates
+
+        def broken():
+            raise ImportError("simulated failure importing a gate module")
+
+        run_cli._load_gates = broken
+        try:
+            code, output = self._run(work, manifest_path)
+        finally:
+            run_cli._load_gates = real
+
+        self.assertEqual(code, 1, output)
+        self.assertIn("simulated failure importing a gate module", output)
+        self._assert_clean(work, base)
+
+    def test_a_malformed_manifest_removes_a_prior_candidate(self):
+        """Unparseable JSON, but the board it belongs to is still legible."""
+        text = ('{\n  "board_id": "pre-malformed",\n'
+                '  "schema_version": 2,\n'
+                '  "sources": { "pcb": "x.kicad_pcb", },\n}')
+        work, manifest_path, base = self._fixture("pre-malformed", text)
+        self._plant(base)
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self._assert_clean(work, base)
+
+    def test_a_manifest_of_the_wrong_schema_version_removes_a_prior_candidate(self):
+        work, manifest_path, base = self._fixture("pre-wrong-schema")
+        doc = json.load(open(manifest_path, encoding="utf-8"))
+        doc["schema_version"] = 99
+        with open(manifest_path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        self._plant(base)
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertIn("schema_version", output)
+        self._assert_clean(work, base)
+
+    def test_a_manifest_naming_no_board_is_refused_without_guessing(self):
+        """With no board id there is no managed directory, and none is invented."""
+        work, manifest_path, _base = self._fixture("pre-no-board", "{ not json")
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertIn("cannot identify the board", output)
+
+    def test_the_board_id_survives_a_manifest_that_will_not_parse(self):
+        work = tempfile.mkdtemp(prefix="pcbqa_bid_")
+        self.addCleanup(shutil.rmtree, work, True)
+        path = os.path.join(work, "m.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write('{ "board_id": "legible-anyway", oops }')
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        try:
+            resolved = run_cli.managed_output_dir(path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        self.assertTrue(resolved.endswith(os.path.join("out", "legible-anyway")),
+                        resolved)
+
+
 class PromotionIsTransactional(unittest.TestCase):
     """A candidate exists in the output tree, or it does not. Never half.
 

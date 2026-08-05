@@ -470,6 +470,84 @@ class CoordinatesAreCanonicalMillimetres(unittest.TestCase):
         self.assertIsNotNone(g_checks._waived(finding, [waiver], 0.001))
 
 
+class DescriptionsAreCompleteInIdentity(unittest.TestCase):
+    """Two objects that agree for 160 characters are still two objects.
+
+    Item descriptions used to be cut to 160 characters before being digested
+    or matched. KiCad's descriptions are long and front-loaded with the same
+    boilerplate - net name, layer, shape - so two genuinely different objects
+    can share a long prefix. Truncating first made them the same object: the
+    digest did not change and a waiver for one silently covered the other.
+    """
+
+    SHARED = "Track [VERY_LONG_BUS_NAME_FOR_A_DIFFERENTIAL_PAIR] on In1.Cu, " \
+             + "length " + "9" * 100
+    ONE = SHARED + " ending at pad U1 pin 1"
+    TWO = SHARED + " ending at pad U2 pin 7"
+
+    def _finding(self, description):
+        doc = drc_report(violations=[{
+            "type": "clearance", "description": "Clearance violation",
+            "severity": "error",
+            "items": [{"uuid": UUID, "description": description,
+                       "pos": {"x": 10.0, "y": 20.0}}]}])
+        return reports.parse_drc(doc)[0]
+
+    def test_the_two_descriptions_really_do_share_their_first_160_characters(self):
+        self.assertEqual(self.ONE[:160], self.TWO[:160])
+        self.assertNotEqual(self.ONE, self.TWO)
+        self.assertGreater(len(self.ONE), 160)
+
+    def test_the_complete_description_is_stored(self):
+        finding = self._finding(self.ONE)[0]
+        self.assertEqual(finding["items"][0]["description"], self.ONE)
+        self.assertEqual(finding["canonical_items"][0]["description"], self.ONE)
+        self.assertEqual(finding["objects"][0], self.ONE)
+
+    def test_truncation_survives_only_for_display(self):
+        finding = self._finding(self.ONE)[0]
+        self.assertEqual(len(finding["object"]), reports.DISPLAY_CHARS)
+        self.assertEqual(finding["objects_display"][0],
+                         self.ONE[:reports.DISPLAY_CHARS])
+
+    def test_the_digest_distinguishes_them(self):
+        self.assertNotEqual(
+            g_checks._report_digest(self._finding(self.ONE)),
+            g_checks._report_digest(self._finding(self.TWO)),
+            "descriptions differing only after character 160 produced the "
+            "same digest, so a waiver would have survived the change")
+
+    def test_a_waiver_for_one_does_not_match_the_other(self):
+        waiver = {"gate": DRC_GATE, "rule": "clearance",
+                  "category": "violations",
+                  "items": [{"description": self.ONE,
+                             "location_mm": [10.0, 20.0]}],
+                  "reason": "r", "reviewed_by": "someone",
+                  "reviewed_utc": "2026-08-01T00:00:00",
+                  "approved_source_sha256": "a" * 64,
+                  "approved_rules_sha256": "b" * 64,
+                  "approved_command_sha256": "c" * 64,
+                  "approved_report_sha256": "d" * 64}
+        self.assertIsNotNone(
+            g_checks._waived(self._finding(self.ONE)[0], [waiver], 0.001),
+            "control: the waiver must match the item it was written for")
+        self.assertIsNone(
+            g_checks._waived(self._finding(self.TWO)[0], [waiver], 0.001),
+            "a waiver matched a different object that shares a 160-character "
+            "prefix")
+
+    def test_the_violation_description_is_also_kept_whole(self):
+        long_description = "Clearance violation: " + "d" * 400
+        doc = drc_report(violations=[{
+            "type": "clearance", "description": long_description,
+            "severity": "error",
+            "items": [{"uuid": UUID, "description": "T1",
+                       "pos": {"x": 1.0, "y": 2.0}}]}])
+        finding = reports.parse_drc(doc)[0][0]
+        self.assertEqual(finding["description"], long_description)
+        self.assertEqual(len(finding["description_display"]), 200)
+
+
 class NonFiniteCoordinatesAreRejected(unittest.TestCase):
     """NaN compares false against everything, including every tolerance."""
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import hashlib
 import json
 import os
 import re
@@ -199,10 +200,38 @@ class ReleaseBlocked(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class Portability(unittest.TestCase):
+    """The same validator, unchanged, on a structurally different board.
+
+    The fixture is rebuilt into a private temporary directory, never into
+    `fixtures/portability`. The builder assigns fresh UUIDs on every run, so
+    building in place rewrote a tracked file every time the suite ran and
+    produced a 48-line diff that looked like a design change and was not one.
+    A test that modifies a checked-in fixture cannot be run twice and compared.
+    """
+
+    TRACKED = os.path.join(HERE, "fixtures", "portability", "widget_b.kicad_pcb")
+
     @classmethod
     def setUpClass(cls):
-        build_portability.build()
-        cls.results, _ctx = validate(PORTABILITY)
+        # Recorded before anything is built, so the comparison below measures
+        # what this suite did rather than what git happens to think.
+        with open(cls.TRACKED, "rb") as fh:
+            cls.tracked_digest = hashlib.sha256(fh.read()).hexdigest()
+        cls.work = tempfile.mkdtemp(prefix="pcbqa_portability_")
+        project = os.path.join(cls.work, "project")
+        os.makedirs(project)
+        shutil.copytree(os.path.join(HERE, "fixtures", "portability"), project,
+                        dirs_exist_ok=True)
+        build_portability.build(os.path.join(project, "widget_b.kicad_pcb"))
+        doc = json.load(open(PORTABILITY, encoding="utf-8"))
+        doc["project_root"] = project
+        cls.manifest_path = _write_json(
+            os.path.join(cls.work, "manifest.json"), doc)
+        cls.results, _ctx = validate(cls.manifest_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.work, ignore_errors=True)
 
     def test_generic_gates_run_on_a_structurally_different_board(self):
         for gate_id in ("STACK.NATIVE_VS_MANIFEST", "VIA.MASK_CLEARANCE_TARGET",
@@ -229,8 +258,20 @@ class Portability(unittest.TestCase):
             self.assertTrue(result["reason"], f"{gate_id} gave no reason")
 
     def test_cli_accepts_the_other_board(self):
-        proc = run_validator(PORTABILITY)
+        proc = run_validator(self.manifest_path)
         self.assertEqual(proc.returncode, 0, proc.stdout[-2000:])
+
+    def test_running_this_suite_does_not_touch_the_tracked_fixture(self):
+        """The builder writes into a temp directory, never into the fixture."""
+        with open(self.TRACKED, "rb") as fh:
+            now = hashlib.sha256(fh.read()).hexdigest()
+        self.assertEqual(now, self.tracked_digest,
+                         "running the portability suite rewrote the tracked "
+                         "fixture " + self.TRACKED)
+        self.assertFalse(self.work in build_portability.TARGET)
+        self.assertTrue(os.path.isfile(
+            os.path.join(self.work, "project", "widget_b.kicad_pcb")),
+            "the suite must build its own copy")
 
 
 # ---------------------------------------------------------------------------

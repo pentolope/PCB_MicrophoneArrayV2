@@ -64,6 +64,12 @@ REQUIRED_BEYOND_SCHEMA = ("included_severities", "ignored_checks")
 
 DRC_BUCKETS = ("violations", "unconnected_items", "schematic_parity")
 
+# How much of a description a one-line summary shows. Display only: canonical
+# identity, digests and waiver matching always use the complete string. Two
+# objects whose names agree for 160 characters and differ after that are two
+# different objects, and truncating before comparing made them one.
+DISPLAY_CHARS = 160
+
 
 def _validate(doc, kind):
     """Schema-validate and return (document, units, mm_per_unit)."""
@@ -192,7 +198,9 @@ def _normalise(item, bucket, scale, units):
         x, y = pos.get("x"), pos.get("y")
         entries.append({
             "uuid": sub.get("uuid"),
-            "description": (sub.get("description") or "")[:160],
+            # Complete and exact. The schema bounds this only by being a
+            # string, so nothing here may shorten it.
+            "description": sub.get("description") or "",
             "x_mm": None if x is None else x * scale,
             "y_mm": None if y is None else y * scale,
         })
@@ -202,18 +210,20 @@ def _normalise(item, bucket, scale, units):
         "category": bucket,
         "severity": item["severity"],
         "rule": item["type"],
-        "description": (item.get("description") or "")[:200],
+        "description": item.get("description") or "",
         # Every affected object, not just the first: a waiver that names one
         # end of a two-object violation is not an exact waiver, and a defect
         # that moves the second end is still a defect that moved.
         "items": entries,
         "canonical_items": canonical_items(entries),
         "objects": [e["description"] for e in entries],
+        "objects_display": [e["description"][:DISPLAY_CHARS] for e in entries],
         "uuids": [e["uuid"] for e in entries if e["uuid"]],
         "excluded": bool(item.get("excluded", False)),
         # Kept for one-line reporting only. Nothing compares against these:
         # matching and digesting use the full item set above.
-        "object": first["description"],
+        "object": first["description"][:DISPLAY_CHARS],
+        "description_display": (item.get("description") or "")[:200],
         "x_mm": first["x_mm"],
         "y_mm": first["y_mm"],
         "source_units": units,
