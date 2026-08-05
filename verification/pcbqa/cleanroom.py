@@ -19,6 +19,7 @@ declare one cannot obtain a release.
 
 from __future__ import annotations
 
+import atexit
 import copy
 import fnmatch
 import glob
@@ -26,6 +27,7 @@ import hashlib
 import json
 import os
 import shutil
+import tempfile
 import zipfile
 
 from . import canonical
@@ -38,6 +40,24 @@ AUTHORITATIVE_KEYS = (
     "archive.zip", "archive.manifest",
     "fixture.hash_file", "fixture.attributes_file",
 )
+
+
+# Anything a fabricator could accept as an order. A blocked release must leave
+# none of these anywhere in its output tree - not in a candidate directory, not
+# in a diagnostic directory, and not in scratch.
+ORDERABLE_SUFFIXES = (".zip", ".7z", ".rar", ".tar", ".tgz", ".tar.gz",
+                      ".tar.bz2", ".tar.xz", ".gz")
+
+
+def orderable_archives(root):
+    """Every archive-shaped file under `root`, recursively."""
+    hits = []
+    for dirpath, _dirs, files in os.walk(root):
+        for name in files:
+            lowered = name.lower()
+            if any(lowered.endswith(suffix) for suffix in ORDERABLE_SUFFIXES):
+                hits.append(os.path.join(dirpath, name))
+    return sorted(hits)
 
 
 class CleanRoomError(Exception):
@@ -128,7 +148,16 @@ class CleanRun:
         self.project = os.path.join(self.root, "fixture", "project")
         self.generated = os.path.join(self.root, "generated")
         self.gerbers = os.path.join(self.generated, "gerbers")
-        self.release = os.path.join(self.generated, "release")
+        # The assembled release package is *staged outside the output tree*.
+        # Deleting it on failure would be a promise kept only while the process
+        # lives; putting it somewhere the output tree never reaches keeps the
+        # promise even if this process is killed outright. It becomes part of
+        # the output only when promote() is called, and promote() is only
+        # called once every mandatory gate has passed.
+        self.staging = tempfile.mkdtemp(prefix="pcbqa_release_staging_")
+        self.release = self.staging
+        self.promoted = False
+        atexit.register(self.discard_staging)
         self.reports = os.path.join(self.root, "reports")
         self.log = []
         self.removed = []
@@ -191,10 +220,6 @@ class CleanRun:
         generation, so a tool that rewrites the board while checking it - a
         zone refill or a save-on-DRC - cannot go unnoticed.
         """
-        attrs = self.manifest.resolve(self.manifest.get("fixture.attributes_file"))
-        target_attrs = os.path.join(self.root, "fixture", ".gitattributes")
-        shutil.copy2(attrs, target_attrs)
-        self.policy = canonical.AttributePolicy.load(target_attrs)
         files = _digest_map(self.project, self.policy)
         inventory = {
             "digest_policy": "text hashed over LF bytes; production output over "
@@ -211,6 +236,14 @@ class CleanRun:
         self.log.append({"step": "freeze", "files": len(files)})
         return inventory
 
+    def load_policy(self):
+        """Install the line-ending policy the canonical digests depend on."""
+        attrs = self.manifest.resolve(self.manifest.get("fixture.attributes_file"))
+        target_attrs = os.path.join(self.root, "fixture", ".gitattributes")
+        shutil.copy2(attrs, target_attrs)
+        self.policy = canonical.AttributePolicy.load(target_attrs)
+        return self.policy
+
     # -- stage 3: generate everything the release ships --------------------
     def generate(self):
         cli = self.source_ctx.kicad_cli
@@ -219,15 +252,16 @@ class CleanRun:
         cfg = self.cfg
         bom, cpl = cfg["bom"], cfg["cpl"]
 
+        from .gates.g_checks import VIOLATIONS_EXIT_CODE, required_options
         commands = [
             ("erc", [cli, "sch", "erc", "--output",
                      os.path.join(self.reports, cfg["erc"]["output"]),
                      "--format", "json"]
-             + list(self.manifest.get("checks.erc.flags")) + [sch]),
+             + list(required_options("erc")) + [sch]),
             ("drc", [cli, "pcb", "drc", "--output",
                      os.path.join(self.reports, cfg["drc"]["output"]),
                      "--format", "json"]
-             + list(self.manifest.get("checks.drc.flags")) + [board]),
+             + list(required_options("drc")) + [board]),
             ("gerbers", [cli, "pcb", "export", "gerbers", "--output", self.gerbers]
              + list(self.manifest.get("artifacts.gerber_export_flags")) + [board]),
             ("drill", [cli, "pcb", "export", "drill", "--output", self.gerbers]
@@ -245,7 +279,7 @@ class CleanRun:
         # `--exit-code-violations` makes a finding an exit code; that is a
         # successful invocation reporting something, not a tool failure. Only
         # the gates decide what the findings mean.
-        violations_exit = int(cfg["violations_exit_code"])
+        violations_exit = VIOLATIONS_EXIT_CODE
         for name, args in commands:
             proc = self.source_ctx.run_tool(args)
             ok = proc.returncode == 0 or (
@@ -378,14 +412,17 @@ class CleanRun:
         data["fixture"]["attributes_file"] = "../.gitattributes"
         up = "../.."                       # fixture/project -> run root
         data["artifacts"]["gerber_dir"] = f"{up}/generated/gerbers"
-        data["artifacts"]["bom"] = f"{up}/generated/release/{cfg['bom']['output']}"
-        data["artifacts"]["cpl"] = f"{up}/generated/release/{cfg['cpl']['output']}"
+        data["artifacts"]["bom"] = os.path.join(self.staging,
+                                                cfg["bom"]["output"])
+        data["artifacts"]["cpl"] = os.path.join(self.staging,
+                                                cfg["cpl"]["output"])
         data["artifacts"]["cpl_fields"] = cfg["cpl"]["field_map"]
         data["artifacts"]["cpl_origin"] = cfg["cpl"]["origin"]
         data["assembly"]["bom_fields"] = cfg["bom"]["field_map"]
-        data["archive"]["zip"] = f"{up}/generated/release/{cfg['archive']['zip']}"
-        data["archive"]["manifest"] = \
-            f"{up}/generated/release/{cfg['archive']['manifest']}"
+        data["archive"]["zip"] = os.path.join(self.staging,
+                                              cfg["archive"]["zip"])
+        data["archive"]["manifest"] = os.path.join(self.staging,
+                                                   cfg["archive"]["manifest"])
         data["archive"].pop("pre_normalization_digests", None)
         data["reports"] = dict(data["reports"])
         data["reports"]["files"] = [f"{up}/reports/*.json"]
@@ -405,7 +442,7 @@ class CleanRun:
                 continue
             resolved = derived.resolve(derived.get(key))
             checked[key] = resolved
-            if not _inside(resolved, self.root):
+            if not self.owns(resolved):
                 problems.append({"key": key, "path": resolved,
                                  "issue": "resolves outside the clean run"})
             elif _inside(resolved, self.origin_root):
@@ -415,7 +452,7 @@ class CleanRun:
         for pattern in derived.get("reports.files"):
             for path in glob.glob(os.path.join(report_root, pattern), recursive=True):
                 checked[f"reports:{os.path.basename(path)}"] = path
-                if not _inside(path, self.root) or _inside(path, self.origin_root):
+                if not self.owns(path) or _inside(path, self.origin_root):
                     problems.append({"key": "reports.files", "path": path,
                                      "issue": "report is not from this run"})
         # And nothing may resolve into the outputs the origin already carries.
@@ -438,17 +475,61 @@ class CleanRun:
     def build(self):
         from .core import Manifest
         self.isolate()
-        self.freeze()
+        # The authoritative DRC refills zones and saves the board, so the
+        # inventory is taken after generation: it records the design that was
+        # actually exported and packaged, which is the one that would ship.
+        self.load_policy()
         self.generate()
+        self.freeze()
         derived = Manifest(self.derive_manifest())
         self.bind_reports(derived)
         self.package()
         self.assert_isolated(derived)
         return derived
 
+    # -- stage 7: nothing orderable exists until everything passed ---------
+    def owns(self, path):
+        """Both roots this attempt legitimately writes to."""
+        return _inside(path, self.root) or _inside(path, self.staging)
+
+    def promote(self, destination):
+        """Move the staged package into the output tree. Success only."""
+        if os.path.isdir(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(self.staging, destination)
+        self.promoted = True
+        return sorted(os.listdir(destination))
+
+    def discard_staging(self):
+        """Destroy the staged package. Safe to call repeatedly."""
+        staging = getattr(self, "staging", None)
+        if staging and os.path.isdir(staging):
+            shutil.rmtree(staging, ignore_errors=True)
+
+    def sweep_output_tree(self, *extra_roots):
+        """Remove any archive that reached the output tree anyway.
+
+        Staging should make this a no-op. It is here because "should" is not a
+        property, and a release that leaves one orderable file behind is the
+        failure this whole mechanism exists to prevent.
+        """
+        removed = []
+        for root in (self.root,) + tuple(extra_roots):
+            if not root or not os.path.isdir(root):
+                continue
+            for path in orderable_archives(root):
+                try:
+                    os.unlink(path)
+                    removed.append(path)
+                except OSError:
+                    pass
+        return removed
+
     def summary(self):
         return {
             "run_root": self.root,
+            "staging_root": self.staging,
+            "promoted": self.promoted,
             "origin": self.origin_root,
             "purged": self.removed,
             "steps": self.log,

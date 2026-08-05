@@ -108,8 +108,10 @@ class CleanRoomIsolation(unittest.TestCase):
                                        "gerbers")),
             "the purge must happen in the copy; the origin is read-only input")
         for entry in run.summary()["authoritative_paths"]:
+            # The attempt owns two roots: the output tree, and the staging area
+            # the release package is assembled in before anything has passed.
             self.assertTrue(
-                cleanroom._inside(entry["path"], run.root),
+                run.owns(entry["path"]),
                 "{} escaped the clean run".format(entry["key"]))
 
         results = _validate(derived, run, {"ARCH.CONTENTS", "STACK.GERBER_PARITY"})

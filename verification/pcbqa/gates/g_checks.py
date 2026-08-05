@@ -124,10 +124,50 @@ def _matches_any(rel, patterns):
 # ERC / DRC
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# what a check must be told to do
+#
+# These are the validator's requirements, not a board's. A board manifest may
+# ask for more, but it cannot ask for less: a project that could switch off
+# `--schematic-parity` or drop `--severity-exclusions` could pass this gate
+# while never having run the check the gate claims to have run.
+# ---------------------------------------------------------------------------
+
+REQUIRED_OPTIONS = {
+    "erc": ("--severity-all", "--severity-exclusions", "--exit-code-violations"),
+    "drc": ("--severity-all", "--severity-exclusions", "--all-track-errors",
+            "--schematic-parity", "--refill-zones", "--save-board",
+            "--exit-code-violations"),
+}
+
+# `--save-board` is only meaningful with `--refill-zones`, and refilling
+# without saving would check a board nobody ships. KiCad enforces the pairing;
+# so does this, so a future edit cannot half-remove it.
+OPTION_PAIRS = {"--save-board": "--refill-zones"}
+
+# Severities a run must have asked for. A run that omitted exclusions reports
+# an excluded violation as nothing at all.
+REQUIRED_SEVERITIES = ("error", "warning", "exclusion")
+
+# Documented by KiCad for `--exit-code-violations`: the check ran and found
+# something. Any other nonzero status means the check did not complete.
+VIOLATIONS_EXIT_CODE = 5
+
 WAIVER_REQUIRED_FIELDS = ("gate", "rule", "category", "objects", "location_mm",
                           "reason", "reviewed_by", "reviewed_utc",
                           "approved_source_sha256", "approved_rules_sha256",
                           "approved_command_sha256", "approved_report_sha256")
+
+
+def required_options(kind):
+    """The mandatory option list for `erc` or `drc`, validated for coherence."""
+    options = tuple(REQUIRED_OPTIONS[kind])
+    for option, needs in OPTION_PAIRS.items():
+        if option in options and needs not in options:
+            raise ValueError(
+                "{} requires {} but the required set omits it".format(
+                    option, needs))
+    return options
 
 
 def _canonical_command(args):
@@ -166,6 +206,8 @@ def _report_digest(findings):
 def _waiver_defects(w, tol):
     """Why a waiver record cannot be honoured. Empty means it is well formed."""
     bad = []
+    if not isinstance(w, dict):
+        return ["waiver is not an object"]
     for field in WAIVER_REQUIRED_FIELDS:
         if w.get(field) in (None, "", [], {}):
             bad.append("waiver omits {!r}".format(field))
@@ -193,7 +235,7 @@ def _waivers_for(ctx, gate_id, bindings, tol):
     """Waivers that are well formed, for this gate, and still bound to reality."""
     live, rejected = [], []
     for w in ctx.manifest.get("waivers", []):
-        if w.get("gate") != gate_id:
+        if not isinstance(w, dict) or w.get("gate") != gate_id:
             continue
         defects = _waiver_defects(w, tol)
         if defects:
@@ -233,28 +275,33 @@ def _waived(finding, waivers, tol):
 
 
 def _run(ctx, res, kind, gate_id):
-    spec = ctx.manifest.get("checks.{}".format(kind))
-    source = ctx.schematic_path() if kind == "erc" else ctx.board_path()
+    spec = ctx.manifest.get("checks.{}".format(kind), {}) or {}
+    relative = (ctx.manifest.get("sources.schematic") if kind == "erc"
+                else ctx.manifest.get("sources.pcb"))
+    source = ctx.manifest.resolve(relative)
+    if not os.path.isfile(source):
+        return res.errored("{} source not found: {}".format(kind.upper(), source))
     source_hash = sha256_file(source)
     rules_hash = (sha256_file(ctx.project_path())
                   if os.path.isfile(ctx.project_path()) else None)
 
-    required_flags = res.limit(ctx.manifest.constraint(
-        "checks.{}.required_flags".format(kind), units="cli option",
-        cid="checks.{}.required_flags".format(kind))).value
-    required_sev = res.limit(ctx.manifest.constraint(
-        "checks.{}.required_severities".format(kind), units="severity",
-        cid="checks.{}.required_severities".format(kind))).value
-    violations_exit = res.limit(ctx.manifest.constraint(
-        "checks.{}.violations_exit_code".format(kind), units="exit status",
-        cid="checks.{}.violations_exit_code".format(kind))).value
+    try:
+        working = ctx.check_path(relative)
+    except OSError as exc:
+        return res.errored(
+            "could not prepare an isolated copy to check: {}".format(exc))
+
+    try:
+        options = list(required_options(kind))
+    except ValueError as exc:
+        return res.errored("incoherent required option set: {}".format(exc))
+    extra = [f for f in spec.get("extra_flags", []) if f not in options]
     waiver_tol = res.limit(ctx.manifest.geometry_profile()
                            .tolerance("waiver_location_mm")).value
 
     out_json = os.path.join(ctx.workdir, "{}_authoritative.json".format(kind))
     args = [ctx.kicad_cli, ("sch" if kind == "erc" else "pcb"), kind,
-            "--format", "json", "-o", out_json] \
-        + list(spec.get("flags", [])) + [source]
+            "--format", "json", "-o", out_json] + options + extra + [working]
     command = _canonical_command(args)
     command_hash = hashlib.sha256(command.encode("utf-8")).hexdigest()
 
@@ -268,24 +315,36 @@ def _run(ctx, res, kind, gate_id):
     res.measurements.update({
         "command": command,
         "command_sha256": command_hash,
+        "required_options": options,
         "exit_status": proc.returncode,
-        "violations_exit_code": violations_exit,
+        "violations_exit_code": VIOLATIONS_EXIT_CODE,
         "source": os.path.basename(source),
         "source_sha256": source_hash,
+        "checked_copy_sha256": (sha256_file(working)
+                                if os.path.isfile(working) else None),
         "rules_sha256": rules_hash,
         "constraint_manifest_sha256": ctx.manifest.sha256,
         "kicad_version": ctx.kicad_version(),
         "generated_utc": utcnow(),
     })
 
+    # The gate is worthless if the command it ran was not the command it says
+    # it ran, so the recorded argv is re-checked rather than trusted.
+    missing_options = [o for o in options if o not in args]
+    if missing_options:
+        return res.errored(
+            "{} was invoked without required option(s) {}; the result cannot "
+            "be interpreted".format(kind.upper(), missing_options))
+
     # A tool that could not do its job is an ERROR, never a FAIL: "the design
     # is bad" and "we do not know whether the design is bad" are different
-    # answers, and only one of them can be argued with.
-    if proc.returncode not in (0, violations_exit):
+    # answers, and only one of them can be argued with. No waiver applies to
+    # any of the paths below - there is no finding to waive.
+    if proc.returncode not in (0, VIOLATIONS_EXIT_CODE):
         return res.errored(
             "{} invocation failed with exit {} (documented codes: 0=clean, "
             "{}=violations found): {}".format(
-                kind.upper(), proc.returncode, violations_exit,
+                kind.upper(), proc.returncode, VIOLATIONS_EXIT_CODE,
                 (proc.stderr or "").strip()[:300]))
     if not os.path.isfile(out_json):
         return res.errored(
@@ -293,8 +352,9 @@ def _run(ctx, res, kind, gate_id):
                 kind.upper(), proc.returncode, (proc.stderr or "").strip()[:300]))
     res.evidence_file(out_json)
     try:
-        doc = json.load(open(out_json, encoding="utf-8"))
-    except ValueError as exc:
+        with open(out_json, encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (ValueError, OSError) as exc:
         return res.errored("{} report is not readable JSON: {}".format(
             kind.upper(), exc))
     try:
@@ -308,11 +368,7 @@ def _run(ctx, res, kind, gate_id):
     res.measurements["report_meta"] = meta
     res.measurements["report_findings_sha256"] = report_hash
 
-    missing_flags = [f for f in required_flags if f not in args]
     problems = []
-    if missing_flags:
-        problems.append({"issue": "required command-line option not used",
-                         "missing": missing_flags})
     if os.path.basename(str(meta["source"])) != os.path.basename(source):
         problems.append({"issue": "report names a different source than we checked",
                          "report_source": meta["source"],
@@ -320,15 +376,20 @@ def _run(ctx, res, kind, gate_id):
     if meta["ignored_checks"]:
         problems.append({"issue": "run ignored one or more checks",
                          "ignored": meta["ignored_checks"]})
-    absent_sev = [s for s in required_sev if s not in meta["included_severities"]]
+    absent_sev = [s for s in REQUIRED_SEVERITIES
+                  if s not in meta["included_severities"]]
     if absent_sev:
         problems.append({"issue": "run did not include every required severity",
                          "missing": absent_sev,
                          "included": meta["included_severities"]})
-    if proc.returncode == violations_exit and not findings:
+    if proc.returncode == VIOLATIONS_EXIT_CODE and not findings:
         problems.append({"issue": "KiCad reported violations by exit code but the "
                                   "report lists none",
                          "exit_status": proc.returncode})
+    if proc.returncode == 0 and findings:
+        problems.append({"issue": "KiCad exited clean but the report lists "
+                                  "findings",
+                         "findings": len(findings)})
 
     bindings = {
         "approved_source_sha256": source_hash,
@@ -365,19 +426,25 @@ def _run(ctx, res, kind, gate_id):
                                        counts or 0, proc.returncode,
                                        len(meta["ignored_checks"])))
     return res.passed(
-        "{} clean: exit {}, schema validated, no ignored checks, severities {}, "
-        "source {}".format(kind.upper(), proc.returncode,
-                           meta["included_severities"], source_hash[:12]))
+        "{} clean: exit {}, schema {} validated, no ignored checks, severities "
+        "{}, all {} required options used, source {}".format(
+            kind.upper(), proc.returncode, meta["schema"],
+            meta["included_severities"], len(options), source_hash[:12]))
 
 
+# `requires` names the *sources* a check needs, never its options. A board that
+# declares no schematic has not opted into ERC and reports NOT_APPLICABLE - and
+# because the release profile lists both gates as mandatory, NOT_APPLICABLE
+# still blocks a release. What a board cannot do is declare a schematic and
+# then ask for a weaker check of it.
 @gate("ERC.AUTHORITATIVE", "Fresh ERC on the exact final schematic",
-      requires=("checks.erc.required_flags",))
+      requires=("sources.schematic",))
 def erc(ctx, res):
     return _run(ctx, res, "erc", "ERC.AUTHORITATIVE")
 
 
 @gate("DRC.AUTHORITATIVE", "Fresh DRC on the exact final board",
-      requires=("checks.drc.required_flags",))
+      requires=("sources.pcb", "sources.project"))
 def drc(ctx, res):
     return _run(ctx, res, "drc", "DRC.AUTHORITATIVE")
 

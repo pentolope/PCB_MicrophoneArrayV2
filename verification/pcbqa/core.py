@@ -301,6 +301,32 @@ class Context:
             return pcbnew.LoadBoard(path)
         return self.cache("board", load)
 
+    def check_copy(self):
+        """A private copy of the project that tools may open.
+
+        kicad-cli opens a project for *writing* even when only exporting: it
+        drops a `~<project>.kicad_pro.lck` beside the design for the duration
+        of the run, and `pcb drc --save-board` rewrites the board outright.
+        Pointing any of that at the design under test would mean the act of
+        verifying it modified it - and, when checks run concurrently, one
+        check would see another check's lock file and report the frozen
+        fixture as altered. It was.
+
+        Built once per context and shared by every gate that shells out.
+        """
+        def build():
+            import shutil
+            root = os.path.join(self.workdir, "check_copy")
+            if os.path.isdir(root):
+                shutil.rmtree(root)
+            shutil.copytree(self.manifest.resolve("."), root)
+            return root
+        return self.cache("check_copy", build)
+
+    def check_path(self, relative):
+        """`relative` inside the private copy rather than the design."""
+        return os.path.join(self.check_copy(), relative)
+
     def clean_copy(self, into):
         """A pristine copy of the project, for runs that must not see stale output."""
         import shutil

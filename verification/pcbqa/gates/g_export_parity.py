@@ -282,7 +282,10 @@ def stack_gerber_parity(ctx, res):
         shutil.rmtree(fresh_dir)
     os.makedirs(fresh_dir)
     args = [ctx.kicad_cli, "pcb", "export", "gerbers", "--output", fresh_dir]
-    args += list(flags) + [ctx.board_path()]
+    # Exported from the private copy: kicad-cli locks the project it opens,
+    # and a lock file appearing in the frozen fixture is indistinguishable
+    # from someone having left one there.
+    args += list(flags) + [ctx.check_path(ctx.manifest.get("sources.pcb"))]
     proc = ctx.run_tool(args)
     res.measurements["fresh_export_command"] = " ".join(args[1:])
     res.measurements["fresh_export_exit"] = proc.returncode

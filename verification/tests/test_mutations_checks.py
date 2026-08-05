@@ -120,7 +120,8 @@ class ToolFailureIsNotAVerdict(unittest.TestCase):
 
     def test_erc_findings_under_sheets_are_not_silently_empty(self):
         """The false PASS this framework exists to prevent."""
-        doc = {"$schema": "x", "date": "d", "kicad_version": "10.0",
+        doc = {"$schema": "https://schemas.kicad.org/erc.v1.json",
+               "date": "2026-08-04T00:00:00", "kicad_version": "10.0.5",
                "source": "s.kicad_sch", "ignored_checks": [],
                "included_severities": ["error"],
                "sheets": [{"path": "/", "violations": [

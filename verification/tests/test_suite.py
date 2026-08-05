@@ -146,7 +146,11 @@ class ReleaseBlocked(unittest.TestCase):
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", REVA],
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
-        out = os.path.join(HERE, "out", "microphone_array_v2-revA")
+        # Under the parallel runner the release writes to this worker's output
+        # root, not to the repository's out/. Looking in the wrong place made
+        # this test pass off a stale directory left by an earlier run.
+        out = os.path.join(os.environ.get("PCBQA_TEST_OUTPUT_ROOT", HERE),
+                           "out", "microphone_array_v2-revA")
         for forbidden in ("release_sealed", "release_candidate_UNSEALED"):
             self.assertFalse(os.path.isdir(os.path.join(out, forbidden)),
                              f"{forbidden} was created despite failures")

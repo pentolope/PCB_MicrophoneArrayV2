@@ -64,55 +64,16 @@
     ]
   },
   "checks": {
+    "description": "The mandatory ERC/DRC options, severities and exit-code meanings are defined and verified by the validator (pcbqa.gates.g_checks), not here: a board that could relax them could pass a check it never ran. Only additional board-specific options belong in this block.",
     "erc": {
-      "flags": [
-        "--severity-all",
-        "--exit-code-violations"
-      ],
-      "required_flags": [
-        "--severity-all",
-        "--exit-code-violations"
-      ],
-      "required_severities": [
-        "error",
-        "warning",
-        "exclusion"
-      ],
-      "violations_exit_code": 5,
-      "exit_code_meanings": {
-        "0": "the check ran and found nothing",
-        "5": "the check ran and found violations (--exit-code-violations)",
-        "other": "the check did not run to completion; this is a tool failure, not a verdict on the design"
-      }
+      "extra_flags": []
     },
     "drc": {
-      "flags": [
-        "--severity-all",
-        "--all-track-errors",
-        "--schematic-parity",
-        "--exit-code-violations"
-      ],
+      "extra_flags": [],
       "forbidden_severities": [
         "ignore"
       ],
-      "permitted_ignored_rules": [],
-      "required_flags": [
-        "--severity-all",
-        "--exit-code-violations",
-        "--all-track-errors",
-        "--schematic-parity"
-      ],
-      "required_severities": [
-        "error",
-        "warning",
-        "exclusion"
-      ],
-      "violations_exit_code": 5,
-      "exit_code_meanings": {
-        "0": "the check ran and found nothing",
-        "5": "the check ran and found violations (--exit-code-violations)",
-        "other": "the check did not run to completion; this is a tool failure, not a verdict on the design"
-      }
+      "permitted_ignored_rules": []
     }
   },
   "reports": {
@@ -604,7 +565,7 @@
     ]
   },
   "release_generation": {
-    "description": "Every command a clean-room release runs, and the field names the artifacts it generates actually carry. Nothing here is inferred by the code: a board that does not declare this block cannot obtain a release.",
+    "description": "Every command a clean-room release runs, and the field names the artifacts it generates actually carry. The ERC and DRC option sets are taken from the validator so a release cannot run a weaker check than validation demands.",
     "lock_file_globs": [
       "*.lck",
       "~*.lck",
@@ -616,7 +577,6 @@
       "generated/**",
       "generated"
     ],
-    "violations_exit_code": 5,
     "erc": {
       "output": "erc.json"
     },

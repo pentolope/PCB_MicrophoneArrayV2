@@ -83,13 +83,15 @@ def cmd_validate(manifest_path, quiet=False):
 def cmd_release(manifest_path):
     """Clean-room release.
 
-    Nothing that already exists in the tree can contribute to the verdict. The
-    project is copied into an isolated run directory, every previously
-    generated output is purged, and ERC, DRC, Gerbers, drills, BOM, CPL and the
-    fabrication archive are regenerated there. Validation then runs against a
-    derived manifest whose every authoritative path is proven to resolve inside
-    that run, so the artifacts that are validated are the artifacts that were
-    just generated. Success produces an UNSEALED candidate only.
+    Nothing that already exists in the tree can contribute to the verdict, and
+    nothing orderable exists until the verdict is in. The project is copied
+    into an isolated run directory, every previously generated output is
+    purged, and ERC, DRC, Gerbers, drills, BOM, CPL and the fabrication archive
+    are regenerated. The archive is assembled in a staging area *outside* the
+    output tree; it is copied in only after every mandatory gate has passed. On
+    any other outcome - a failing gate, an exception, a timeout, Ctrl+C - the
+    staging area is destroyed and the output tree is swept, so a rejected
+    release leaves diagnostics and nothing a fabricator would accept.
     """
     from pcbqa import cleanroom, core
     from pcbqa.core import Context, Manifest, Status
@@ -113,7 +115,41 @@ def cmd_release(manifest_path):
               "so a clean-room run cannot be reproduced")
         return 1
 
+    sealed = os.path.join(base, "release_sealed")
+    candidate = os.path.join(base, "release_candidate_UNSEALED")
+    unsafe = os.path.join(base, "release_UNSAFE_diagnostic")
+
     run = cleanroom.CleanRun(source_ctx, os.path.join(base, "clean_run"))
+    try:
+        return _release_attempt(run, manifest, profile, mandatory, base,
+                                sealed, candidate, unsafe)
+    except KeyboardInterrupt:
+        print(chr(10) + "RELEASE ABANDONED: interrupted before any gate could "
+                        "clear it")
+        return 130
+    except BaseException as exc:                              # fail closed
+        print(chr(10) + "RELEASE BLOCKED by an unhandled {}: {}".format(
+            type(exc).__name__, exc))
+        return 1
+    finally:
+        # Unconditional, and in this order: the staged package dies first,
+        # then anything orderable that reached the output tree by any route.
+        run.discard_staging()
+        if not run.promoted:
+            swept = run.sweep_output_tree(base)
+            if swept:
+                print("Removed {} orderable archive(s) from a release that did "
+                      "not pass".format(len(swept)))
+        left = cleanroom.orderable_archives(base)
+        if left:
+            print("WARNING: orderable archive(s) remain: {}".format(left))
+
+
+def _release_attempt(run, manifest, profile, mandatory, base,
+                     sealed, candidate, unsafe):
+    from pcbqa import cleanroom, core
+    from pcbqa.core import Context, Status
+
     derived = None
     try:
         derived = run.build()
@@ -128,7 +164,7 @@ def cmd_release(manifest_path):
     results = []
     if derived is not None:
         ctx = Context(derived, os.path.join(run.root, "validation"),
-                      kicad_cli=source_ctx.kicad_cli)
+                      kicad_cli=run.source_ctx.kicad_cli)
         results = core.run_all(ctx)
         doc, jpath, mpath = _emit(ctx, results, "release_validation")
         doc["clean_room"] = run.summary()
@@ -147,9 +183,6 @@ def cmd_release(manifest_path):
             if r.status in Status.BLOCKING and r.gate_id not in mandatory:
                 blockers.append((r.gate_id, r.status, "non-mandatory gate blocked"))
 
-    sealed = os.path.join(base, "release_sealed")
-    candidate = os.path.join(base, "release_candidate_UNSEALED")
-    unsafe = os.path.join(base, "release_UNSAFE_diagnostic")
     for path in (sealed, candidate, unsafe):
         if os.path.isdir(path):
             shutil.rmtree(path)
@@ -162,13 +195,16 @@ def cmd_release(manifest_path):
         len(run.summary()["purged"])))
     print("  {} authoritative path(s) proven inside the run".format(
         len(run.summary()["authoritative_paths"])))
+    print("  package staged outside the output tree: " + run.staging)
 
     if blockers:
         os.makedirs(unsafe)
         lines = ["UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE", "",
                  "board: " + str(manifest.get("board_id")),
                  "release profile: " + str(profile.get("id")),
-                 "clean run: " + run.root, "", "blocking:"]
+                 "clean run: " + run.root, "",
+                 "No fabrication archive was promoted; the staged package has "
+                 "been destroyed.", "", "blocking:"]
         for gate_id, status, why in blockers:
             lines.append("  {}: {} - {}".format(gate_id, status, why))
         lines += ["", "No sealed or orderable package was produced.", ""]
@@ -187,24 +223,27 @@ def cmd_release(manifest_path):
             print("  {}: {} - {}".format(gate_id, status, why))
         print("Unsafe diagnostic output only: " + unsafe)
         print("Sealed package created: NO")
+        print("Fabrication archive created: NO")
         return 1
 
+    # Every mandatory gate passed. Only now does anything orderable exist.
     os.makedirs(candidate)
-    shutil.copytree(run.release, os.path.join(candidate, "fabrication"))
+    promoted = run.promote(os.path.join(candidate, "fabrication"))
     shutil.copytree(run.reports, os.path.join(candidate, "reports"))
     shutil.copy2(jpath, os.path.join(candidate, "validation.json"))
     with open(os.path.join(candidate, "clean_room.json"), "w",
               encoding="utf-8") as fh:
         json.dump(run.summary(), fh, indent=2)
     with open(os.path.join(candidate, "UNSEALED.txt"), "w", encoding="utf-8") as fh:
-        fh.write("Release CANDIDATE, not sealed.\n\n"
-                 "Every artifact here was generated in this run from a clean "
-                 "project copy with all prior output purged, and every "
-                 "mandatory gate passed against those artifacts. Sealing "
-                 "additionally requires recorded visual-review evidence "
-                 "({}).\n"
-                 .format(profile.get("visual_review_evidence")))
-    print("\nUnsealed release candidate: " + candidate)
+        fh.write("Release CANDIDATE, not sealed." + chr(10) + chr(10)
+                 + "Every artifact here was generated in this run from a clean "
+                   "project copy with all prior output purged, and every "
+                   "mandatory gate passed against those artifacts before the "
+                   "package was moved out of staging. Sealing additionally "
+                   "requires recorded visual-review evidence ({}).".format(
+                       profile.get("visual_review_evidence")) + chr(10))
+    print(chr(10) + "Unsealed release candidate: " + candidate)
+    print("Promoted from staging: " + ", ".join(promoted))
     print("Sealed package created: NO (sealing requires visual-review evidence)")
     return 0
 
