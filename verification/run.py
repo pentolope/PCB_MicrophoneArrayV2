@@ -44,25 +44,31 @@ def _load_gates():
                              g_contracts, g_assembly, g_export_parity)
 
 
-def _load(manifest_path):
-    from pcbqa.core import Context, Manifest
-    _load_gates()
-    manifest = Manifest(manifest_path)
-    workdir = os.path.join(_output_base(), "out", manifest.get("board_id"))
-    os.makedirs(workdir, exist_ok=True)
-    ctx = Context(manifest, workdir)
-    try:
-        ctx.tool_versions["kicad"] = ctx.kicad_version()
-    except Exception as exc:
-        ctx.tool_versions["kicad"] = "UNAVAILABLE: {}".format(exc)
-    return ctx
+def open_board(manifest_path):
+    """Load and validate a manifest, then derive its output layout.
+
+    The single entry point for every manifest-driven command. Nothing
+    filesystem-shaped exists until both of these succeed, and the layout is
+    built from the validated manifest rather than from raw JSON, so no command
+    is ever in a position to join untrusted text onto a path.
+    """
+    from pcbqa.core import load_manifest
+    from pcbqa.layout import OutputLayout
+    manifest = load_manifest(manifest_path)
+    return manifest, OutputLayout.for_manifest(manifest, _output_base())
 
 
-def _emit(ctx, results, tag):
+def _refuse(exc):
+    print("REFUSED: " + str(exc))
+    return 1
+
+
+def _emit(ctx, results, tag, directory=None):
     from pcbqa import core
     doc = core.to_json(results, ctx)
-    jpath = os.path.join(ctx.workdir, tag + ".json")
-    mpath = os.path.join(ctx.workdir, tag + ".md")
+    directory = directory or ctx.workdir
+    jpath = os.path.join(directory, tag + ".json")
+    mpath = os.path.join(directory, tag + ".md")
     with open(jpath, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2, default=str)
     with open(mpath, "w", encoding="utf-8") as fh:
@@ -71,139 +77,67 @@ def _emit(ctx, results, tag):
 
 
 def cmd_validate(manifest_path, quiet=False):
+    """Validate a board. Everything this run writes lives in its own attempt."""
     from pcbqa import core
-    ctx = _load(manifest_path)
-    results = core.run_all(ctx)
-    doc, jpath, mpath = _emit(ctx, results, "validation")
+    from pcbqa.core import Context, ManifestError
+    from pcbqa.layout import LayoutError
+
+    try:
+        manifest, layout = open_board(manifest_path)
+    except (ManifestError, LayoutError) as exc:
+        return _refuse(exc), None, None
+
+    _load_gates()
+    attempt = layout.new_attempt()
+    ctx = Context(manifest, attempt.work)
+    try:
+        ctx.tool_versions["kicad"] = ctx.kicad_version()
+    except Exception as exc:                                   # noqa: BLE001
+        ctx.tool_versions["kicad"] = "UNAVAILABLE: {}".format(exc)
+
+    try:
+        results = core.run_all(ctx)
+        doc, jpath, mpath = _emit(ctx, results, "validation", attempt.path)
+    except BaseException:
+        # This attempt produced nothing usable; it owns its directory and
+        # takes it with it. No sibling attempt and no published release is
+        # any of its business.
+        attempt.discard()
+        raise
+
     if not quiet:
         print(core.to_markdown(doc))
-        print("\nJSON:     " + jpath + "\nMarkdown: " + mpath)
+        print(chr(10) + "attempt:  " + attempt.path)
+        print("JSON:     " + jpath)
+        print("Markdown: " + mpath)
     return (1 if doc["summary"]["blocking"] else 0), doc, ctx
-
-
-# A board id names one directory under `out/`. It arrives from a manifest that
-# nobody has validated yet - the whole point of reading it early is that it is
-# read *before* the manifest is trusted - and it is then used to choose a
-# directory that gets deleted. So it is a single conservative slug or it is
-# nothing: must start alphanumeric, may then contain alphanumerics, dot,
-# underscore and hyphen, and nothing else. That admits every board id in this
-# repository and admits no path syntax at all - no separator, no drive letter,
-# no `..`, no leading dot, no whitespace, no NUL.
-BOARD_ID_RE = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\Z")
-BOARD_ID_MAX = 100
-
-
-def valid_board_id(value):
-    """True only for a name safe to use as a single path component."""
-    if not isinstance(value, str):
-        return False
-    if not value or len(value) > BOARD_ID_MAX:
-        return False
-    if not BOARD_ID_RE.match(value):
-        return False
-    # Belt and braces: the regex already excludes these, but the cost of
-    # asserting it directly is nothing next to the cost of being wrong.
-    if value in (os.curdir, os.pardir):
-        return False
-    if os.path.basename(value) != value:
-        return False
-    drive, _tail = os.path.splitdrive(value)
-    return not drive
-
-
-def managed_output_dir(manifest_path):
-    """Where this board's release output lives. Returns None if unidentifiable.
-
-    Called before the gates are imported and before the manifest is
-    constructed, because both of those can fail and a release that fails is
-    still a release that must not leave an old candidate behind.
-
-    The manifest must be a JSON *object* and its `board_id` must be a safe
-    single path component. There is deliberately no salvage path for malformed
-    JSON: the value chosen here selects a directory that this command will
-    delete from, and guessing it out of a file that does not parse is how a
-    cleanup routine ends up removing somebody else's work. A manifest we cannot
-    read is a manifest whose board we do not know, and not knowing is a reason
-    to stop rather than to guess.
-    """
-    try:
-        with open(manifest_path, encoding="utf-8") as fh:
-            document = json.load(fh)
-    except (OSError, ValueError):
-        return None
-    if not isinstance(document, dict):
-        return None
-    if not valid_board_id(document.get("board_id")):
-        return None
-
-    root = os.path.realpath(os.path.join(_output_base(), "out"))
-    candidate = os.path.realpath(os.path.join(root, document["board_id"]))
-    # Strictly beneath, and exactly one level down. This also catches the case
-    # where `out/<id>` is a symlink pointing somewhere else entirely, because
-    # realpath has already followed it by the time we look.
-    if candidate == root or os.path.dirname(candidate) != root:
-        return None
-    return candidate
 
 
 def cmd_release(manifest_path):
     """Clean-room release.
 
-    Nothing that already exists in the tree can contribute to the verdict, and
-    nothing orderable exists in the managed output until the verdict is in. The
-    project is copied into an isolated run directory, every previously
-    generated output is purged, and ERC, DRC, Gerbers, drills, BOM, CPL and the
-    fabrication archive are regenerated. The package is assembled in staging
-    *outside* the output tree and moved in by a single rename, which is the
-    last operation of a successful run.
+    One invocation, one attempt directory, and nothing outside it is touched
+    for any reason. The project is copied into the attempt, every previously
+    generated output is purged *from that copy*, and ERC, DRC, Gerbers,
+    drills, BOM, CPL and the fabrication archive are regenerated inside
+    `<attempt>/build`. That directory is a candidate until the moment every
+    mandatory gate has passed, at which point it is renamed into
+    `published/<release_id>` - a name that did not exist before, so nothing is
+    replaced and nothing has to be deleted to make room.
 
-    The cleanup contract is established first - before the optional gate
-    modules are imported, before the manifest is constructed, and before it is
-    validated. Every one of those can fail, and each failure is still a failed
-    release: it must not leave yesterday's candidate sitting in the output
-    directory looking current.
+    A failed run removes its own build directory and leaves diagnostics. It
+    does not remove a previous release, a sibling attempt, or anything else:
+    a run that could not produce a release has learned nothing about the
+    release that came before it.
     """
-    from pcbqa import cleanroom
+    from pcbqa import cleanroom, core
+    from pcbqa.core import Context, ManifestError
+    from pcbqa.layout import LayoutError, orderable_archives
 
-    base = managed_output_dir(manifest_path)
-    state = {"succeeded": False, "run": None}
     try:
-        if base is None:
-            print("RELEASE BLOCKED: cannot identify the board this manifest "
-                  "describes, so nothing can be released from it")
-            return 1
-        os.makedirs(base, exist_ok=True)
-        _load_gates()                       # optional, and able to fail
-        from pcbqa.core import Manifest
-        manifest = Manifest(manifest_path)  # validates schema_version, JSON
-        return _release_preconditions_and_attempt(manifest, base, state)
-    except KeyboardInterrupt:
-        print(chr(10) + "RELEASE ABANDONED: interrupted before it could "
-                        "complete")
-        return 130
-    except BaseException as exc:                              # fail closed
-        print(chr(10) + "RELEASE BLOCKED by an unhandled {}: {}".format(
-            type(exc).__name__, exc))
-        return 1
-    finally:
-        run = state["run"]
-        if run is not None:
-            run.discard_staging()
-            run.discard_pending()
-        if not state["succeeded"] and base is not None:
-            swept = cleanroom.purge_managed_output(
-                base, os.path.dirname(base))
-            if swept:
-                print("Removed {} orderable artifact(s) from a release that "
-                      "did not succeed".format(len(swept)))
-            left = cleanroom.orderable_archives(base)
-            if left:
-                print("WARNING: orderable archive(s) remain: {}".format(left))
-
-
-def _release_preconditions_and_attempt(manifest, base, state):
-    from pcbqa import cleanroom
-    from pcbqa.core import Context
+        manifest, layout = open_board(manifest_path)
+    except (ManifestError, LayoutError) as exc:
+        return _refuse(exc)
 
     profile = manifest.get("release_profile", None)
     if not profile:
@@ -218,23 +152,37 @@ def _release_preconditions_and_attempt(manifest, base, state):
               "so a clean-room run cannot be reproduced")
         return 1
 
-    sealed = os.path.join(base, "release_sealed")
-    candidate = os.path.join(base, "release_candidate_UNSEALED")
-    unsafe = os.path.join(base, "release_UNSAFE_diagnostic")
+    _load_gates()
+    attempt = layout.new_attempt()
+    published = False
+    try:
+        code = _release_attempt(manifest, layout, attempt, profile, mandatory)
+        published = (code == 0)
+        return code
+    except KeyboardInterrupt:
+        print(chr(10) + "RELEASE ABANDONED: interrupted before it could "
+                        "complete")
+        return 130
+    except BaseException as exc:                              # fail closed
+        print(chr(10) + "RELEASE BLOCKED by an unhandled {}: {}".format(
+            type(exc).__name__, exc))
+        return 1
+    finally:
+        if not published:
+            attempt.discard_build()
+        remaining = [a for a in orderable_archives(attempt.path)]
+        if remaining:
+            print("WARNING: archive(s) remain in the attempt: {}".format(
+                remaining))
 
-    source_ctx = Context(manifest, os.path.join(base, "release_driver"))
-    run = cleanroom.CleanRun(source_ctx, os.path.join(base, "clean_run"))
-    state["run"] = run
-    code = _release_attempt(run, manifest, profile, mandatory, base,
-                            sealed, candidate, unsafe)
-    state["succeeded"] = (code == 0) and run.succeeded
-    return code
 
-
-def _release_attempt(run, manifest, profile, mandatory, base,
-                     sealed, candidate, unsafe):
+def _release_attempt(manifest, layout, attempt, profile, mandatory):
     from pcbqa import cleanroom, core
     from pcbqa.core import Context, Status
+
+    source_ctx = Context(manifest, os.path.join(attempt.work, "driver"))
+    run = cleanroom.CleanRun(source_ctx, os.path.join(attempt.work, "clean_run"),
+                             attempt.build)
 
     derived = None
     try:
@@ -247,9 +195,8 @@ def _release_attempt(run, manifest, profile, mandatory, base,
 
     blockers = list(run.blockers)
     doc = jpath = mpath = None
-    results = []
     if derived is not None:
-        ctx = Context(derived, os.path.join(run.root, "validation"),
+        ctx = Context(derived, os.path.join(attempt.work, "validation"),
                       kicad_cli=run.source_ctx.kicad_cli)
         results = core.run_all(ctx)
         doc, jpath, mpath = _emit(ctx, results, "release_validation")
@@ -269,104 +216,83 @@ def _release_attempt(run, manifest, profile, mandatory, base,
             if r.status in Status.BLOCKING and r.gate_id not in mandatory:
                 blockers.append((r.gate_id, r.status, "non-mandatory gate blocked"))
 
-    for path in (sealed, candidate, unsafe):
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-
-    print(os.linesep + "Clean-room run: " + run.root)
+    print(os.linesep + "Attempt:       " + attempt.path)
+    print("Clean-room run: " + run.root)
     for entry in run.summary()["steps"]:
         if "exit" in entry:
             print("  {}: exit {}".format(entry["step"], entry["exit"]))
-    print("  purged {} pre-existing output path(s)".format(
+    print("  purged {} pre-existing output path(s) from the copy".format(
         len(run.summary()["purged"])))
     print("  {} authoritative path(s) proven inside the run".format(
         len(run.summary()["authoritative_paths"])))
-    print("  package staged outside the output tree: " + run.staging)
 
     if blockers:
-        _write_unsafe(unsafe, run, manifest, profile, blockers, jpath, mpath)
+        _write_diagnostics(attempt, manifest, profile, blockers, jpath, mpath)
         print(chr(10) + "RELEASE BLOCKED by {} condition(s):".format(
             len(blockers)))
         for gate_id, status, why in blockers[:25]:
             print("  {}: {} - {}".format(gate_id, status, why))
-        print("Unsafe diagnostic output only: " + unsafe)
-        print("Sealed package created: NO")
-        print("Fabrication archive created: NO")
+        print("Diagnostics only: " + attempt.diagnostics)
+        print("Published release created: NO")
         return 1
 
-    # Every mandatory gate passed. Assemble the candidate in full outside the
-    # output tree; a failure anywhere below leaves the output tree untouched.
-    try:
-        pending = run.stage_candidate()
-        shutil.copytree(run.reports, os.path.join(pending, "reports"))
-        shutil.copy2(jpath, os.path.join(pending, "validation.json"))
-        with open(os.path.join(pending, "clean_room.json"), "w",
-                  encoding="utf-8") as fh:
-            json.dump(run.summary(), fh, indent=2)
-        with open(os.path.join(pending, "UNSEALED.txt"), "w",
-                  encoding="utf-8") as fh:
-            fh.write(_unsealed_text(profile))
-        promoted = run.commit_candidate(candidate)   # last operation, atomic
-    except BaseException as exc:
-        # Includes KeyboardInterrupt. Whatever went wrong, this attempt did
-        # not produce a release, and the only thing it may leave behind is a
-        # diagnostic saying so.
-        run.discard_pending()
-        run.sweep_output_tree(base)
-        _write_unsafe(unsafe, run, manifest, profile,
-                      [("release:promotion", "ERROR",
-                        "{}: {}".format(type(exc).__name__, exc))],
-                      jpath, mpath)
-        print(chr(10) + "RELEASE BLOCKED: promotion failed after every gate "
-                        "passed ({}: {})".format(type(exc).__name__, exc))
-        print("Unsafe diagnostic output only: " + unsafe)
-        print("Sealed package created: NO")
-        print("Fabrication archive created: NO")
-        if isinstance(exc, KeyboardInterrupt):
-            raise
-        return 1
+    # Every mandatory gate passed. Finish the candidate, then publish it by
+    # renaming it into a name that has never existed.
+    shutil.copytree(run.reports, os.path.join(attempt.build, "reports"),
+                    dirs_exist_ok=True)
+    shutil.copy2(jpath, os.path.join(attempt.build, "validation.json"))
+    with open(os.path.join(attempt.build, "clean_room.json"), "w",
+              encoding="utf-8") as fh:
+        json.dump(run.summary(), fh, indent=2)
+    with open(os.path.join(attempt.build, "UNSEALED.txt"), "w",
+              encoding="utf-8") as fh:
+        fh.write(_unsealed_text(profile))
 
-    print(chr(10) + "Unsealed release candidate: " + candidate)
-    print("Promoted from staging: " + ", ".join(promoted))
-    print("Sealed package created: NO (sealing requires visual-review evidence)")
+    release_id, destination = attempt.publish()
+    pointer = layout.write_latest(release_id, {
+        "board_id": manifest.board_id,
+        "attempt_id": attempt.id,
+        "sealed": False,
+    })
+    print(chr(10) + "Published release: " + destination)
+    print("Release id:        " + release_id)
+    print("latest.json:       " + layout.latest_pointer)
+    print("Sealed:            NO (sealing requires visual-review evidence)")
     return 0
 
 
 def _unsealed_text(profile):
     return ("Release CANDIDATE, not sealed." + chr(10) + chr(10)
-            + "Every artifact here was generated in this run from a clean "
-              "project copy with all prior output purged, and every mandatory "
-              "gate passed against those artifacts before the candidate was "
-              "assembled. The whole candidate was built in temporary storage "
-              "and moved here in one operation, so this directory is never "
-              "partially written. Sealing additionally requires recorded "
-              "visual-review evidence ({}).".format(
+            + "Every artifact here was generated in one clean-room run from a "
+              "pristine project copy with all prior output purged, and every "
+              "mandatory gate passed against these exact artifacts before this "
+              "directory was published. It was assembled under the attempt "
+              "that produced it and moved here by a single rename, so it has "
+              "never existed in a partly-written state. Sealing additionally "
+              "requires recorded visual-review evidence ({}).".format(
                   profile.get("visual_review_evidence")) + chr(10))
 
 
-def _write_unsafe(unsafe, run, manifest, profile, blockers, jpath, mpath):
-    """The only thing an unsuccessful attempt may leave behind."""
-    if os.path.isdir(unsafe):
-        shutil.rmtree(unsafe)
-    os.makedirs(unsafe)
+def _write_diagnostics(attempt, manifest, profile, blockers, jpath, mpath):
+    """What a failed attempt is allowed to leave: reasons, never artifacts."""
     lines = ["UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE", "",
-             "board: " + str(manifest.get("board_id")),
+             "board: " + manifest.board_id,
              "release profile: " + str(profile.get("id")),
-             "clean run: " + run.root, "",
-             "No fabrication archive was promoted; the staged package has "
-             "been destroyed.", "", "blocking:"]
+             "attempt: " + attempt.id, "",
+             "No fabrication archive was published. This attempt's build "
+             "directory has been removed; any previously published release is "
+             "untouched.", "", "blocking:"]
     for gate_id, status, why in blockers:
         lines.append("  {}: {} - {}".format(gate_id, status, why))
-    lines += ["", "No sealed or orderable package was produced.", ""]
-    with open(os.path.join(unsafe, "DO_NOT_ORDER.txt"), "w",
+    lines += ["", "No orderable package was produced.", ""]
+    with open(os.path.join(attempt.diagnostics, "DO_NOT_ORDER.txt"), "w",
               encoding="utf-8") as fh:
         fh.write(chr(10).join(lines))
-    with open(os.path.join(unsafe, "clean_room.json"), "w",
-              encoding="utf-8") as fh:
-        json.dump(run.summary(), fh, indent=2)
     if jpath:
-        shutil.copy2(jpath, os.path.join(unsafe, "validation.json"))
-        shutil.copy2(mpath, os.path.join(unsafe, "validation.md"))
+        shutil.copy2(jpath, os.path.join(attempt.diagnostics,
+                                         "validation.json"))
+        shutil.copy2(mpath, os.path.join(attempt.diagnostics,
+                                         "validation.md"))
 
 
 def cmd_selftest(argv):

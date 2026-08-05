@@ -56,9 +56,11 @@ def _origin(tag, mutate=None):
 
 
 def _build(manifest_path, work):
-    manifest = Manifest(manifest_path)
+    """A clean-room run with an explicit build directory it owns."""
+    manifest = core.load_manifest(manifest_path)
     ctx = Context(manifest, os.path.join(work, "driver"))
-    run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"))
+    run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"),
+                             os.path.join(work, "build"))
     derived = run.build()
     return run, derived
 
@@ -248,9 +250,10 @@ class CleanRoomHygiene(unittest.TestCase):
 
         work, _project, path = _origin("lock", add_lock)
         self._work.append(work)
-        manifest = Manifest(path)
+        manifest = core.load_manifest(path)
         ctx = Context(manifest, os.path.join(work, "driver"))
-        run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"))
+        run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"),
+                                 os.path.join(work, "build"))
         with self.assertRaises(cleanroom.CleanRoomError):
             run.isolate()
         self.assertTrue(any(b[0] == "release:lock_files" for b in run.blockers),
@@ -261,9 +264,10 @@ class CleanRoomHygiene(unittest.TestCase):
     def test_previous_output_is_purged_before_anything_is_generated(self):
         work, _project, path = _origin("purge")
         self._work.append(work)
-        manifest = Manifest(path)
+        manifest = core.load_manifest(path)
         ctx = Context(manifest, os.path.join(work, "driver"))
-        run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"))
+        run = cleanroom.CleanRun(ctx, os.path.join(work, "clean_run"),
+                                 os.path.join(work, "build"))
         run.isolate()
         self.assertTrue(run.removed, "the fixture ships generated output; the "
                                      "clean run must have removed it")

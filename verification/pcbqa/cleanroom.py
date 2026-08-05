@@ -19,7 +19,6 @@ declare one cannot obtain a release.
 
 from __future__ import annotations
 
-import atexit
 import copy
 import fnmatch
 import glob
@@ -27,7 +26,6 @@ import hashlib
 import json
 import os
 import shutil
-import tempfile
 import zipfile
 
 from . import canonical
@@ -42,83 +40,10 @@ AUTHORITATIVE_KEYS = (
 )
 
 
-# Anything a fabricator could accept as an order. A blocked release must leave
-# none of these anywhere in its output tree - not in a candidate directory, not
-# in a diagnostic directory, and not in scratch.
-ORDERABLE_SUFFIXES = (".zip", ".7z", ".rar", ".tar", ".tgz", ".tar.gz",
-                      ".tar.bz2", ".tar.xz", ".gz")
-
-# Directory names that mean "this is a release you could act on". Any of these
-# left behind by an unsuccessful attempt is removed whole.
-CANDIDATE_DIR_NAMES = ("release_candidate_UNSEALED", "release_sealed",
-                       ".release_candidate_incoming")
-
-
-class UncontainedTarget(Exception):
-    """A deletion was asked for outside the directory tree it may touch."""
-
-
-def contained(target, managed_root):
-    """True when `target` is strictly inside `managed_root`."""
-    if not target or not managed_root:
-        return False
-    target = os.path.realpath(target)
-    managed_root = os.path.realpath(managed_root)
-    if target == managed_root:
-        return False
-    try:
-        return os.path.commonpath([target, managed_root]) == managed_root
-    except ValueError:                      # different drives on Windows
-        return False
-
-
-def purge_managed_output(root, managed_root):
-    """Remove every orderable artifact from a board's managed output directory.
-
-    Deliberately a plain function rather than a method: the earliest reasons a
-    release can be refused - no release profile, no mandatory gates, no
-    generation block - are decided before there is a CleanRun to ask. Cleanup
-    that only exists once the run object does is cleanup that misses exactly
-    those cases, and an older candidate from a previous attempt would survive
-    them.
-
-    `managed_root` is the tree this function is permitted to delete inside, and
-    it is not optional. The caller derives `root` from a manifest, and a
-    manifest is untrusted input; the last thing standing between a hostile
-    `board_id` and somebody's files should not be the caller's care. A target
-    equal to or outside the managed root raises rather than being silently
-    skipped, because a cleanup that quietly did nothing is its own bug.
-    """
-    if not contained(root, managed_root):
-        raise UncontainedTarget(
-            "refusing to purge {!r}: it is not strictly inside the managed "
-            "output root {!r}".format(root, managed_root))
-    removed = []
-    if not os.path.isdir(root):
-        return removed
-    for name in CANDIDATE_DIR_NAMES:
-        path = os.path.join(root, name)
-        if os.path.isdir(path):
-            shutil.rmtree(path, ignore_errors=True)
-            removed.append(path)
-    for path in orderable_archives(root):
-        try:
-            os.unlink(path)
-            removed.append(path)
-        except OSError:
-            pass
-    return removed
-
-
-def orderable_archives(root):
-    """Every archive-shaped file under `root`, recursively."""
-    hits = []
-    for dirpath, _dirs, files in os.walk(root):
-        for name in files:
-            lowered = name.lower()
-            if any(lowered.endswith(suffix) for suffix in ORDERABLE_SUFFIXES):
-                hits.append(os.path.join(dirpath, name))
-    return sorted(hits)
+# Archive shapes and the containment rules live in pcbqa.layout, which is the
+# only module allowed to turn an identity into a path. Nothing here decides
+# where output goes any more; it is handed the directories it may use.
+from .layout import ORDERABLE_SUFFIXES, orderable_archives   # noqa: F401
 
 
 class CleanRoomError(Exception):
@@ -201,7 +126,7 @@ def source_closure(manifest, policy):
 class CleanRun:
     """One isolated release attempt."""
 
-    def __init__(self, ctx, root):
+    def __init__(self, ctx, root, build_dir):
         self.source_ctx = ctx
         self.manifest = ctx.manifest
         self.root = os.path.abspath(root)
@@ -209,22 +134,12 @@ class CleanRun:
         self.project = os.path.join(self.root, "fixture", "project")
         self.generated = os.path.join(self.root, "generated")
         self.gerbers = os.path.join(self.generated, "gerbers")
-        # The assembled release package is *staged outside the output tree*.
-        # Deleting it on failure would be a promise kept only while the process
-        # lives; putting it somewhere the output tree never reaches keeps the
-        # promise even if this process is killed outright. It becomes part of
-        # the output only when promote() is called, and promote() is only
-        # called once every mandatory gate has passed.
-        self.staging = tempfile.mkdtemp(prefix="pcbqa_release_staging_")
-        self.release = self.staging
-        # The candidate is assembled here too, and moved into the output tree
-        # in a single final operation. Assembling it in place would mean that
-        # a failure part-way through - an exception, a timeout, Ctrl+C - left a
-        # directory that looks like a release and contains a real archive.
-        self.pending = None
-        self.promoted = False
-        self.succeeded = False
-        atexit.register(self.discard_staging)
+        # The assembled package lives in the attempt's own build directory.
+        # It is a candidate for exactly as long as it sits there: publication
+        # is the attempt renaming this directory into `published/`, and until
+        # that happens nothing here has been released.
+        self.release = build_dir
+        os.makedirs(self.release, exist_ok=True)
         self.reports = os.path.join(self.root, "reports")
         self.log = []
         self.removed = []
@@ -479,16 +394,16 @@ class CleanRun:
         data["fixture"]["attributes_file"] = "../.gitattributes"
         up = "../.."                       # fixture/project -> run root
         data["artifacts"]["gerber_dir"] = f"{up}/generated/gerbers"
-        data["artifacts"]["bom"] = os.path.join(self.staging,
+        data["artifacts"]["bom"] = os.path.join(self.release,
                                                 cfg["bom"]["output"])
-        data["artifacts"]["cpl"] = os.path.join(self.staging,
+        data["artifacts"]["cpl"] = os.path.join(self.release,
                                                 cfg["cpl"]["output"])
         data["artifacts"]["cpl_fields"] = cfg["cpl"]["field_map"]
         data["artifacts"]["cpl_origin"] = cfg["cpl"]["origin"]
         data["assembly"]["bom_fields"] = cfg["bom"]["field_map"]
-        data["archive"]["zip"] = os.path.join(self.staging,
+        data["archive"]["zip"] = os.path.join(self.release,
                                               cfg["archive"]["zip"])
-        data["archive"]["manifest"] = os.path.join(self.staging,
+        data["archive"]["manifest"] = os.path.join(self.release,
                                                    cfg["archive"]["manifest"])
         data["archive"].pop("pre_normalization_digests", None)
         data["reports"] = dict(data["reports"])
@@ -540,7 +455,7 @@ class CleanRun:
 
     # -- orchestration -----------------------------------------------------
     def build(self):
-        from .core import Manifest
+        from .core import load_manifest
         self.isolate()
         # The authoritative DRC refills zones and saves the board, so the
         # inventory is taken after generation: it records the design that was
@@ -548,97 +463,21 @@ class CleanRun:
         self.load_policy()
         self.generate()
         self.freeze()
-        derived = Manifest(self.derive_manifest())
+        derived = load_manifest(self.derive_manifest())
         self.bind_reports(derived)
         self.package()
         self.assert_isolated(derived)
         return derived
 
-    # -- stage 7: nothing orderable exists until everything passed ---------
+    # -- stage 7: what this run owns --------------------------------------
     def owns(self, path):
-        """Both roots this attempt legitimately writes to."""
-        return _inside(path, self.root) or _inside(path, self.staging)
-
-    def stage_candidate(self):
-        """Begin assembling the candidate, outside the output tree.
-
-        Returns a directory to fill. Nothing in the output tree changes until
-        `commit_candidate` is called, so a failure at any point during
-        assembly leaves the output tree exactly as it was.
-        """
-        self.discard_pending()
-        self.pending = tempfile.mkdtemp(prefix="pcbqa_release_pending_")
-        atexit.register(self.discard_pending)
-        shutil.copytree(self.staging, os.path.join(self.pending, "fabrication"))
-        return self.pending
-
-    def commit_candidate(self, destination):
-        """Move the finished candidate into place. The last operation.
-
-        A rename is atomic on the same volume, which is the case that matters:
-        the candidate directory either exists complete or does not exist. When
-        the temporary directory is on another volume the move degrades to a
-        copy, so that case is detected and the copy is made into a hidden name
-        and renamed, keeping the final step atomic either way.
-        """
-        if self.pending is None or not os.path.isdir(self.pending):
-            raise CleanRoomError("no candidate has been staged")
-        if os.path.isdir(destination):
-            shutil.rmtree(destination)
-        parent = os.path.dirname(destination)
-        os.makedirs(parent, exist_ok=True)
-        try:
-            os.rename(self.pending, destination)
-        except OSError:
-            # Different volume: copy beside the target, then rename.
-            interim = os.path.join(parent, ".release_candidate_incoming")
-            if os.path.isdir(interim):
-                shutil.rmtree(interim)
-            shutil.copytree(self.pending, interim)
-            os.rename(interim, destination)
-            shutil.rmtree(self.pending, ignore_errors=True)
-        self.pending = None
-        self.promoted = True
-        self.succeeded = True
-        return sorted(os.listdir(destination))
-
-    def discard_pending(self):
-        """Destroy a half-assembled candidate. Safe to call repeatedly."""
-        pending = getattr(self, "pending", None)
-        if pending and os.path.isdir(pending):
-            shutil.rmtree(pending, ignore_errors=True)
-        self.pending = None
-
-    def discard_staging(self):
-        """Destroy the staged package. Safe to call repeatedly."""
-        staging = getattr(self, "staging", None)
-        if staging and os.path.isdir(staging):
-            shutil.rmtree(staging, ignore_errors=True)
-
-    @property
-    def managed_root(self):
-        """The `out/` directory this run's output lives under."""
-        return os.path.dirname(os.path.dirname(self.root))
-
-    def sweep_output_tree(self, *extra_roots):
-        """Remove any archive that reached the output tree anyway.
-
-        Staging should make this a no-op. It is here because "should" is not a
-        property, and a release that leaves one orderable file behind is the
-        failure this whole mechanism exists to prevent.
-        """
-        removed = []
-        for root in (self.root,) + tuple(extra_roots):
-            removed.extend(purge_managed_output(root, self.managed_root))
-        return removed
+        """The two roots this run legitimately writes to."""
+        return _inside(path, self.root) or _inside(path, self.release)
 
     def summary(self):
         return {
             "run_root": self.root,
-            "staging_root": self.staging,
-            "pending_root": self.pending,
-            "promoted": self.promoted,
-            "release_succeeded": self.succeeded,
+            "build_root": self.release,
             "origin": self.origin_root,
             "purged": self.removed,
             "steps": self.log,

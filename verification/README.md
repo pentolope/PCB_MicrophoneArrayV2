@@ -20,11 +20,22 @@ python verification/run.py validate verification/boards/reva.json
 python verification/run.py release verification/boards/reva.json
 ```
 
-`selftest` runs 38 unit, portability, hygiene and mutation tests. `validate`
-exits nonzero and writes `out/<board_id>/validation.{json,md}`. `release`
-re-runs every gate first and, on any blocking result, writes only
-`release_UNSAFE_diagnostic/` containing `DO_NOT_ORDER.txt` - it never creates a
-sealed package.
+`selftest` runs the unit, lifecycle, portability, hygiene and mutation tests.
+
+Every invocation owns one attempt directory and writes nothing outside it:
+
+    out/<board_id>/attempts/<attempt_id>/     work/, build/, diagnostics/
+    out/<board_id>/published/<release_id>/    immutable once created
+    out/<board_id>/latest.json                pointer, replaced atomically
+
+`validate` exits nonzero on a blocking result and leaves its report in its
+attempt. `release` builds the candidate under `build/` and publishes it only
+once every mandatory gate has passed, by renaming that directory into
+`published/<release_id>` - a name that did not exist before, so no release is
+ever overwritten. A failed release removes its own `build/`, keeps
+`diagnostics/DO_NOT_ORDER.txt`, and leaves any previously published release
+and the `latest.json` pointer byte-identical. Nothing is ever swept from a
+sibling attempt or from an earlier release.
 
 Use KiCad's bundled Python (it provides `pcbnew` and `shapely`):
 `"C:\Program Files\KiCad\10.0\bin\python.exe"`.

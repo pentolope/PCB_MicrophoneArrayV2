@@ -100,6 +100,28 @@ class _Collector(unittest.TestResult):
         super().addUnexpectedSuccess(test)
         self._finish(test, "unexpected_success", "")
 
+    def addSubTest(self, test, subtest, err):
+        """Record subtest outcomes against the parent test.
+
+        Without this, a test using `subTest` whose subtest fails calls neither
+        addSuccess nor addFailure for the test itself, so the worker returns
+        nothing for it and the parent reports "test produced no result
+        record" - technically true and completely useless, because the actual
+        assertion failure is discarded. A runner that turns a real failure
+        into a shrug is the failure mode this whole file exists to prevent.
+        """
+        super().addSubTest(test, subtest, err)
+        if err is None:
+            return
+        detail = self._exc_info_to_string(err, test)
+        outcome = ("fail" if issubclass(err[0], test.failureException)
+                   else "error")
+        existing = self.records.get(test.id())
+        if existing and existing["outcome"] in ("fail", "error"):
+            existing["detail"] += "\n" + str(subtest) + "\n" + detail
+            return
+        self._finish(test, outcome, str(subtest) + "\n" + detail)
+
 
 def _run_one(test_id, top_level):
     sys.path.insert(0, top_level)

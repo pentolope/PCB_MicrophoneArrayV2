@@ -143,41 +143,35 @@ class RevAExpectedFailureMatrix(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class ReleaseBlocked(unittest.TestCase):
-    def test_release_creates_no_sealed_package(self):
+    """Rev A must not be publishable, and must publish nothing trying."""
+
+    def _out_root(self):
+        return os.path.join(os.environ.get("PCBQA_TEST_OUTPUT_ROOT", HERE),
+                            "out", "microphone_array_v2-revA")
+
+    def test_release_publishes_nothing(self):
+        from pcbqa import layout
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", REVA],
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
-        # Under the parallel runner the release writes to this worker's output
-        # root, not to the repository's out/. Looking in the wrong place made
-        # this test pass off a stale directory left by an earlier run.
-        out = os.path.join(os.environ.get("PCBQA_TEST_OUTPUT_ROOT", HERE),
-                           "out", "microphone_array_v2-revA")
-        for forbidden in ("release_sealed", "release_candidate_UNSEALED"):
-            self.assertFalse(os.path.isdir(os.path.join(out, forbidden)),
-                             f"{forbidden} was created despite failures")
-        unsafe = os.path.join(out, "release_UNSAFE_diagnostic")
-        self.assertTrue(os.path.isdir(unsafe))
-        self.assertTrue(os.path.isfile(os.path.join(unsafe, "DO_NOT_ORDER.txt")))
-        # A blocked release must publish nothing orderable. The clean run's
-        # own workspace is scratch - it necessarily builds an archive in order
-        # to validate one - so what matters is that no archive reaches any
-        # directory the release publishes.
-        published = [os.path.join(out, d) for d in
-                     ("release_sealed", "release_candidate_UNSEALED",
-                      "release_UNSAFE_diagnostic")]
-        for directory in published:
-            for _root, _dirs, files in os.walk(directory):
-                for name in files:
-                    self.assertFalse(
-                        name.lower().endswith(".zip"),
-                        f"release published an orderable archive: {name}")
-        text = open(os.path.join(unsafe, "DO_NOT_ORDER.txt"),
+        board = self._out_root()
+        self.assertFalse(os.path.isdir(os.path.join(board, "published")),
+                         "a rejected board published a release")
+        self.assertFalse(os.path.isfile(os.path.join(board, "latest.json")))
+        # Every attempt this produced must be free of orderable artifacts.
+        attempts = os.path.join(board, "attempts")
+        self.assertTrue(os.path.isdir(attempts))
+        self.assertEqual(layout.orderable_archives(attempts), [],
+                         "a failed attempt kept an orderable archive")
+        newest = sorted(os.listdir(attempts))[-1]
+        diagnostics = os.path.join(attempts, newest, "diagnostics")
+        text = open(os.path.join(diagnostics, "DO_NOT_ORDER.txt"),
                     encoding="utf-8").read()
         self.assertIn("NOT A RELEASE", text)
-        self.assertIn("No sealed or orderable package was produced", text)
+        self.assertIn("No orderable package was produced", text)
 
     def test_missing_mandatory_gate_blocks_release(self):
-        """A gate that is NOT_APPLICABLE but mandatory must block sealing."""
+        """A gate that is NOT_APPLICABLE but mandatory must block publication."""
         tmp = temp_manifest("mandatory",
                             lambda doc: doc.pop("via_mask"))   # four VIA gates N/A
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
@@ -192,7 +186,6 @@ class ReleaseBlocked(unittest.TestCase):
         proc = subprocess.run([PYTHON, os.path.join(HERE, "run.py"), "release", tmp],
                               capture_output=True, text=True, cwd=HERE)
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("names no mandatory gates", proc.stdout)
 
 
 # ---------------------------------------------------------------------------

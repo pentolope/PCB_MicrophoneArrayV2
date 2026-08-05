@@ -142,18 +142,44 @@ class Manifest:
     """
 
     def __init__(self, path):
+        """Parse and validate. A constructed Manifest is a trusted one.
+
+        Everything a caller needs to check about a manifest is checked here,
+        exactly once: that it is JSON, that it is an object, that it declares a
+        schema version this validator implements, and that its board id is a
+        name safe to use as a single path component. There is deliberately no
+        second, looser way to read a manifest - the reason this class exists is
+        so that no command has to decide for itself how much of a file to
+        believe before touching the filesystem.
+        """
+        from .layout import valid_board_id
+
         self.path = os.path.abspath(path)
-        with open(self.path, "rb") as fh:
-            raw = fh.read()
+        try:
+            with open(self.path, "rb") as fh:
+                raw = fh.read()
+        except OSError as exc:
+            raise ManifestError(f"{path}: cannot be read: {exc}") from exc
         self.sha256 = sha256_bytes(raw)
         try:
             self.data = json.loads(raw.decode("utf-8"))
-        except ValueError as exc:
+        except (ValueError, UnicodeDecodeError) as exc:
             raise ManifestError(f"{self.path}: not valid JSON: {exc}") from exc
+        if not isinstance(self.data, dict):
+            raise ManifestError(
+                f"{self.path}: top level is a "
+                f"{type(self.data).__name__}, not a JSON object")
         if self.data.get("schema_version") != SCHEMA_VERSION:
             raise ManifestError(
                 f"{self.path}: schema_version {self.data.get('schema_version')!r}, "
                 f"this validator implements {SCHEMA_VERSION}")
+        board_id = self.data.get("board_id")
+        if not valid_board_id(board_id):
+            raise ManifestError(
+                f"{self.path}: board_id {board_id!r} is not a usable board "
+                f"identity; it must be a single conservative slug, because it "
+                f"names a directory this tool creates and removes")
+        self.board_id = board_id
         self.root = os.path.dirname(self.path)
         self.accesses = []       # [(key, value)] for the parity gate
 
@@ -208,6 +234,15 @@ class Manifest:
         """A path relative to the manifest's project_root."""
         base = self.get("project_root")
         return os.path.abspath(os.path.join(self.root, base, *parts))
+
+
+def load_manifest(path):
+    """The authoritative manifest entry point for every command.
+
+    Raises ManifestError, and does so before any caller has been given
+    anything it could build a path out of.
+    """
+    return Manifest(path)
 
 
 # ---------------------------------------------------------------------------
@@ -316,10 +351,21 @@ class Context:
         """
         def build():
             import shutil
+            from .layout import ORDERABLE_SUFFIXES
             root = os.path.join(self.workdir, "check_copy")
             if os.path.isdir(root):
                 shutil.rmtree(root)
-            shutil.copytree(self.manifest.resolve("."), root)
+
+            def skip_archives(_directory, names):
+                # A tool opening the project has no use for the project's
+                # previously packaged archives, and copying them would put a
+                # complete fabrication zip inside an attempt directory - the
+                # one thing an attempt is never allowed to contain.
+                return {n for n in names
+                        if n.lower().endswith(ORDERABLE_SUFFIXES)}
+
+            shutil.copytree(self.manifest.resolve("."), root,
+                            ignore=skip_archives)
             return root
         return self.cache("check_copy", build)
 
