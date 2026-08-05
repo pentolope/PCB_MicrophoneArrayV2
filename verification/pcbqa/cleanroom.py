@@ -162,8 +162,13 @@ class CleanRun:
             raise CleanRoomError("lock files present in the release source tree")
 
         os.makedirs(os.path.dirname(self.project), exist_ok=True)
-        shutil.copytree(self.origin_root, self.project,
-                        ignore=self._reject_locks)
+        # A project root can contain the validator's own output tree; the
+        # shared helper refuses to copy the destination into itself.
+        from .core import copy_project
+        copy_project(self.origin_root, self.project)
+        residual_locks = _find(self.project, self.cfg["lock_file_globs"])
+        for rel in residual_locks:
+            os.unlink(os.path.join(self.project, rel))
         for pattern in self.cfg["purge_globs"]:
             for path in sorted(glob.glob(os.path.join(self.project, pattern),
                                          recursive=True)):

@@ -129,6 +129,56 @@ def utcnow():
 # constraint manifest
 # ---------------------------------------------------------------------------
 
+# Directories that are never part of a design and must never be copied with
+# one. `.git` is enormous and irrelevant; the rest are caches.
+NEVER_COPY = (".git", "__pycache__", ".mypy_cache", ".pytest_cache")
+
+
+def copy_project(source, destination, skip_archives=False):
+    """Copy a project tree without copying the destination into itself.
+
+    A project root that contains the validator's own output directory - which
+    is exactly what happens when the manifest points at a repository root
+    rather than at a fixture - makes a naive copytree recurse into the copy it
+    is currently writing. It either runs out of stack or trips over a file it
+    has open. The destination and every directory on the way to it are skipped
+    here, so the copy terminates whatever the project root happens to contain.
+    """
+    import shutil
+    from .layout import ORDERABLE_SUFFIXES
+
+    target = os.path.realpath(destination)
+    # Every ancestor of the destination, so a parent on the path to it is not
+    # descended into and the copy cannot chase its own tail.
+    blocked = set()
+    walk = target
+    while True:
+        blocked.add(walk)
+        parent = os.path.dirname(walk)
+        if parent == walk:
+            break
+        walk = parent
+
+    def ignore(directory, names):
+        skipped = set()
+        for name in names:
+            if name in NEVER_COPY:
+                skipped.add(name)
+                continue
+            if skip_archives and name.lower().endswith(ORDERABLE_SUFFIXES):
+                skipped.add(name)
+                continue
+            full = os.path.realpath(os.path.join(directory, name))
+            if full == target or (full in blocked and os.path.isdir(full)):
+                skipped.add(name)
+        return skipped
+
+    if os.path.isdir(destination):
+        shutil.rmtree(destination)
+    shutil.copytree(source, destination, ignore=ignore)
+    return destination
+
+
 class ManifestError(Exception):
     pass
 
@@ -350,23 +400,13 @@ class Context:
         Built once per context and shared by every gate that shells out.
         """
         def build():
-            import shutil
-            from .layout import ORDERABLE_SUFFIXES
-            root = os.path.join(self.workdir, "check_copy")
-            if os.path.isdir(root):
-                shutil.rmtree(root)
-
-            def skip_archives(_directory, names):
-                # A tool opening the project has no use for the project's
-                # previously packaged archives, and copying them would put a
-                # complete fabrication zip inside an attempt directory - the
-                # one thing an attempt is never allowed to contain.
-                return {n for n in names
-                        if n.lower().endswith(ORDERABLE_SUFFIXES)}
-
-            shutil.copytree(self.manifest.resolve("."), root,
-                            ignore=skip_archives)
-            return root
+            # Archives are skipped too: a tool opening a project has no use for
+            # its previously packaged output, and copying one would put a
+            # complete fabrication zip inside an attempt directory - the one
+            # thing an attempt is never allowed to contain.
+            return copy_project(self.manifest.resolve("."),
+                                os.path.join(self.workdir, "check_copy"),
+                                skip_archives=True)
         return self.cache("check_copy", build)
 
     def check_path(self, relative):
@@ -375,12 +415,7 @@ class Context:
 
     def clean_copy(self, into):
         """A pristine copy of the project, for runs that must not see stale output."""
-        import shutil
-        root = self.manifest.resolve(".")
-        if os.path.isdir(into):
-            shutil.rmtree(into)
-        shutil.copytree(root, into)
-        return into
+        return copy_project(self.manifest.resolve("."), into)
 
     def run_tool(self, args, timeout=1800):
         proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
