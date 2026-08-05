@@ -54,7 +54,25 @@ CANDIDATE_DIR_NAMES = ("release_candidate_UNSEALED", "release_sealed",
                        ".release_candidate_incoming")
 
 
-def purge_managed_output(root):
+class UncontainedTarget(Exception):
+    """A deletion was asked for outside the directory tree it may touch."""
+
+
+def contained(target, managed_root):
+    """True when `target` is strictly inside `managed_root`."""
+    if not target or not managed_root:
+        return False
+    target = os.path.realpath(target)
+    managed_root = os.path.realpath(managed_root)
+    if target == managed_root:
+        return False
+    try:
+        return os.path.commonpath([target, managed_root]) == managed_root
+    except ValueError:                      # different drives on Windows
+        return False
+
+
+def purge_managed_output(root, managed_root):
     """Remove every orderable artifact from a board's managed output directory.
 
     Deliberately a plain function rather than a method: the earliest reasons a
@@ -63,9 +81,20 @@ def purge_managed_output(root):
     that only exists once the run object does is cleanup that misses exactly
     those cases, and an older candidate from a previous attempt would survive
     them.
+
+    `managed_root` is the tree this function is permitted to delete inside, and
+    it is not optional. The caller derives `root` from a manifest, and a
+    manifest is untrusted input; the last thing standing between a hostile
+    `board_id` and somebody's files should not be the caller's care. A target
+    equal to or outside the managed root raises rather than being silently
+    skipped, because a cleanup that quietly did nothing is its own bug.
     """
+    if not contained(root, managed_root):
+        raise UncontainedTarget(
+            "refusing to purge {!r}: it is not strictly inside the managed "
+            "output root {!r}".format(root, managed_root))
     removed = []
-    if not root or not os.path.isdir(root):
+    if not os.path.isdir(root):
         return removed
     for name in CANDIDATE_DIR_NAMES:
         path = os.path.join(root, name)
@@ -586,6 +615,11 @@ class CleanRun:
         if staging and os.path.isdir(staging):
             shutil.rmtree(staging, ignore_errors=True)
 
+    @property
+    def managed_root(self):
+        """The `out/` directory this run's output lives under."""
+        return os.path.dirname(os.path.dirname(self.root))
+
     def sweep_output_tree(self, *extra_roots):
         """Remove any archive that reached the output tree anyway.
 
@@ -595,7 +629,7 @@ class CleanRun:
         """
         removed = []
         for root in (self.root,) + tuple(extra_roots):
-            removed.extend(purge_managed_output(root))
+            removed.extend(purge_managed_output(root, self.managed_root))
         return removed
 
     def summary(self):

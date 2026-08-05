@@ -81,37 +81,69 @@ def cmd_validate(manifest_path, quiet=False):
     return (1 if doc["summary"]["blocking"] else 0), doc, ctx
 
 
-BOARD_ID_PATTERN = r'"board_id"\s*:\s*"([^"]+)"'
+# A board id names one directory under `out/`. It arrives from a manifest that
+# nobody has validated yet - the whole point of reading it early is that it is
+# read *before* the manifest is trusted - and it is then used to choose a
+# directory that gets deleted. So it is a single conservative slug or it is
+# nothing: must start alphanumeric, may then contain alphanumerics, dot,
+# underscore and hyphen, and nothing else. That admits every board id in this
+# repository and admits no path syntax at all - no separator, no drive letter,
+# no `..`, no leading dot, no whitespace, no NUL.
+BOARD_ID_RE = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\Z")
+BOARD_ID_MAX = 100
+
+
+def valid_board_id(value):
+    """True only for a name safe to use as a single path component."""
+    if not isinstance(value, str):
+        return False
+    if not value or len(value) > BOARD_ID_MAX:
+        return False
+    if not BOARD_ID_RE.match(value):
+        return False
+    # Belt and braces: the regex already excludes these, but the cost of
+    # asserting it directly is nothing next to the cost of being wrong.
+    if value in (os.curdir, os.pardir):
+        return False
+    if os.path.basename(value) != value:
+        return False
+    drive, _tail = os.path.splitdrive(value)
+    return not drive
 
 
 def managed_output_dir(manifest_path):
-    """Where this board's release output lives, resolved without trusting much.
+    """Where this board's release output lives. Returns None if unidentifiable.
 
     Called before the gates are imported and before the manifest is
     constructed, because both of those can fail and a release that fails is
-    still a release that must not leave an old candidate behind. A manifest too
-    broken to parse is still usually readable enough to say which board it is
-    about, so the board id is taken from strict JSON when that works and from
-    the raw text when it does not.
+    still a release that must not leave an old candidate behind.
 
-    Returns None only when no board can be identified, in which case there is
-    no managed directory to clean.
+    The manifest must be a JSON *object* and its `board_id` must be a safe
+    single path component. There is deliberately no salvage path for malformed
+    JSON: the value chosen here selects a directory that this command will
+    delete from, and guessing it out of a file that does not parse is how a
+    cleanup routine ends up removing somebody else's work. A manifest we cannot
+    read is a manifest whose board we do not know, and not knowing is a reason
+    to stop rather than to guess.
     """
     try:
         with open(manifest_path, encoding="utf-8") as fh:
-            text = fh.read()
-    except OSError:
+            document = json.load(fh)
+    except (OSError, ValueError):
         return None
-    board_id = None
-    try:
-        board_id = json.loads(text).get("board_id")
-    except ValueError:
-        match = re.search(BOARD_ID_PATTERN, text)
-        if match:
-            board_id = match.group(1)
-    if not isinstance(board_id, str) or not board_id.strip():
+    if not isinstance(document, dict):
         return None
-    return os.path.join(_output_base(), "out", board_id)
+    if not valid_board_id(document.get("board_id")):
+        return None
+
+    root = os.path.realpath(os.path.join(_output_base(), "out"))
+    candidate = os.path.realpath(os.path.join(root, document["board_id"]))
+    # Strictly beneath, and exactly one level down. This also catches the case
+    # where `out/<id>` is a symlink pointing somewhere else entirely, because
+    # realpath has already followed it by the time we look.
+    if candidate == root or os.path.dirname(candidate) != root:
+        return None
+    return candidate
 
 
 def cmd_release(manifest_path):
@@ -159,7 +191,8 @@ def cmd_release(manifest_path):
             run.discard_staging()
             run.discard_pending()
         if not state["succeeded"] and base is not None:
-            swept = cleanroom.purge_managed_output(base)
+            swept = cleanroom.purge_managed_output(
+                base, os.path.dirname(base))
             if swept:
                 print("Removed {} orderable artifact(s) from a release that "
                       "did not succeed".format(len(swept)))

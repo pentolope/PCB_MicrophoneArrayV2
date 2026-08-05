@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import hashlib
 import json
 import os
 import shutil
@@ -406,17 +407,31 @@ class FailuresBeforeTheManifestStillCleanUp(unittest.TestCase):
         self.assertIn("simulated failure importing a gate module", output)
         self._assert_clean(work, base)
 
-    def test_a_malformed_manifest_removes_a_prior_candidate(self):
-        """Unparseable JSON, but the board it belongs to is still legible."""
-        text = ('{\n  "board_id": "pre-malformed",\n'
-                '  "schema_version": 2,\n'
-                '  "sources": { "pcb": "x.kicad_pcb", },\n}')
+    def test_a_malformed_manifest_stops_without_guessing_a_target(self):
+        """Unparseable JSON names no board this command is willing to act on.
+
+        An earlier version salvaged `board_id` out of the raw text with a
+        regex, so a manifest with a stray comma still got cleaned up. That
+        reads a deletion target out of a file whose structure is unknown,
+        which is the wrong direction to fail in. The prior candidate surviving
+        is the intended outcome: it is left for a human rather than removed on
+        a guess.
+        """
+        text = ('{ "board_id": "pre-malformed", "schema_version": 2, '
+                '"sources": { "pcb": "x.kicad_pcb", }, }')
         work, manifest_path, base = self._fixture("pre-malformed", text)
-        self._plant(base)
+        archive = self._plant(base)
+        with open(archive, "rb") as fh:
+            digest = hashlib.sha256(fh.read()).hexdigest()
 
         code, output = self._run(work, manifest_path)
         self.assertEqual(code, 1, output)
-        self._assert_clean(work, base)
+        self.assertIn("cannot identify the board", output)
+        self.assertTrue(os.path.isfile(archive),
+                        "a manifest that does not parse was used to choose a "
+                        "deletion target")
+        with open(archive, "rb") as fh:
+            self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), digest)
 
     def test_a_manifest_of_the_wrong_schema_version_removes_a_prior_candidate(self):
         work, manifest_path, base = self._fixture("pre-wrong-schema")
@@ -438,7 +453,8 @@ class FailuresBeforeTheManifestStillCleanUp(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn("cannot identify the board", output)
 
-    def test_the_board_id_survives_a_manifest_that_will_not_parse(self):
+    def test_a_legible_board_id_in_unparseable_json_is_still_refused(self):
+        """Legible is not the same as trustworthy."""
         work = tempfile.mkdtemp(prefix="pcbqa_bid_")
         self.addCleanup(shutil.rmtree, work, True)
         path = os.path.join(work, "m.json")
@@ -453,8 +469,240 @@ class FailuresBeforeTheManifestStillCleanUp(unittest.TestCase):
                 os.environ.pop(ENV_OUTPUT_ROOT, None)
             else:
                 os.environ[ENV_OUTPUT_ROOT] = saved
-        self.assertTrue(resolved.endswith(os.path.join("out", "legible-anyway")),
-                        resolved)
+        self.assertIsNone(resolved,
+                          "a board id was recovered from JSON that does not "
+                          "parse, and would have selected a deletion target")
+
+    def _sandbox(self):
+        work = tempfile.mkdtemp(prefix="pcbqa_hostile_")
+        self.addCleanup(shutil.rmtree, work, True)
+        os.makedirs(os.path.join(work, "out"), exist_ok=True)
+        return work
+
+    def _plant_outside(self, work):
+        """A bystander: a candidate directory and archive next to `out/`."""
+        victim = os.path.join(work, "victim")
+        fabrication = os.path.join(victim, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication)
+        archive = os.path.join(fabrication, "someone-elses-fabrication.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("their-board-F_Cu.gbr", "G04 not ours*\n")
+        with open(archive, "rb") as fh:
+            digest = hashlib.sha256(fh.read()).hexdigest()
+        return victim, archive, digest
+
+    def _manifest(self, work, payload):
+        path = os.path.join(work, "manifest.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            if isinstance(payload, str):
+                fh.write(payload)
+            else:
+                json.dump(payload, fh, indent=2)
+        return path
+
+    def _release(self, work, manifest_path):
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                code = run_cli.cmd_release(manifest_path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        return code, captured.getvalue()
+
+    @staticmethod
+    def _inventory(root):
+        found = []
+        for dirpath, _dirs, files in os.walk(root):
+            for name in files:
+                found.append(os.path.relpath(os.path.join(dirpath, name),
+                                             root).replace("\\", "/"))
+        return sorted(found)
+
+    # -- 1: the traversal itself -------------------------------------------
+    def test_a_traversing_board_id_is_refused_and_the_bystander_survives(self):
+        work = self._sandbox()
+        victim, archive, digest = self._plant_outside(work)
+        before = self._inventory(victim)
+        manifest_path = self._manifest(work, {"board_id": "../victim",
+                                              "schema_version": 2})
+
+        code, output = self._release(work, manifest_path)
+
+        self.assertEqual(code, 1, output)
+        self.assertIn("cannot identify the board", output)
+        self.assertTrue(os.path.isfile(archive),
+                        "a hostile board_id deleted a file outside the "
+                        "managed output tree")
+        with open(archive, "rb") as fh:
+            self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), digest,
+                             "the bystander archive was modified")
+        self.assertEqual(self._inventory(victim), before,
+                         "the bystander directory changed")
+        self.assertTrue(os.path.isdir(
+            os.path.join(victim, "release_candidate_UNSEALED")))
+
+    def test_no_directory_is_created_outside_the_output_tree(self):
+        work = self._sandbox()
+        manifest_path = self._manifest(
+            work, {"board_id": "../../elsewhere", "schema_version": 2})
+        # Snapshot after the manifest is written: it is an input to the run,
+        # not something the run produced.
+        before = self._inventory(work)
+        code, _output = self._release(work, manifest_path)
+        self.assertEqual(code, 1)
+        self.assertFalse(os.path.exists(os.path.join(
+            os.path.dirname(work), "elsewhere")))
+        self.assertEqual(self._inventory(work), before,
+                         "a refused release created something")
+
+    # -- 2: absolute paths and separators -----------------------------------
+    def test_absolute_and_separated_ids_are_refused(self):
+        hostile = ["/etc", "/tmp/victim", "C:" + os.sep + "Windows",
+                   "a/b", "a" + os.sep + "b", "..", ".", "",
+                   "sub/../../escape", "\\\\server\\share"]
+        for value in hostile:
+            self.assertFalse(run_cli.valid_board_id(value),
+                             "accepted hostile board_id {!r}".format(value))
+        work = self._sandbox()
+        for value in ("/tmp/victim", "a/b", "..", ""):
+            manifest_path = self._manifest(work, {"board_id": value,
+                                                  "schema_version": 2})
+            code, output = self._release(work, manifest_path)
+            self.assertEqual(code, 1, "{!r} was not refused".format(value))
+            self.assertIn("cannot identify the board", output)
+
+    # -- 3: shapes that are not an object at all ----------------------------
+    def test_a_json_list_fails_in_a_controlled_way(self):
+        work = self._sandbox()
+        victim, archive, digest = self._plant_outside(work)
+        manifest_path = self._manifest(work, ["board_id", "microphone"])
+
+        code, output = self._release(work, manifest_path)
+
+        self.assertEqual(code, 1, output)
+        self.assertIn("cannot identify the board", output)
+        self.assertNotIn("AttributeError", output,
+                         "a JSON list must not reach .get(): " + output)
+        self.assertNotIn("Traceback", output)
+        with open(archive, "rb") as fh:
+            self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), digest)
+
+    def test_malformed_json_deletes_nothing_and_does_not_guess(self):
+        """The regex salvage path is gone: an unparseable manifest names no board."""
+        work = self._sandbox()
+        victim, archive, digest = self._plant_outside(work)
+        board = os.path.join(work, "out", "microphone_array_v2-revA")
+        fabrication = os.path.join(board, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication)
+        managed_archive = os.path.join(fabrication, "managed.zip")
+        with zipfile.ZipFile(managed_archive, "w") as zf:
+            zf.writestr("x.gbr", "G04*\n")
+
+        manifest_path = self._manifest(
+            work, '{ "board_id": "microphone_array_v2-revA", oops }')
+        code, output = self._release(work, manifest_path)
+
+        self.assertEqual(code, 1, output)
+        self.assertIn("cannot identify the board", output)
+        self.assertTrue(os.path.isfile(managed_archive),
+                        "an unparseable manifest was used to choose a "
+                        "deletion target anyway")
+        with open(archive, "rb") as fh:
+            self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), digest)
+
+    def test_a_non_string_board_id_is_refused(self):
+        work = self._sandbox()
+        for value in (17, None, ["a"], {"a": 1}, True):
+            manifest_path = self._manifest(work, {"board_id": value,
+                                                  "schema_version": 2})
+            code, _output = self._release(work, manifest_path)
+            self.assertEqual(code, 1, "{!r} was not refused".format(value))
+
+    # -- 4: the deletion boundary itself ------------------------------------
+    def test_the_cleanup_helper_refuses_a_target_outside_its_root(self):
+        work = self._sandbox()
+        victim, archive, digest = self._plant_outside(work)
+        managed = os.path.join(work, "out")
+
+        for target in (victim,
+                       work,
+                       os.path.join(managed, "..", "victim"),
+                       managed):
+            with self.assertRaises(cleanroom.UncontainedTarget,
+                                   msg="purged {!r}".format(target)):
+                cleanroom.purge_managed_output(target, managed)
+
+        self.assertTrue(os.path.isfile(archive))
+        with open(archive, "rb") as fh:
+            self.assertEqual(hashlib.sha256(fh.read()).hexdigest(), digest)
+
+    def test_the_cleanup_helper_still_works_inside_its_root(self):
+        work = self._sandbox()
+        board = os.path.join(work, "out", "some-board")
+        fabrication = os.path.join(board, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication)
+        with zipfile.ZipFile(os.path.join(fabrication, "f.zip"), "w") as zf:
+            zf.writestr("x.gbr", "G04*\n")
+        removed = cleanroom.purge_managed_output(board,
+                                                 os.path.join(work, "out"))
+        self.assertTrue(removed)
+        self.assertEqual(cleanroom.orderable_archives(work), [])
+
+    # -- 5: the real board still resolves and still gets cleaned ------------
+    def test_the_real_board_id_resolves_beneath_the_output_tree(self):
+        work = self._sandbox()
+        manifest_path = self._manifest(
+            work, {"board_id": "microphone_array_v2-revA", "schema_version": 2})
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        try:
+            resolved = run_cli.managed_output_dir(manifest_path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        self.assertIsNotNone(resolved)
+        managed = os.path.realpath(os.path.join(work, "out"))
+        self.assertTrue(cleanroom.contained(resolved, managed), resolved)
+        self.assertEqual(os.path.basename(resolved),
+                         "microphone_array_v2-revA")
+
+    def test_a_normal_failed_release_still_cleans_its_own_candidate(self):
+        """The containment work must not have disabled the cleanup it guards."""
+        work = tempfile.mkdtemp(prefix="pcbqa_hostile_ok_")
+        self.addCleanup(shutil.rmtree, work, True)
+        project = os.path.join(work, "project")
+        shutil.copytree(FIXTURE, project)
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["board_id"] = "containment-control"
+        doc["project_root"] = project
+        doc["fixture"] = {"attributes_file": os.path.abspath(
+            os.path.join(HERE, "..", ".gitattributes"))}
+        doc.pop("release_profile")           # an early refusal
+        manifest_path = self._manifest(work, doc)
+
+        base = os.path.join(work, "out", "containment-control")
+        fabrication = os.path.join(base, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication)
+        with zipfile.ZipFile(os.path.join(fabrication, "old.zip"), "w") as zf:
+            zf.writestr("x.gbr", "G04*\n")
+
+        code, output = self._release(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertEqual(cleanroom.orderable_archives(os.path.join(work, "out")),
+                         [], "the managed candidate was not cleaned")
+        self.assertFalse(os.path.exists(
+            os.path.join(base, "release_candidate_UNSEALED")))
+
 
 
 class PromotionIsTransactional(unittest.TestCase):
@@ -609,12 +857,13 @@ class SweepIsABackstopNotThePrimaryMechanism(unittest.TestCase):
     def test_the_sweep_finds_and_removes_an_archive_that_got_through(self):
         work = tempfile.mkdtemp(prefix="pcbqa_sweep_")
         self.addCleanup(shutil.rmtree, work, True)
-        nested = os.path.join(work, "clean_run", "generated", "release")
+        nested = os.path.join(work, "out", "board", "clean_run",
+                              "generated", "release")
         os.makedirs(nested)
         planted = os.path.join(nested, "fabrication.zip")
         with open(planted, "wb") as fh:
             fh.write(b"PK\x03\x04not really")
-        also = os.path.join(work, "somewhere", "else")
+        also = os.path.join(work, "out", "board", "somewhere", "else")
         os.makedirs(also)
         with open(os.path.join(also, "panel.tar.gz"), "wb") as fh:
             fh.write(b"\x1f\x8b")
@@ -622,8 +871,10 @@ class SweepIsABackstopNotThePrimaryMechanism(unittest.TestCase):
         self.assertEqual(len(cleanroom.orderable_archives(work)), 2)
 
         class _Stub:
-            root = work
-        removed = cleanroom.CleanRun.sweep_output_tree(_Stub())
+            root = os.path.join(work, "out", "board", "clean_run")
+            managed_root = os.path.join(work, "out")
+        removed = cleanroom.CleanRun.sweep_output_tree(
+            _Stub(), os.path.join(work, "out", "board"))
         self.assertEqual(len(removed), 2, removed)
         self.assertEqual(cleanroom.orderable_archives(work), [])
 
