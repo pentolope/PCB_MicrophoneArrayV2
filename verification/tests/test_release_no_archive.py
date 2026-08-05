@@ -23,6 +23,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import zipfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if HERE not in sys.path:
@@ -163,6 +164,165 @@ class FailedReleaseLeavesNothingOrderable(unittest.TestCase):
         self.assertIn("NOT A RELEASE", text)
         self.assertIn("No sealed or orderable package was produced", text)
         self.assertIn("staged package has been destroyed", text)
+
+
+class EarlyRejectionStillCleansUp(unittest.TestCase):
+    """A release refused before it starts is still a release that failed.
+
+    The preconditions - no release profile, no mandatory gates, no generation
+    block - used to be checked before the cleanup contract was established, so
+    they returned 1 without touching the managed output directory. An older
+    candidate from a previous, successful-looking attempt therefore survived a
+    failed command, sitting under its published name with a real ZIP in it.
+    Anyone reading the directory rather than the exit code would have taken it
+    for current.
+    """
+
+    def _fixture(self, board_id, mutate=None):
+        work = tempfile.mkdtemp(prefix="pcbqa_early_")
+        self.addCleanup(shutil.rmtree, work, True)
+        project = os.path.join(work, "project")
+        shutil.copytree(FIXTURE, project)
+        doc = json.load(open(REVA, encoding="utf-8"))
+        doc["board_id"] = board_id
+        doc["project_root"] = project
+        doc["fixture"] = {"attributes_file": os.path.abspath(
+            os.path.join(HERE, "..", ".gitattributes"))}
+        if mutate:
+            mutate(doc)
+        manifest_path = os.path.join(work, "manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        base = os.path.join(work, "out", board_id)
+        return work, manifest_path, base
+
+    @staticmethod
+    def _plant_prior_candidate(base):
+        """A complete-looking candidate from an earlier attempt."""
+        fabrication = os.path.join(base, "release_candidate_UNSEALED",
+                                   "fabrication")
+        os.makedirs(fabrication)
+        archive = os.path.join(fabrication, "yesterday-fabrication.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("board-F_Cu.gbr", "G04 from an earlier run*\n")
+        with open(os.path.join(base, "release_candidate_UNSEALED",
+                               "UNSEALED.txt"), "w", encoding="utf-8") as fh:
+            fh.write("Release CANDIDATE from a previous attempt.\n")
+        return archive
+
+    def _run(self, work, manifest_path):
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                code = run_cli.cmd_release(manifest_path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        return code, captured.getvalue()
+
+    def _assert_managed_output_is_clean(self, base, work):
+        self.assertEqual(cleanroom.orderable_archives(os.path.join(work, "out")),
+                         [], "an orderable archive survived a failed release")
+        for name in cleanroom.CANDIDATE_DIR_NAMES:
+            self.assertFalse(
+                os.path.exists(os.path.join(base, name)),
+                "{} survived a failed release".format(name))
+        leftovers = []
+        for dirpath, _dirs, files in os.walk(os.path.join(work, "out")):
+            for name in files:
+                if name.lower().endswith(cleanroom.ORDERABLE_SUFFIXES):
+                    leftovers.append(os.path.join(dirpath, name))
+        self.assertEqual(leftovers, [])
+
+    # -- each precondition, with a prior candidate already in place --------
+    def test_a_missing_release_profile_removes_a_prior_candidate(self):
+        work, manifest_path, base = self._fixture(
+            "early-no-profile", lambda doc: doc.pop("release_profile"))
+        os.makedirs(base, exist_ok=True)
+        archive = self._plant_prior_candidate(base)
+        self.assertTrue(os.path.isfile(archive))
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertIn("declares no release_profile", output)
+        self._assert_managed_output_is_clean(base, work)
+
+    def test_an_empty_mandatory_gate_list_removes_a_prior_candidate(self):
+        def mutate(doc):
+            doc["release_profile"]["mandatory_gates"] = []
+        work, manifest_path, base = self._fixture("early-no-gates", mutate)
+        os.makedirs(base, exist_ok=True)
+        self._plant_prior_candidate(base)
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertIn("names no mandatory gates", output)
+        self._assert_managed_output_is_clean(base, work)
+
+    def test_a_missing_generation_block_removes_a_prior_candidate(self):
+        work, manifest_path, base = self._fixture(
+            "early-no-generation", lambda doc: doc.pop("release_generation"))
+        os.makedirs(base, exist_ok=True)
+        self._plant_prior_candidate(base)
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output)
+        self.assertIn("no release_generation block", output)
+        self._assert_managed_output_is_clean(base, work)
+
+    def test_a_validation_failure_also_removes_a_prior_candidate(self):
+        """Rev A fails its gates; the prior candidate must go with it."""
+        work, manifest_path, base = self._fixture("early-validation-failure")
+        os.makedirs(base, exist_ok=True)
+        self._plant_prior_candidate(base)
+
+        code, output = self._run(work, manifest_path)
+        self.assertEqual(code, 1, output[-1500:])
+        self._assert_managed_output_is_clean(base, work)
+        self.assertTrue(os.path.isfile(os.path.join(
+            base, "release_UNSAFE_diagnostic", "DO_NOT_ORDER.txt")))
+
+    def test_a_successful_release_still_publishes_exactly_one_candidate(self):
+        """The control: cleanup must not eat a release that earned publication."""
+        work, manifest_path, base = self._fixture("early-success-control")
+        os.makedirs(base, exist_ok=True)
+        self._plant_prior_candidate(base)
+
+        real_run_all = core.run_all
+
+        def all_pass(context, only=None):
+            results = real_run_all(context, only=only)
+            for result in results:
+                if result.status != Status.NOT_APPLICABLE:
+                    result.passed(result.reason or "forced for this test")
+            return results
+
+        core.run_all = all_pass
+        try:
+            code, output = self._run(work, manifest_path)
+        finally:
+            core.run_all = real_run_all
+
+        self.assertEqual(code, 0, output[-2000:])
+        candidate = os.path.join(base, "release_candidate_UNSEALED")
+        self.assertTrue(os.path.isdir(candidate))
+        archives = cleanroom.orderable_archives(os.path.join(work, "out"))
+        self.assertEqual(len(archives), 1,
+                         "expected exactly one published archive, found "
+                         "{}".format(archives))
+        # realpath on both sides: Windows hands back 8.3 short names ("PENTOL~1")
+        # in one and the expanded form in the other, and comparing the two
+        # verbatim would fail on a correct result.
+        self.assertTrue(
+            os.path.realpath(archives[0]).startswith(
+                os.path.realpath(candidate)),
+            "the surviving archive is not the published one: " + archives[0])
+        # And it is this run's archive, not the one planted beforehand.
+        self.assertNotIn("yesterday-fabrication.zip", archives[0])
+
 
 
 class PromotionIsTransactional(unittest.TestCase):

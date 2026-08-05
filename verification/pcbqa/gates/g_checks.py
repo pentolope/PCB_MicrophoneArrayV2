@@ -154,7 +154,11 @@ REQUIRED_SEVERITIES = ("error", "warning", "exclusion")
 # something. Any other nonzero status means the check did not complete.
 VIOLATIONS_EXIT_CODE = 5
 
-WAIVER_REQUIRED_FIELDS = ("gate", "rule", "category", "objects", "location_mm",
+# A waiver names the whole violation, not a corner of it: every affected item
+# and where each one is. Waiving "the clearance error at these two places" is a
+# reviewable statement; waiving "a clearance error involving this one pad" is
+# not, because the other end could move anywhere and the waiver would hold.
+WAIVER_REQUIRED_FIELDS = ("gate", "rule", "category", "items",
                           "reason", "reviewed_by", "reviewed_utc",
                           "approved_source_sha256", "approved_rules_sha256",
                           "approved_command_sha256", "approved_report_sha256")
@@ -182,10 +186,16 @@ def _canonical_command(args):
 
 
 def _finding_key(f):
+    """Everything about a finding that a reviewer would have looked at.
+
+    The canonical item set carries every affected object *and* its position, so
+    moving any one of them - not just the first - changes the digest and
+    retires every waiver bound to it.
+    """
     return {
         "category": f.get("category"), "rule": f.get("rule"),
-        "severity": f.get("severity"), "objects": sorted(f.get("objects") or []),
-        "x_mm": f.get("x_mm"), "y_mm": f.get("y_mm"),
+        "severity": f.get("severity"),
+        "items": f.get("canonical_items") or [],
         "description": f.get("description"),
     }
 
@@ -212,17 +222,26 @@ def _waiver_defects(w, tol):
     for field in WAIVER_REQUIRED_FIELDS:
         if w.get(field) in (None, "", [], {}):
             bad.append("waiver omits {!r}".format(field))
-    objects = w.get("objects")
-    if objects is not None and (not isinstance(objects, list)
-                                or not all(isinstance(o, str) and o.strip()
-                                           for o in objects)):
-        bad.append("waiver `objects` must be a non-empty list of object "
-                   "descriptions; a waiver that names no object is a blanket "
-                   "waiver")
-    loc = w.get("location_mm")
-    if loc is not None and (not isinstance(loc, (list, tuple)) or len(loc) != 2
-                            or not all(isinstance(v, (int, float)) for v in loc)):
-        bad.append("waiver `location_mm` must be an [x, y] pair in mm")
+    entries = w.get("items")
+    if entries is not None:
+        if not isinstance(entries, list) or not entries:
+            bad.append("waiver `items` must be a non-empty list; a waiver that "
+                       "names no affected item is a blanket waiver")
+        else:
+            for index, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    bad.append(f"waiver item {index} is not an object")
+                    continue
+                if not isinstance(entry.get("description"), str) \
+                        or not entry["description"].strip():
+                    bad.append(f"waiver item {index} names no object")
+                loc = entry.get("location_mm")
+                if (not isinstance(loc, (list, tuple)) or len(loc) != 2
+                        or not all(isinstance(v, (int, float))
+                                   and not isinstance(v, bool) for v in loc)
+                        or not all(math.isfinite(v) for v in loc)):
+                    bad.append(f"waiver item {index} needs a finite [x, y] "
+                               f"location in mm")
     for field in ("rule", "category"):
         value = w.get(field)
         if isinstance(value, str) and value.strip() in ("*", "any", "all"):
@@ -256,30 +275,68 @@ def _waivers_for(ctx, gate_id, bindings, tol):
     return live, rejected
 
 
+def _waiver_items(entries):
+    """A waiver's affected set, canonicalised the same way a finding's is."""
+    return sorted(
+        ({"description": e["description"],
+          "x_mm": float(e["location_mm"][0]),
+          "y_mm": float(e["location_mm"][1]),
+          "uuid": e.get("uuid")} for e in entries),
+        key=lambda e: (e["description"], e["uuid"] or "", e["x_mm"], e["y_mm"]))
+
+
+def _placed(entries):
+    """True only when every item has a real, finite position."""
+    for entry in entries:
+        x, y = entry.get("x_mm"), entry.get("y_mm")
+        if x is None or y is None:
+            return False
+        # A non-finite coordinate makes every comparison false, which means
+        # `abs(nan - wx) > tol` is false and the waiver would *match*. Schema
+        # validation rejects such a report before it gets here; this is the
+        # second lock on the same door, because the failure mode is a silent
+        # waiver rather than a visible error.
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return False
+    return True
+
+
 def _waived(finding, waivers, tol):
-    """Exact match only: same rule, same category, same objects, same place."""
+    """Exact match: same rule, same category, and the same complete item set.
+
+    Every affected item must be accounted for, at the position the reviewer
+    approved. One more item, one fewer, or one that moved, and the waiver no
+    longer describes what was found.
+    """
+    found = finding.get("canonical_items")
+    if found is None:
+        found = sorted(finding.get("items") or [],
+                       key=lambda e: (e.get("description", ""),
+                                      e.get("uuid") or "",
+                                      e.get("x_mm") or 0.0,
+                                      e.get("y_mm") or 0.0))
+    if not found or not _placed(found):
+        return None
     for w in waivers:
         if w["rule"] != finding.get("rule"):
             continue
         if w["category"] != finding.get("category"):
             continue
-        if sorted(w["objects"]) != sorted(finding.get("objects") or []):
+        wanted = _waiver_items(w["items"])
+        if len(wanted) != len(found):
             continue
-        x, y = finding.get("x_mm"), finding.get("y_mm")
-        if x is None or y is None:
-            continue
-        # A non-finite coordinate makes every comparison below false, which
-        # means `abs(nan - wx) > tol` is false and the waiver would *match*.
-        # Schema validation rejects such a report before it gets here; this is
-        # the second lock on the same door, because the failure mode is a
-        # silent waiver rather than a visible error.
-        if not (math.isfinite(x) and math.isfinite(y)):
-            continue
-        wx, wy = w["location_mm"]
-        if abs(x - wx) > tol or abs(y - wy) > tol:
-            continue
-        return w
+        if all(_same_item(a, b, tol) for a, b in zip(wanted, found)):
+            return w
     return None
+
+
+def _same_item(waived, found, tol):
+    if waived["description"] != found.get("description"):
+        return False
+    if waived.get("uuid") and waived["uuid"] != found.get("uuid"):
+        return False
+    return (abs(found["x_mm"] - waived["x_mm"]) <= tol
+            and abs(found["y_mm"] - waived["y_mm"]) <= tol)
 
 
 def _run(ctx, res, kind, gate_id):

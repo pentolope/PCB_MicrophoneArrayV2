@@ -84,23 +84,56 @@ def cmd_release(manifest_path):
     """Clean-room release.
 
     Nothing that already exists in the tree can contribute to the verdict, and
-    nothing orderable exists until the verdict is in. The project is copied
-    into an isolated run directory, every previously generated output is
-    purged, and ERC, DRC, Gerbers, drills, BOM, CPL and the fabrication archive
-    are regenerated. The archive is assembled in a staging area *outside* the
-    output tree; it is copied in only after every mandatory gate has passed. On
-    any other outcome - a failing gate, an exception, a timeout, Ctrl+C - the
-    staging area is destroyed and the output tree is swept, so a rejected
-    release leaves diagnostics and nothing a fabricator would accept.
+    nothing orderable exists in the managed output until the verdict is in. The
+    project is copied into an isolated run directory, every previously
+    generated output is purged, and ERC, DRC, Gerbers, drills, BOM, CPL and the
+    fabrication archive are regenerated. The package is assembled in staging
+    *outside* the output tree and moved in by a single rename, which is the
+    last operation of a successful run.
+
+    The cleanup contract is established before anything else, including before
+    the preconditions are checked. A release refused for a missing profile is
+    still a release that failed, and it must not leave yesterday's candidate
+    sitting in the output directory looking current.
     """
     from pcbqa import cleanroom, core
-    from pcbqa.core import Context, Manifest, Status
+    from pcbqa.core import Context, Manifest
     _load_gates()
 
     manifest = Manifest(manifest_path)
     base = os.path.join(_output_base(), "out", manifest.get("board_id"))
     os.makedirs(base, exist_ok=True)
-    source_ctx = Context(manifest, os.path.join(base, "release_driver"))
+
+    # Set before the first `return`, cleared only by a completed promotion.
+    state = {"succeeded": False, "run": None}
+    try:
+        return _release_preconditions_and_attempt(manifest, base, state)
+    except KeyboardInterrupt:
+        print(chr(10) + "RELEASE ABANDONED: interrupted before it could "
+                        "complete")
+        return 130
+    except BaseException as exc:                              # fail closed
+        print(chr(10) + "RELEASE BLOCKED by an unhandled {}: {}".format(
+            type(exc).__name__, exc))
+        return 1
+    finally:
+        run = state["run"]
+        if run is not None:
+            run.discard_staging()
+            run.discard_pending()
+        if not state["succeeded"]:
+            swept = cleanroom.purge_managed_output(base)
+            if swept:
+                print("Removed {} orderable artifact(s) from a release that "
+                      "did not succeed".format(len(swept)))
+        left = cleanroom.orderable_archives(base)
+        if left:
+            print("WARNING: orderable archive(s) remain: {}".format(left))
+
+
+def _release_preconditions_and_attempt(manifest, base, state):
+    from pcbqa import cleanroom
+    from pcbqa.core import Context
 
     profile = manifest.get("release_profile", None)
     if not profile:
@@ -119,34 +152,13 @@ def cmd_release(manifest_path):
     candidate = os.path.join(base, "release_candidate_UNSEALED")
     unsafe = os.path.join(base, "release_UNSAFE_diagnostic")
 
+    source_ctx = Context(manifest, os.path.join(base, "release_driver"))
     run = cleanroom.CleanRun(source_ctx, os.path.join(base, "clean_run"))
-    try:
-        return _release_attempt(run, manifest, profile, mandatory, base,
-                                sealed, candidate, unsafe)
-    except KeyboardInterrupt:
-        print(chr(10) + "RELEASE ABANDONED: interrupted before any gate could "
-                        "clear it")
-        return 130
-    except BaseException as exc:                              # fail closed
-        print(chr(10) + "RELEASE BLOCKED by an unhandled {}: {}".format(
-            type(exc).__name__, exc))
-        return 1
-    finally:
-        # Unconditional, and in this order: the staged package and any
-        # half-assembled candidate die first, then anything orderable that
-        # reached the output tree by any route. `succeeded` is set by
-        # commit_candidate and only by commit_candidate, so a failure between
-        # "archive built" and "candidate in place" sweeps like any other.
-        run.discard_staging()
-        run.discard_pending()
-        if not run.succeeded:
-            swept = run.sweep_output_tree(base)
-            if swept:
-                print("Removed {} orderable archive(s) from a release that did "
-                      "not pass".format(len(swept)))
-        left = cleanroom.orderable_archives(base)
-        if left:
-            print("WARNING: orderable archive(s) remain: {}".format(left))
+    state["run"] = run
+    code = _release_attempt(run, manifest, profile, mandatory, base,
+                            sealed, candidate, unsafe)
+    state["succeeded"] = (code == 0) and run.succeeded
+    return code
 
 
 def _release_attempt(run, manifest, profile, mandatory, base,

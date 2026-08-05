@@ -1,0 +1,26 @@
+UNSAFE DIAGNOSTIC OUTPUT - NOT A RELEASE
+
+board: microphone_array_v2-revA
+release profile: jlcpcb-4layer-assembled
+clean run: C:\Users\pentolope\Documents\GitHub\PCB_MicrophoneArrayV2\verification\out\microphone_array_v2-revA\clean_run
+
+No fabrication archive was promoted; the staged package has been destroyed.
+
+blocking:
+  PROV.SOURCE_AUTHORITY: FAIL - 1 contradictory authority claim group(s), 2 non-authoritative derivation(s) of released data
+  ERC.AUTHORITATIVE: FAIL - 1 blocking ERC condition(s); findings=0, exit=0, ignored_checks=4
+  DRC.AUTHORITATIVE: FAIL - 1 blocking DRC condition(s); findings=0, exit=0, ignored_checks=5
+  DRC.NO_SUPPRESSED_RULES: FAIL - 5 DRC and 0 ERC rule(s) disabled, 0 stored exclusion(s)
+  STACK.NATIVE_VS_MANIFEST: FAIL - the frozen constraint manifest and the native board describe different plane assignments; the board is authori
+  VIA.MASK_CLEARANCE_TARGET: FAIL - 70 of 184 vias are closer than 0.4 mm (annulus_to_opening_mm) to a solder-mask opening
+  VIA.MASK_CLEARANCE_PROCESS: FAIL - 63 of 184 vias are closer than 0.35 mm (annulus_to_opening_mm) to a solder-mask opening
+  VIA.ANNULUS_MASK_OVERLAP: FAIL - 24 via annulus/mask-opening contacts (23 strict overlaps + 1 exact tangencies): these vias cannot be tented or
+  VIA.IN_PAD_CONTACT: FAIL - 13 vias contact a pad that receives solder paste (9 centre-inside, 4 partial); solder will wick into the barre
+  NET.TOPOLOGY: FAIL - 3 critical-net topology violation(s)
+  ROUTE.ANGLE_STYLE: FAIL - 138 corners are not on the permitted [0.0, 45.0] degree geometry
+  ROUTE.TINY_SEGMENTS: FAIL - 57 track fragments below 0.25 mm are not pad or via entries
+  CONTRACT.CONNECTOR: FAIL - 15x documentation asserts a superseded interconnect; 2x artifact contradicts the required gender; 1x no docume
+  BOM.NATIVE_PARITY: FAIL - 21 disagreement(s) between the native schematic, the board and the packaged BOM
+  CFG.NO_RIVAL_THRESHOLDS: FAIL - 2 rival threshold definition(s) outside the canonical manifest
+
+No sealed or orderable package was produced.

@@ -350,7 +350,8 @@ class UnusableInputsAreErrors(_Base):
                 project, "stub_cli", "@echo off\r\nexit /b 3\r\n")
             doc["waivers"] = [{
                 "gate": DRC_GATE, "rule": "clearance", "category": "violations",
-                "objects": ["T1", "T2"], "location_mm": [1.0, 2.0],
+                "items": [{"description": "T1", "location_mm": [1.0, 2.0]},
+                          {"description": "T2", "location_mm": [3.0, 4.0]}],
                 "reason": "reviewed", "reviewed_by": "someone",
                 "reviewed_utc": "2026-08-01T00:00:00",
                 "approved_source_sha256": "a" * 64,
@@ -452,8 +453,9 @@ class CoordinatesAreCanonicalMillimetres(unittest.TestCase):
             coordinate_units="in",
             violations=[_violation(x=1.0, y=2.0)]))[0][0]
         waiver = {"gate": DRC_GATE, "rule": "clearance", "category": "violations",
-                  "objects": ["Track [Net] on F.Cu"],
-                  "location_mm": [1.0, 2.0],          # the raw inch numbers
+                  # the raw inch numbers, not the physical place
+                  "items": [{"description": "Track [Net] on F.Cu",
+                             "location_mm": [1.0, 2.0]}],
                   "reason": "r", "reviewed_by": "someone",
                   "reviewed_utc": "2026-08-01T00:00:00",
                   "approved_source_sha256": "a" * 64,
@@ -463,7 +465,8 @@ class CoordinatesAreCanonicalMillimetres(unittest.TestCase):
         self.assertIsNone(g_checks._waived(finding, [waiver], 0.001),
                           "a waiver written in the report's raw units matched a "
                           "finding 24.4 mm away")
-        waiver["location_mm"] = [25.4, 50.8]
+        waiver["items"] = [{"description": "Track [Net] on F.Cu",
+                            "location_mm": [25.4, 50.8]}]
         self.assertIsNotNone(g_checks._waived(finding, [waiver], 0.001))
 
 
@@ -490,20 +493,21 @@ class NonFiniteCoordinatesAreRejected(unittest.TestCase):
     def test_a_nan_finding_never_reaches_waiver_matching(self):
         """Validation happens first, so there is nothing to waive."""
         waiver = {"gate": DRC_GATE, "rule": "clearance", "category": "violations",
-                  "objects": ["Track [Net] on F.Cu"], "location_mm": [0.0, 0.0],
+                  "items": [{"description": "Track [Net] on F.Cu",
+                             "location_mm": [0.0, 0.0]}],
                   "reason": "r", "reviewed_by": "s",
                   "reviewed_utc": "2026-08-01T00:00:00",
                   "approved_source_sha256": "a" * 64,
                   "approved_rules_sha256": "b" * 64,
                   "approved_command_sha256": "c" * 64,
                   "approved_report_sha256": "d" * 64}
-        finding = _violation(x=float("nan"), y=float("nan"))
         normalised = {"category": "violations", "rule": "clearance",
-                      "objects": ["Track [Net] on F.Cu"],
-                      "x_mm": float("nan"), "y_mm": float("nan")}
+                      "items": [{"description": "Track [Net] on F.Cu",
+                                 "uuid": None, "x_mm": float("nan"),
+                                 "y_mm": float("nan")}]}
+        normalised["canonical_items"] = normalised["items"]
         # Even if such a finding somehow reached the matcher, it must not match.
         self.assertIsNone(g_checks._waived(normalised, [waiver], 1e9))
-        del finding
 
 
 class GenuineReportsStillParse(unittest.TestCase):

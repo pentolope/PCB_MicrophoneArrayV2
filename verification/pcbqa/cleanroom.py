@@ -54,6 +54,33 @@ CANDIDATE_DIR_NAMES = ("release_candidate_UNSEALED", "release_sealed",
                        ".release_candidate_incoming")
 
 
+def purge_managed_output(root):
+    """Remove every orderable artifact from a board's managed output directory.
+
+    Deliberately a plain function rather than a method: the earliest reasons a
+    release can be refused - no release profile, no mandatory gates, no
+    generation block - are decided before there is a CleanRun to ask. Cleanup
+    that only exists once the run object does is cleanup that misses exactly
+    those cases, and an older candidate from a previous attempt would survive
+    them.
+    """
+    removed = []
+    if not root or not os.path.isdir(root):
+        return removed
+    for name in CANDIDATE_DIR_NAMES:
+        path = os.path.join(root, name)
+        if os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+            removed.append(path)
+    for path in orderable_archives(root):
+        try:
+            os.unlink(path)
+            removed.append(path)
+        except OSError:
+            pass
+    return removed
+
+
 def orderable_archives(root):
     """Every archive-shaped file under `root`, recursively."""
     hits = []
@@ -568,21 +595,7 @@ class CleanRun:
         """
         removed = []
         for root in (self.root,) + tuple(extra_roots):
-            if not root or not os.path.isdir(root):
-                continue
-            # A part-built candidate directory is itself orderable-looking,
-            # whatever it does or does not contain.
-            for name in CANDIDATE_DIR_NAMES:
-                path = os.path.join(root, name)
-                if os.path.isdir(path):
-                    shutil.rmtree(path, ignore_errors=True)
-                    removed.append(path)
-            for path in orderable_archives(root):
-                try:
-                    os.unlink(path)
-                    removed.append(path)
-                except OSError:
-                    pass
+            removed.extend(purge_managed_output(root))
         return removed
 
     def summary(self):

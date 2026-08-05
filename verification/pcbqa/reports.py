@@ -150,28 +150,72 @@ def parse_erc(doc):
     return findings, _meta(doc)
 
 
+def canonical_items(items):
+    """A deterministic, order-independent form of an affected-item set.
+
+    A violation names every object involved in it - both ends of a clearance
+    error, every pad of a shorted net. KiCad lists them in whatever order it
+    found them, and that order is incidental: the same violation reported with
+    its two items swapped is the same violation. Sorting on the identity fields
+    means a digest taken over this form is stable against that, and changes the
+    moment any item actually moves, appears or disappears.
+    """
+    def key(entry):
+        return (entry["description"],
+                entry["uuid"] or "",
+                _sortable(entry["x_mm"]),
+                _sortable(entry["y_mm"]))
+    return [
+        {"description": e["description"], "uuid": e["uuid"],
+         "x_mm": _round(e["x_mm"]), "y_mm": _round(e["y_mm"])}
+        for e in sorted(items, key=key)
+    ]
+
+
+def _sortable(value):
+    # None sorts before every real coordinate, deterministically.
+    return (0, 0.0) if value is None else (1, value)
+
+
+def _round(value):
+    # Below any tolerance this framework applies, and far below KiCad's own
+    # report precision; present so that two identical positions cannot differ
+    # by a float artefact in a digest.
+    return None if value is None else round(value, 6)
+
+
 def _normalise(item, bucket, scale, units):
-    """One finding, with its position converted to millimetres."""
-    items = item["items"]
-    first = items[0] if items else {}
-    pos = first.get("pos") or {}
-    x = pos.get("x")
-    y = pos.get("y")
+    """One finding, with *every* affected item converted to millimetres."""
+    entries = []
+    for sub in item["items"]:
+        pos = sub.get("pos") or {}
+        x, y = pos.get("x"), pos.get("y")
+        entries.append({
+            "uuid": sub.get("uuid"),
+            "description": (sub.get("description") or "")[:160],
+            "x_mm": None if x is None else x * scale,
+            "y_mm": None if y is None else y * scale,
+        })
+    first = entries[0] if entries else {"description": "", "x_mm": None,
+                                        "y_mm": None}
     return {
         "category": bucket,
         "severity": item["severity"],
         "rule": item["type"],
         "description": (item.get("description") or "")[:200],
-        "object": (first.get("description") or "")[:160],
         # Every affected object, not just the first: a waiver that names one
-        # end of a two-object violation is not an exact waiver.
-        "objects": [(i.get("description") or "")[:160] for i in items],
-        "uuids": [i["uuid"] for i in items if i.get("uuid")],
+        # end of a two-object violation is not an exact waiver, and a defect
+        # that moves the second end is still a defect that moved.
+        "items": entries,
+        "canonical_items": canonical_items(entries),
+        "objects": [e["description"] for e in entries],
+        "uuids": [e["uuid"] for e in entries if e["uuid"]],
         "excluded": bool(item.get("excluded", False)),
-        # Canonical millimetres, always. The units the report used are kept
-        # only so a result can be traced back to what was read.
-        "x_mm": None if x is None else x * scale,
-        "y_mm": None if y is None else y * scale,
+        # Kept for one-line reporting only. Nothing compares against these:
+        # matching and digesting use the full item set above.
+        "object": first["description"],
+        "x_mm": first["x_mm"],
+        "y_mm": first["y_mm"],
         "source_units": units,
     }
 

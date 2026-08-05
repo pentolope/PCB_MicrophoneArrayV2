@@ -195,21 +195,35 @@ class IgnoredAndExcludedChecks(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class WaiverMatching(unittest.TestCase):
+    """A waiver describes an entire violation, or it describes nothing."""
+
     TOL = 0.001
+    TRACK = "R5 pad 1"
+    PAD = "U2 pad 20"
 
     def _finding(self, **over):
+        items = over.pop("items", None)
+        if items is None:
+            items = [{"description": self.TRACK, "uuid": None,
+                      "x_mm": 12.5, "y_mm": 34.75},
+                     {"description": self.PAD, "uuid": None,
+                      "x_mm": 40.0, "y_mm": 50.0}]
         base = {"category": "violations", "rule": "silk_over_copper",
                 "severity": "warning", "description": "Silk over copper",
-                "object": "R5 pad 1", "objects": ["R5 pad 1", "U2 pad 20"],
-                "x_mm": 12.5, "y_mm": 34.75}
+                "items": items,
+                "canonical_items": reports.canonical_items(items),
+                "objects": [i["description"] for i in items],
+                "object": items[0]["description"] if items else "",
+                "x_mm": items[0]["x_mm"] if items else None,
+                "y_mm": items[0]["y_mm"] if items else None}
         base.update(over)
         return base
 
     def _waiver(self, **over):
         base = {"gate": "DRC.AUTHORITATIVE", "rule": "silk_over_copper",
                 "category": "violations",
-                "objects": ["R5 pad 1", "U2 pad 20"],
-                "location_mm": [12.5, 34.75],
+                "items": [{"description": self.TRACK, "location_mm": [12.5, 34.75]},
+                          {"description": self.PAD, "location_mm": [40.0, 50.0]}],
                 "reason": "legend clipped by 20 um on a test pad; reviewed on "
                           "the fabricator's DFM report",
                 "reviewed_by": "A. Reviewer <a@example.invalid>",
@@ -226,11 +240,49 @@ class WaiverMatching(unittest.TestCase):
             g_checks._waived(self._finding(), [self._waiver()], self.TOL))
 
     def test_a_waiver_naming_only_one_object_does_not_match(self):
-        w = self._waiver(objects=["R5 pad 1"])
+        w = self._waiver(items=[{"description": self.TRACK,
+                                 "location_mm": [12.5, 34.75]}])
         self.assertIsNone(g_checks._waived(self._finding(), [w], self.TOL))
 
+    def test_moving_the_second_item_retires_the_waiver(self):
+        """The defect this class exists for: only items[0] used to count."""
+        moved = self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": 12.5, "y_mm": 34.75},
+            {"description": self.PAD, "uuid": None, "x_mm": 41.0, "y_mm": 50.0}])
+        self.assertIsNotNone(g_checks._waived(self._finding(), [self._waiver()],
+                                              self.TOL),
+                             "control: the unmoved finding must still match")
+        self.assertIsNone(g_checks._waived(moved, [self._waiver()], self.TOL),
+                          "a waiver survived its second affected item moving "
+                          "1 mm")
+
+    def test_adding_a_secondary_item_retires_the_waiver(self):
+        extra = self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": 12.5, "y_mm": 34.75},
+            {"description": self.PAD, "uuid": None, "x_mm": 40.0, "y_mm": 50.0},
+            {"description": "V3", "uuid": None, "x_mm": 60.0, "y_mm": 70.0}])
+        self.assertIsNone(g_checks._waived(extra, [self._waiver()], self.TOL))
+
+    def test_removing_a_secondary_item_retires_the_waiver(self):
+        fewer = self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": 12.5, "y_mm": 34.75}])
+        self.assertIsNone(g_checks._waived(fewer, [self._waiver()], self.TOL))
+
+    def test_reordering_the_items_does_not_change_the_outcome(self):
+        swapped = self._finding(items=[
+            {"description": self.PAD, "uuid": None, "x_mm": 40.0, "y_mm": 50.0},
+            {"description": self.TRACK, "uuid": None, "x_mm": 12.5, "y_mm": 34.75}])
+        self.assertIsNotNone(g_checks._waived(swapped, [self._waiver()], self.TOL),
+                             "incidental ordering must not break a waiver")
+        self.assertEqual(g_checks._report_digest([self._finding()]),
+                         g_checks._report_digest([swapped]),
+                         "incidental ordering must not change the digest")
+
     def test_a_moved_finding_does_not_match_an_old_waiver(self):
-        moved = self._finding(x_mm=12.5 + 10 * self.TOL)
+        moved = self._finding(items=[
+            {"description": self.TRACK, "uuid": None,
+             "x_mm": 12.5 + 10 * self.TOL, "y_mm": 34.75},
+            {"description": self.PAD, "uuid": None, "x_mm": 40.0, "y_mm": 50.0}])
         self.assertIsNone(g_checks._waived(moved, [self._waiver()], self.TOL))
 
     def test_a_different_rule_at_the_same_place_does_not_match(self):
@@ -238,18 +290,30 @@ class WaiverMatching(unittest.TestCase):
         self.assertIsNone(g_checks._waived(other, [self._waiver()], self.TOL))
 
     def test_a_finding_with_no_location_can_never_be_waived(self):
-        nowhere = self._finding(x_mm=None, y_mm=None)
+        nowhere = self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": None, "y_mm": None},
+            {"description": self.PAD, "uuid": None, "x_mm": 40.0, "y_mm": 50.0}])
         self.assertIsNone(g_checks._waived(nowhere, [self._waiver()], self.TOL))
 
     def test_a_broad_waiver_is_rejected_as_malformed(self):
-        for field in ("rule", "objects", "location_mm", "reason", "reviewed_by",
+        for field in ("rule", "items", "reason", "reviewed_by",
                       "approved_source_sha256"):
             w = self._waiver()
             w.pop(field)
             self.assertTrue(g_checks._waiver_defects(w, self.TOL),
                             "a waiver missing {!r} was accepted".format(field))
         self.assertTrue(g_checks._waiver_defects(self._waiver(rule="*"), self.TOL))
-        self.assertTrue(g_checks._waiver_defects(self._waiver(objects=[]), self.TOL))
+        self.assertTrue(g_checks._waiver_defects(self._waiver(items=[]), self.TOL))
+        self.assertTrue(g_checks._waiver_defects(
+            self._waiver(items=[{"description": "", "location_mm": [0, 0]}]),
+            self.TOL))
+        self.assertTrue(g_checks._waiver_defects(
+            self._waiver(items=[{"description": "x", "location_mm": [0]}]),
+            self.TOL))
+        self.assertTrue(g_checks._waiver_defects(
+            self._waiver(items=[{"description": "x",
+                                 "location_mm": [float("nan"), 0]}]),
+            self.TOL))
         self.assertFalse(g_checks._waiver_defects(self._waiver(), self.TOL))
 
     def test_a_changed_input_takes_the_waiver_out_of_service(self):
@@ -276,15 +340,26 @@ class WaiverMatching(unittest.TestCase):
         one = [self._finding()]
         self.assertEqual(g_checks._report_digest(one),
                          g_checks._report_digest(list(one)))
-        two = one + [self._finding(rule="track_dangling", x_mm=1.0, y_mm=2.0,
-                                   objects=["T1"])]
+        two = one + [self._finding(rule="track_dangling", items=[
+            {"description": "T1", "uuid": None, "x_mm": 1.0, "y_mm": 2.0}])]
         self.assertNotEqual(g_checks._report_digest(one),
                             g_checks._report_digest(two),
                             "a new finding must invalidate every waiver bound "
                             "to the report the reviewer saw")
-        moved = [self._finding(x_mm=99.0)]
+        moved = [self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": 99.0, "y_mm": 34.75},
+            {"description": self.PAD, "uuid": None, "x_mm": 40.0, "y_mm": 50.0}])]
         self.assertNotEqual(g_checks._report_digest(one),
                             g_checks._report_digest(moved))
+
+    def test_moving_only_the_second_item_changes_the_digest(self):
+        moved = self._finding(items=[
+            {"description": self.TRACK, "uuid": None, "x_mm": 12.5, "y_mm": 34.75},
+            {"description": self.PAD, "uuid": None, "x_mm": 40.5, "y_mm": 50.0}])
+        self.assertNotEqual(g_checks._report_digest([self._finding()]),
+                            g_checks._report_digest([moved]),
+                            "a digest that ignores items[1:] cannot retire a "
+                            "waiver when items[1:] move")
 
 
 # ---------------------------------------------------------------------------

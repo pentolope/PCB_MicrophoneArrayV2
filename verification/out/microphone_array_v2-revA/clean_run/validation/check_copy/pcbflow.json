@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "microphone_array_v2",
+    "board": "microphone_array_v2.kicad_pcb",
+    "schematic": "microphone_array_v2.kicad_sch",
+    "project_file": "microphone_array_v2.kicad_pro"
+  },
+  "toolchain": {
+    "kicad_cli": "C:/Program Files/KiCad/10.0/bin/kicad-cli.exe",
+    "kicad_python": "C:/Program Files/KiCad/10.0/bin/python.exe",
+    "required_kicad_major": 10,
+    "freerouting_jar": "C:/Users/pentolope/Documents/KiCad/10.0/3rdparty/plugins/app_freerouting_kicad-plugin/jar/freerouting-2.2.4.jar",
+    "freerouting_sha256": "6B19565F155BAD19D00DB09ADF2F7F25E48D5CF707CE5BD7559E620681AF4AAC",
+    "java": "java",
+    "node": "node",
+    "tracespace": ["npx", "--yes", "@tracespace/cli@4.2.8"]
+  },
+  "board": {
+    "copper_layers": ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"],
+    "routable_layers": [true, false, false, true],
+    "allowed_track_layers": ["F.Cu", "B.Cu"],
+    "plane_net_classes": ["PLANE"],
+    "critical_net_classes": ["MANUAL_CRITICAL"],
+    "default_track_width_mm": 0.2,
+    "absolute_min_track_width_mm": 0.127,
+    "default_min_clearance_mm": 0.15,
+    "min_copper_to_edge_mm": 0.3,
+    "via": {
+      "diameter_mm": 0.45,
+      "drill_mm": 0.3,
+      "min_hole_to_hole_mm": 0.25,
+      "min_hole_to_track_mm": 0.25
+    },
+    "via_covering": {
+      "process": "plugged",
+      "max_via_diameter_mm": 0.5,
+      "min_mask_opening_clearance_mm": 0.4,
+      "require_closed_both_sides": true
+    }
+  },
+  "routing": {
+    "max_turn_degrees": 45.0,
+    "corner_tolerance_degrees": 1.0,
+    "max_passes": 12,
+    "threads": 4,
+    "seeds": [17, 37, 73],
+    "ignore_net_classes": ["PLANE"],
+    "preferred_direction_horizontal": [true, false, true, false]
+  },
+  "release": {
+    "root": "generated/release",
+    "gerber_layers": [
+      "F.Cu", "In1.Cu", "In2.Cu", "B.Cu",
+      "F.Paste", "B.Paste",
+      "F.Silkscreen", "B.Silkscreen",
+      "F.Mask", "B.Mask",
+      "Edge.Cuts"
+    ],
+    "require_x2": true,
+    "assembly_side": "top",
+    "variant": ""
+  },
+  "assembly": {
+    "bom": "generated/release/bom.csv",
+    "cpl": "generated/release/cpl.csv",
+    "native_position": "generated/release/positions.csv",
+    "rotation_offsets": {},
+    "hand_soldered_refs": ["J1", "J2", "J3"],
+    "dnp_refs": ["J1", "J2", "J3"]
+  },
+  "checks": {
+    "pre_route_allowed_drc_types": ["unconnected_items"],
+    "waivers": [],
+    "required_custom_ids": [
+      "netlist-parity",
+      "placement-and-array-geometry",
+      "route-constraints"
+    ],
+    "custom_commands": [
+      {
+        "id": "netlist-parity",
+        "phase": "all",
+        "command": [
+          "C:/Program Files/KiCad/10.0/bin/python.exe",
+          "tools/check_netlist_parity.py"
+        ]
+      },
+      {
+        "id": "placement-and-array-geometry",
+        "phase": "all",
+        "command": [
+          "C:/Program Files/KiCad/10.0/bin/python.exe",
+          "tools/check_placement.py"
+        ]
+      },
+      {
+        "id": "route-constraints",
+        "phase": "post-route",
+        "command": [
+          "C:/Program Files/KiCad/10.0/bin/python.exe",
+          "tools/check_routes.py",
+          "{board}"
+        ]
+      }
+    ]
+  }
+}
