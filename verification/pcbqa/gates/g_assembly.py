@@ -112,7 +112,18 @@ def _assembly_truth(ctx):
         sch = _schematic_parts(ctx)
         brd = _board_parts(ctx)
         problems = []
-        for ref in sorted(set(brd) - set(sch)):
+        # The schematic is read through its BOM export, and a BOM export cannot
+        # carry a symbol marked exclude-from-BOM: KiCad 10 deprecated
+        # --include-excluded-from-bom and it now has no effect. So a mounting
+        # hole, a test pad or a hand-fitted connector is absent from the export
+        # by construction, and comparing every board footprint against it
+        # reported twenty-one parts as missing from a schematic that has all of
+        # them. Only parts the export could have contained are compared; the
+        # rest are recorded, so an unexpected one is still visible.
+        comparable = {ref: entry for ref, entry in brd.items()
+                      if not entry["excluded_from_bom"]}
+        not_in_bom = sorted(set(brd) - set(comparable))
+        for ref in sorted(set(comparable) - set(sch)):
             entry = brd[ref]
             problems.append({
                 "reference": ref,
@@ -156,7 +167,8 @@ def _assembly_truth(ctx):
             parts[ref] = merged
         return {"parts": parts, "parity": problems,
                 "schematic_only": sorted(set(sch) - set(brd)),
-                "board_only": sorted(set(brd) - set(sch))}
+                "board_only": sorted(set(comparable) - set(sch)),
+                "board_not_in_bom_export": not_in_bom}
     return ctx.cache("assembly_truth", build)
 
 
@@ -192,6 +204,7 @@ def bom_parity(ctx, res):
     res.measurements["schematic_symbols"] = len(_schematic_parts(ctx))
     res.measurements["board_footprints"] = len(_board_parts(ctx))
     res.measurements["schematic_populated"] = len(expected)
+    res.measurements["board_not_in_bom_export"] = truth["board_not_in_bom_export"]
     res.measurements["uncomparable_fields"] = [f for f in compared
                                                if fields.get(f) is None]
 

@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\microphone_array_v2.kicad_sch")
-		(date "2026-08-03T07:07:29")
+		(date "2026-08-06T15:55:27")
 		(tool "Eeschema 10.0.5")
 		(sheet
 			(number "1")
@@ -2562,7 +2562,7 @@
 			(ref "J1")
 			(value "RPi_P1_26")
 			(footprint "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical")
-			(description "hand-soldered 26-way IDC to the 2012 Raspberry Pi P1 header")
+			(description "hand-soldered 26-way header to the 2012 Raspberry Pi P1 header")
 			(fields
 				(field
 					(name "Footprint") "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical")
@@ -2570,7 +2570,7 @@
 					(name "Datasheet")
 				)
 				(field
-					(name "Description") "hand-soldered 26-way IDC to the 2012 Raspberry Pi P1 header")
+					(name "Description") "hand-soldered 26-way header to the 2012 Raspberry Pi P1 header")
 			)
 			(libsource
 				(lib "MicArrayV2")
@@ -2593,7 +2593,7 @@
 			)
 			(property
 				(name "ki_keywords")
-				(value "connector raspberry pi IDC")
+				(value "connector raspberry pi header")
 			)
 			(sheetpath
 				(names "/")
@@ -12616,7 +12616,7 @@
 		(net
 			(code "83")
 			(name "TANG_3V3")
-			(class "POWER")
+			(class "MODULE_RAIL")
 			(node
 				(ref "J3")
 				(pin "24")

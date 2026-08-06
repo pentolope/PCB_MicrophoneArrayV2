@@ -2231,7 +2231,7 @@
 				)
 			)
 		)
-		(property "ki_keywords" "connector raspberry pi IDC"
+		(property "ki_keywords" "connector raspberry pi header"
 			(at 0 0 0)
 			(hide yes)
 			(effects

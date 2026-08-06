@@ -2,8 +2,19 @@
 
 ## Release package
 
-`generated/release/`, built by `tools/make_release.py` from one board revision
-in a single run:
+`generated/release/`, built by the clean-room release in a single run from one
+board revision:
+
+```bash
+"C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py release verification/boards/live.json
+```
+
+It copies the project into an empty directory, purges every pre-existing
+output, regenerates everything from the native KiCad files with `kicad-cli`,
+re-runs the full validation against what it produced, and publishes only if
+every gate passes. The BOM and CPL come from the schematic and the board, not
+from the Python model that generated them - a released part list has to be
+derived from the thing being manufactured.
 
 | File | Contents |
 |---|---|
@@ -88,16 +99,16 @@ order must be flagged as no-clean.
 | Ref | Part | Side | Notes |
 |---|---|---|---|
 | `J2`, `J3` | 1x24 2.54 mm female header | bottom | 0.900 in row spacing; 1.0 mm drills give about 0.18 mm radial slack per pin |
-| `J1` | 2x13 2.54 mm shrouded IDC | bottom | keyed; pin 1 marked by a square pad and a silkscreen triangle |
+| `J1` | 2x13 2.54 mm pin header | bottom | pin 1 marked by a square pad and a silkscreen triangle |
 
 Fit the module sockets first, then check the Tang Nano 9K seats freely before
-soldering the IDC header.
+soldering the host header.
 
 ## Bring-up sequence
 
 1. Inspect the assembled board: all sixteen microphone ports clear, no residue
    over any port, `U1` and `D1` orientation against the silkscreen.
-2. With **no** Tang Nano 9K fitted and **no** ribbon connected, apply 5 V to
+2. With **no** Tang Nano 9K fitted and the host cable disconnected, apply 5 V to
    test pad `5V` through a current-limited supply. Expect well under 5 mA.
    Confirm `3V3A` reads 3.3 V and `3V3C` reads 3.3 V.
 3. Fit the Tang Nano 9K. Power from the Pi. Confirm `TANG` reads 3.3 V.

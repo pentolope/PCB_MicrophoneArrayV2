@@ -1,10 +1,18 @@
 # Routing methodology
 
+> **The router is now KiCad Routing Tools, driven by
+> [tools/routing_plan.json](../tools/routing_plan.json) from
+> [tools/build.py](../tools/build.py).** The FreeRouting flow described from
+> *Exporting* onwards is kept as the record of how Rev A was first routed; it
+> is not the flow in use. See "Building the board" in the
+> [README](../README.md).
+
 ## Authority
 
-KiCad owns the board. FreeRouting may add or change tracks and vias and
-nothing else. Every candidate is imported into a *copy*, compared against a
-semantic snapshot of the pre-route board, and only then promoted.
+KiCad owns the board. The router may add tracks and vias and nothing else.
+Every candidate is routed into a *copy* of the pre-route board, and the build
+compares the two: footprints, outline, netlist, stackup and origin must be
+untouched, or the candidate is rejected.
 
 ## What is pre-routed, and why
 

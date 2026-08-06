@@ -132,12 +132,37 @@ Nothing that fails a gate. Worth knowing:
   orientation in JLCPCB's library matches the rotation in `cpl.csv`. That needs
   their live preview.
 
+## Open: the host connector
+
+`verification/boards/live.json` carries a `HOST_DIRECT_STACK` contract that
+requires `J1` to be a female 2x13 socket the array plugs straight onto the Pi
+with. The board has a male pin header and a cable. The contract is the better
+link electrically, and it is not a footprint swap:
+
+- **The pin rows mirror.** KiCad's `PinSocket_2x13_P2.54mm_Vertical` numbers
+  its second row on the opposite side of the first (pin 2 at x = -2.54 rather
+  than +2.54) - that mirroring is what lets a socket mate face-to-face with a
+  header. Swapping the footprint moves every even pin to the other column, and
+  the host resistor fan, which is ordered to leave in signal order, has to be
+  re-laid to match. Tried: the generator loses the `PI_5V` feed and every clock
+  branch to the reshuffled Pi header band.
+- **The Raspberry Pi would be where the Tang Nano 9K is.** `J1`, `J2` and `J3`
+  are all on the underside. With a cable that is fine; stacked directly, the
+  module in its sockets and the Pi's board occupy the same space under the
+  array. Direct stacking needs the module moved to the top side, or standoffs
+  and a taller socket, and either is a placement change rather than a wiring
+  one.
+
+Until that is decided the board keeps the header and the cable, and
+`CONTRACT.CONNECTOR` keeps failing - honestly, because the two really do
+disagree.
+
 ## Reproducibility
 
-**The board is no longer reproducible from `tools/gen_pcb.py`.** Re-running the
-generator would discard the autorouted host block and the repairs above. The
-schematic still is: `tools/gen_schematic.py` regenerates it from
-`tools/netlist.py`, and netlist parity passes.
-
-Treat `microphone_array_v2.kicad_pcb` as the source of truth for routing, and
-`tools/patch_board.py` as the record of what was changed by hand.
+**The board is rebuilt from `tools/netlist.py` on demand.** One command,
+`tools/build.py --install`, generates the pre-route board, hands the ordinary
+nets to KiCad Routing Tools under the recorded plan, and installs the result
+only if every gate passes. Nothing in the `.kicad_pcb` is hand-edited, and the
+notes above about patching and cleaning copper describe how the board was first
+brought up, not how it is maintained. The schematic is generated the same way,
+by `tools/gen_schematic.py`, and netlist parity passes.

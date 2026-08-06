@@ -167,9 +167,9 @@ def build_library():
                         "passive"))
     symbols.append(make_symbol(
         "RPi_P1_26", "J", pi_pins,
-        footprint=d.KI_FP["idc2x13"],
+        footprint=d.KI_FP["host2x13"],
         description="26-way P1 header of the 2012 Raspberry Pi Model B",
-        keywords="connector raspberry pi IDC"))
+        keywords="connector raspberry pi header"))
 
     return HEADER + "\n".join(symbols) + "\n)\n"
 

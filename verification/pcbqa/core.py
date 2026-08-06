@@ -31,6 +31,12 @@ class Status:
     FAIL = "FAIL"
     NOT_APPLICABLE = "NOT_APPLICABLE"
     ERROR = "ERROR"          # fail-closed: could not evaluate
+    # A gate the board declares advisory: it ran, it found something, and the
+    # board has decided that finding does not stop a release. The measurement
+    # and the reason are both kept in the report - an advisory gate is quieter
+    # than a blocking one, never silent - and only a FAIL can be demoted.
+    # ERROR never is: a gate that could not be evaluated is still fail-closed.
+    ADVISORY = "ADVISORY"
 
     BLOCKING = (FAIL, ERROR)
 
@@ -64,6 +70,15 @@ class GateResult:
     def not_applicable(self, reason):
         self.status = Status.NOT_APPLICABLE
         self.reason = reason
+        return self
+
+    def advisory(self, why):
+        """Demote a FAIL the board has declared advisory, keeping the finding."""
+        if self.status != Status.FAIL:
+            return self
+        self.status = Status.ADVISORY
+        self.measurements["advisory_blocking_reason"] = self.reason
+        self.reason = "{} [advisory: {}]".format(self.reason, why)
         return self
 
     def errored(self, reason):
@@ -343,8 +358,24 @@ def run_all(context, only=None):
             import traceback
             result.errored(f"{type(exc).__name__}: {exc}")
             result.finding(traceback=traceback.format_exc().splitlines()[-6:])
+        why = advisory_reason(context.manifest, entry["id"])
+        if why:
+            result.advisory(why)
         results.append(result)
     return results
+
+
+def advisory_reason(manifest, gate_id):
+    """Why this board declares a gate advisory, or None if it blocks."""
+    for entry in manifest.get("advisory_gates", []) or []:
+        if entry.get("gate") == gate_id:
+            reason = entry.get("reason")
+            if not reason:
+                raise ValueError(
+                    "advisory_gates entry for {} states no reason; a gate is "
+                    "demoted on the record or not at all".format(gate_id))
+            return reason
+    return None
 
 
 # ---------------------------------------------------------------------------

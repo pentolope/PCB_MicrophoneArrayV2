@@ -1600,7 +1600,7 @@
 		)
 		)
 		)
-		(property "ki_keywords" "connector raspberry pi IDC"
+		(property "ki_keywords" "connector raspberry pi header"
 		(at 0 0 0)
 		(hide yes)
 		(effects
@@ -26353,7 +26353,7 @@
 				)
 			)
 		)
-		(property "Description" "hand-soldered 26-way IDC to the 2012 Raspberry Pi P1 header"
+		(property "Description" "hand-soldered 26-way header to the 2012 Raspberry Pi P1 header"
 			(at 398.78 386.08 0)
 			(hide yes)
 			(effects

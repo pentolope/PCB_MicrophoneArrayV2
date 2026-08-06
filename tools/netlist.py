@@ -224,10 +224,10 @@ def build():
     # Same origin-on-pin-1 convention: on the bottom at rotation 90 the odd row
     # runs towards -X and the even row sits 2.54 mm towards -Y, so this origin
     # centres the 26-way shroud on PI_HEADER_POS.
-    b.add("J1", "RPi_P1_26", "MicArrayV2:RPi_P1_26", d.KI_FP["idc2x13"],
+    b.add("J1", "RPi_P1_26", "MicArrayV2:RPi_P1_26", d.KI_FP["host2x13"],
           d.PI_HEADER_POS[0] + 15.24, d.PI_HEADER_POS[1] + 1.27, 90.0,
           side="bottom", dnp=True, in_bom=False,
-          description="hand-soldered 26-way IDC to the 2012 Raspberry Pi P1 header")
+          description="hand-soldered 26-way header to the 2012 Raspberry Pi P1 header")
     for pin, net in d.PI_HEADER.items():
         b.connect(net, ("J1", pin))
 

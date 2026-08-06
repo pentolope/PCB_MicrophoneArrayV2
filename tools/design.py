@@ -123,11 +123,19 @@ KI_FP = {
     "sma": "Diode_SMD:D_SMA",
     "fuse1812": "Fuse:Fuse_1812_4532Metric",
     "hdr1x24": "Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical",
-    # Plain 2x13 pin header rather than a shrouded IDC. The board plugs
-    # straight onto the Pi's P1 with the header soldered from the bottom, and
-    # the smaller courtyard (6.2 x 34.1 mm against 10.0 x 41.8 mm) is what lets
-    # the host block stack in signal order instead of doubling back.
-    "idc2x13": "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical",
+    # Plain 2x13 pin header, not a shrouded IDC: the smaller courtyard
+    # (6.2 x 34.1 mm against 10.0 x 41.8 mm) is what lets the host block stack
+    # in signal order instead of doubling back.
+    #
+    # A female socket here would mate with the Pi directly, and the manifest's
+    # HOST_DIRECT_STACK contract asks for exactly that - but it is not a
+    # drop-in swap. KiCad's PinSocket footprint numbers its second row on the
+    # opposite side (pin 2 at x = -2.54 rather than +2.54), which is what makes
+    # a socket mate face-to-face with a header, so every even pin moves to the
+    # other column and the whole host fan has to be re-laid. And direct
+    # stacking would put the Raspberry Pi where the Tang Nano 9K already is:
+    # J1, J2 and J3 are all on the underside of this board. See docs/status.md.
+    "host2x13": "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical",
     "mount": "MountingHole:MountingHole_3.2mm_M3",
     "testpoint": "TestPoint:TestPoint_Pad_D1.5mm",
     "mic": "MicArrayV2:MSM261DHP006_LGA-8_3x4mm_TopPort",

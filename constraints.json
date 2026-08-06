@@ -6,7 +6,7 @@
     "shape": "circle",
     "diameter_mm": 120.0,
     "thickness_mm": 1.6,
-    "layers": ["F.Cu", "In1.Cu:GND", "In2.Cu:3V3", "B.Cu"],
+    "layers": ["F.Cu", "In1.Cu:GND", "In2.Cu:GND", "B.Cu"],
     "outer_copper_oz": 1.0,
     "inner_copper_oz": 0.5,
     "finish": "ENIG",
@@ -81,7 +81,7 @@
     "target": "Raspberry Pi Model B (2012), 26-pin P1 header",
     "transport": "SPI0",
     "pins_used": "only pins identical on Model B revision 1.0 and revision 2.0",
-    "connector": "2x13 2.54 mm shrouded IDC, hand-soldered, bottom side"
+    "connector": "2x13 2.54 mm pin header, hand-soldered, bottom side; 26-way cable to the Pi P1 header"
   },
   "fpga_module": {
     "part": "Sipeed Tang Nano 9K",

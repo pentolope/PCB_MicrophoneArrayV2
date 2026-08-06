@@ -11,7 +11,10 @@ Ground is a plane net that the autorouter never sees, so this script places an
 explicit stitching via plus a short connecting track at every ground pad.
 """
 
+import argparse
 import collections
+import fnmatch
+import itertools
 import math
 import os
 import sys
@@ -30,6 +33,7 @@ FOOTPRINT_LIBS = {
     "Diode_SMD": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\Diode_SMD.pretty",
     "Fuse": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\Fuse.pretty",
     "Connector_PinHeader_2.54mm": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\Connector_PinHeader_2.54mm.pretty",
+    "Connector_PinSocket_2.54mm": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\Connector_PinSocket_2.54mm.pretty",
     "Connector_IDC": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\Connector_IDC.pretty",
     "MountingHole": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\MountingHole.pretty",
     "TestPoint": r"C:\Program Files\KiCad\10.0\share\kicad\footprints\TestPoint.pretty",
@@ -100,6 +104,9 @@ def build(project_root, with_escapes=True):
     """Build the board. `with_escapes=False` omits the pre-routed microphone
     escapes, which is the form handed to FreeRouting - its polyline normaliser
     hangs on them. They are re-applied afterwards by tools/apply_escapes.py."""
+    global _MODEL, _RULES, _PROJECT_ROOT
+    _MODEL, _RULES = None, None
+    _PROJECT_ROOT = project_root
     components, nets = nl.build()
     board = pcbnew.BOARD()
     board.SetCopperLayerCount(4)
@@ -240,6 +247,12 @@ def build(project_root, with_escapes=True):
         # should be the one with nowhere else to go.
         strap_count += route_supply_ring_feed(board, placed, pin_net, net_items)
         strap_count += route_power_block(board, placed, pin_net, net_items)
+        # The clock spine before the branches: both are declared critical, and
+        # the spine has one corridor each way while a branch has hundreds.
+        strap_count += route_esd_bias_link(board, placed, pin_net, net_items)
+        strap_count += route_esd_escapes(board, placed, pin_net, net_items)
+        strap_count += route_master_clock(board, placed, pin_net, net_items)
+        strap_count += route_clock_root(board, placed, pin_net, net_items)
         strap_count += route_clock_branches(board, placed, pin_net, net_items)
         strap_count += route_data_spokes(board, placed, pin_net, net_items)
         # route_host_block() is written but not yet called. The stack order is
@@ -253,12 +266,35 @@ def build(project_root, with_escapes=True):
     stitch_count = place_ground_stitching(board, placed, pin_net, net_items)
     add_silkscreen(board)
 
+    # Manufacturing keep-outs, so the autorouter cannot place a via where an
+    # ordinary tented/plugged via would be unreliable, and locks, so it cannot
+    # re-open anything decided above.
+    redundant = drop_redundant_copper(board)
+    import manufacturing as mfg
+    rules = mfg.load_rules(project_root)
+    keepouts = mfg.add_keepouts(board, rules)
+    locked = mfg.lock_generated_copper(board)
+    if redundant:
+        print(f"dropped {redundant} segments laid over copper of their own net")
+    print(f"manufacturing keep-outs {keepouts}  locked copper objects {locked}")
+
     filler = pcbnew.ZONE_FILLER(board)
     filler.Fill(board.Zones())
 
     path = os.path.join(project_root, "microphone_array_v2.kicad_pcb")
     board.Save(path)
     apply_project_settings(project_root)
+
+    # The critical routes above are only critical if something checks them.
+    import critical_nets
+    outcome = critical_nets.verify(board)
+    for row in outcome:
+        if not row["pass"]:
+            print("critical route {} fails {}: {} (limit {})".format(
+                row["rule"], row["check"], row["value"], row["limit"]))
+    failures = [row for row in outcome if not row["pass"]]
+    print("critical net checks {} passed, {} failed".format(
+        len(outcome) - len(failures), len(failures)))
     return path, len(components), len(nets), stitch_count, strap_count
 
 
@@ -276,6 +312,15 @@ NET_CLASSES = [
     # own 0.25 mm local clearance for the fill.
     ("PLANE", 0.60, 0.15, 0.60, 0.35),
     ("POWER", 0.60, 0.25, 0.60, 0.35),
+    # TANG_3V3 is not a distribution rail. It comes out of the Tang Nano and
+    # its whole load is the bias pin of two USBLC6-4SC6 clamps - reverse
+    # leakage, 1 uA each at most - plus a test point. POWER's 0.60 mm track
+    # with 0.25 mm clearance needs a 1.10 mm corridor, and there is none:
+    # pin 5 of a SOT-23-6 sits between two pads 0.35 mm away, and the run
+    # across to the second array threads the host fan. 0.25 mm carries about
+    # an amp on 1 oz outer copper, which is six orders of magnitude of margin
+    # on a microamp load, so the rail is sized for its duty instead.
+    ("MODULE_RAIL", 0.25, 0.20, 0.45, 0.30),
     ("MIC_SUPPLY", 0.15, 0.15, 0.45, 0.30),
     # MIC_DOUT is split out of PDM_DATA so the finished per-channel routing can
     # be handed to the autorouter as an ignored class while PDM_D stays live.
@@ -288,7 +333,8 @@ NET_CLASSES = [
 NET_CLASS_PATTERNS = [
     ("PLANE", "GND"),
     ("POWER", "+5V"), ("POWER", "+3V3A"), ("POWER", "+3V3_CLK"),
-    ("POWER", "PI_5V"), ("POWER", "5V_FUSED"), ("POWER", "TANG_3V3"),
+    ("POWER", "PI_5V"), ("POWER", "5V_FUSED"),
+    ("MODULE_RAIL", "TANG_3V3"),
     ("MIC_SUPPLY", "MIC_VDD_*"),
     ("MANUAL_CRITICAL", "AUDIO_MCLK"), ("MANUAL_CRITICAL", "MCLK_OSC"),
     ("MANUAL_CRITICAL", "PDM_CLK_*"),
@@ -324,6 +370,33 @@ BOARD_RULES = {
 }
 
 
+# Checks KiCad ignores by default and this board does not. Saving from pcbnew
+# resets the severities along with everything else in the project file, so a
+# check that is not named here is a check that quietly stops running after the
+# next build - which is how five of them came to be off.
+RULE_SEVERITIES = {
+    "footprint_filters_mismatch": "warning",
+    "footprint_type_mismatch": "warning",
+    "missing_courtyard": "warning",
+    "tuning_profile_track_geometries": "warning",
+    # Enabled, and the findings it raises are waived one by one in
+    # verification/boards/live.json rather than the rule being turned off. The
+    # router lands a track end on its own grid, which on a handful of nets is
+    # 0.1 mm from the via centre it connects to - a 0.2 mm track well inside a
+    # 0.45 mm annulus, connected and clear. No router setting centres them and
+    # correcting them by hand is editing routed copper, which this board's
+    # process forbids; but a waiver names each one and expires the moment any
+    # of them moves, which a disabled rule would not.
+    "track_not_centered_on_via": "warning",
+}
+ERC_SEVERITIES = {
+    "single_global_label": "warning",
+    "four_way_junction": "warning",
+    "simulation_model_issue": "warning",
+    "footprint_filter": "warning",
+}
+
+
 def apply_project_settings(project_root):
     """Re-apply design rules and net classes after pcbnew rewrites the project.
 
@@ -339,6 +412,9 @@ def apply_project_settings(project_root):
 
     design = project.setdefault("board", {}).setdefault("design_settings", {})
     design.setdefault("rules", {}).update(BOARD_RULES)
+    design.setdefault("rule_severities", {}).update(RULE_SEVERITIES)
+    project.setdefault("erc", {}).setdefault(
+        "rule_severities", {}).update(ERC_SEVERITIES)
     design["track_widths"] = [0.0, 0.127, 0.20, 0.25, 0.30, 0.60, 1.00]
     design["via_dimensions"] = [
         {"diameter": 0.0, "drill": 0.0},
@@ -371,6 +447,48 @@ def apply_project_settings(project_root):
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(project, handle, indent=2)
         handle.write("\n")
+
+
+def mm_to_f(value):
+    """Internal units to millimetres, as a float."""
+    return value / 1e6
+
+
+def legalise_stitch(model, pad_position, preferred, diameter, drill, width,
+                    side):
+    """The preferred spot if it is legal, else the nearest one that is.
+
+    Searches outward along the preferred direction first so the intent behind
+    the choice survives, then sweeps around the pad. Returns None when the pad
+    has nowhere legal at all, which is a generator bug worth failing on rather
+    than a via worth placing illegally.
+    """
+    px, py = mm_to_f(pad_position.x), mm_to_f(pad_position.y)
+    cx, cy = mm_to_f(preferred.x), mm_to_f(preferred.y)
+
+    def ok(x, y):
+        return (model.via_ok(x, y, diameter, drill, "GND")
+                and model.track_ok(px, py, x, y, width, "GND", side))
+
+    if ok(cx, cy):
+        return preferred
+
+    dx, dy = cx - px, cy - py
+    base = math.hypot(dx, dy)
+    if base < 1e-9:
+        dx, dy, base = 0.0, 1.0, 1.0
+    ux, uy = dx / base, dy / base
+    for extra in [0.05 * i for i in range(1, 25)]:
+        x, y = px + ux * (base + extra), py + uy * (base + extra)
+        if ok(x, y):
+            return pcbnew.VECTOR2I(pcbnew.FromMM(x), pcbnew.FromMM(y))
+    for radius in [round(base + 0.05 * i, 3) for i in range(0, 30)]:
+        for step in range(48):
+            angle = 2 * math.pi * step / 48
+            x, y = px + radius * math.cos(angle), py + radius * math.sin(angle)
+            if ok(x, y):
+                return pcbnew.VECTOR2I(pcbnew.FromMM(x), pcbnew.FromMM(y))
+    return None
 
 
 def choose_stitch_position(pad, footprint, position, obstacles, vias_placed):
@@ -526,17 +644,123 @@ def path_45(start, end):
 # so the constrained nets claim their space first.
 # --------------------------------------------------------------------------
 
-TRACK_CLEARANCE = 0.15   # the board's minimum copper-to-copper clearance
+TRACK_CLEARANCE = 0.15   # the smallest clearance any class on this board asks
+
+_CLEARANCE_CACHE = {}
+
+
+def net_clearance(name):
+    """The clearance this net's class demands, in internal units.
+
+    Resolved from NET_CLASSES and NET_CLASS_PATTERNS above - the same table
+    that is written into the project file, so the generator, KiCad and the
+    validator cannot drift apart.
+    """
+    if name not in _CLEARANCE_CACHE:
+        widths = {cls: clr for cls, _t, clr, _d, _k in NET_CLASSES}
+        value = widths.get("Default", TRACK_CLEARANCE)
+        for cls, pattern in NET_CLASS_PATTERNS:
+            if fnmatch.fnmatch(name or "", pattern):
+                value = widths[cls]
+                break
+        _CLEARANCE_CACHE[name] = mm(value)
+    return _CLEARANCE_CACHE[name]
+
+
+def net_track_width(name):
+    """The track width this net's class asks for, in millimetres."""
+    widths = {cls: track for cls, track, _c, _d, _k in NET_CLASSES}
+    for cls, pattern in NET_CLASS_PATTERNS:
+        if fnmatch.fnmatch(name or "", pattern):
+            return widths[cls]
+    return widths.get("Default", 0.20)
+
+
+def pair_clearance(a, b):
+    """What KiCad will require between these two nets: the larger of the two.
+
+    Checking everything against the board minimum instead is how six PDM_D6
+    segments came to run 0.15 mm from J1's host pins, which are POWER and HOST
+    pads wanting 0.25 mm and 0.20 mm.
+    """
+    return max(net_clearance(a), net_clearance(b))
 
 _PLACED = []      # committed track segments
 _PLACED_VIAS = []  # committed via positions
 _PADS = []        # (pad, net name) for every pad on the board
 REFUSED = []      # (net, layer, reason) for everything turned away
 _TRACE_DETAIL = collections.Counter()
+# Which alternative try_paths last accepted. The caller ranked them, so this is
+# how a router reports whether it got the route it wanted or the last resort.
+_CHOICE = [None]
+# Every track object laid down, in order, so a routine that needs to try
+# something and learn from it can put the board back exactly as it found it.
+_ADDED = []
+
+
+def drop_redundant_copper(board):
+    """Remove any generated segment that lies inside another on its own net.
+
+    Routing this board is a search over waypoint sets, and a waypoint can sit
+    behind the leg that reaches it: the 5 V bus starts 1.6 mm west of the
+    Schottky pad it is fed from, so the chain ran west to the corner and then
+    east straight back over itself. Copper laid twice is a doubled-back corner
+    in the geometry report and a redundant object in the file, and it is far
+    easier to drop here than to teach every waypoint list to look behind
+    itself. Only exact overlap counts - a track that merely touches or crosses
+    another is left alone.
+    """
+    groups = collections.defaultdict(list)
+    for track in board.Tracks():
+        if isinstance(track, pcbnew.PCB_VIA):
+            continue
+        groups[(track.GetNetname(), track.GetLayer(),
+                track.GetWidth())].append(track)
+
+    def on_segment(point, start, end, tolerance=1000):   # 1 um in IU
+        ax, ay = start.x, start.y
+        bx, by = end.x, end.y
+        px, py = point.x, point.y
+        dx, dy = bx - ax, by - ay
+        span = math.hypot(dx, dy)
+        if span < 1.0:
+            return False
+        cross = abs((px - ax) * dy - (py - ay) * dx) / span
+        if cross > tolerance:
+            return False
+        along = ((px - ax) * dx + (py - ay) * dy) / span
+        return -tolerance <= along <= span + tolerance
+
+    doomed = []
+    for tracks in groups.values():
+        tracks.sort(key=lambda t: math.hypot(t.GetEnd().x - t.GetStart().x,
+                                             t.GetEnd().y - t.GetStart().y))
+        for index, short in enumerate(tracks):
+            for longer in tracks[index + 1:]:
+                if (on_segment(short.GetStart(), longer.GetStart(),
+                               longer.GetEnd())
+                        and on_segment(short.GetEnd(), longer.GetStart(),
+                                       longer.GetEnd())):
+                    doomed.append(short)
+                    break
+    for track in doomed:
+        board.Remove(track)
+    return len(doomed)
+
+
+def rewind(board, mark):
+    """Undo every track laid since `mark`, leaving no trace on the board."""
+    for track in _ADDED[mark[0]:]:
+        board.Remove(track)
+    del _ADDED[mark[0]:], _PLACED[mark[0]:], REFUSED[mark[1]:]
+
+
+def mark_copper():
+    return len(_ADDED), len(REFUSED)
 
 
 def reset_short_guard(board):
-    del _PLACED[:], _PLACED_VIAS[:], _PADS[:], REFUSED[:]
+    del _PLACED[:], _PLACED_VIAS[:], _PADS[:], REFUSED[:], _ADDED[:]
     for footprint in board.Footprints():
         for pad in footprint.Pads():
             position = pad.GetPosition()
@@ -566,7 +790,7 @@ def _segment_distance(a1, a2, b1, b2):
                _point_near_segment(b2[0], b2[1], a1, a2))
 
 
-def _segment_hits_pad(pad, start, end, half_width):
+def _segment_hits_pad(pad, start, end, half_width, clearance=None):
     """True if a track centre-line runs closer to a pad than the rules allow.
 
     The distance is measured to the pad's real outline. Inflating the pad's
@@ -574,7 +798,8 @@ def _segment_hits_pad(pad, start, end, half_width):
     a factor of root two, which turned away several perfectly legal 45-degree
     runs past the module socket pins.
     """
-    limit = half_width + mm(TRACK_CLEARANCE)
+    limit = half_width + (mm(TRACK_CLEARANCE) if clearance is None
+                          else clearance)
     position = pad.GetPosition()
     size = pad.GetSize()
 
@@ -608,7 +833,6 @@ def path_conflict(net_name, layer, width, points):
     # plus the clearance apart. Checking clearance here and not just crossings
     # means the generator settles a conflict by taking another route rather
     # than by handing a violation to DRC.
-    clearance = mm(TRACK_CLEARANCE)
     for a, b in zip(points, points[1:]):
         start, end = (a.x, a.y), (b.x, b.y)
         if start == end:
@@ -623,7 +847,7 @@ def path_conflict(net_name, layer, width, points):
         for other in _PLACED:
             if other["net"] == net_name or other["layer"] != layer:
                 continue
-            gap = half + other["half"] + clearance
+            gap = half + other["half"] + pair_clearance(net_name, other["net"])
             if (other["lo_x"] - gap > hi_x or other["hi_x"] + gap < lo_x
                     or other["lo_y"] - gap > hi_y or other["hi_y"] + gap < lo_y):
                 continue
@@ -632,18 +856,20 @@ def path_conflict(net_name, layer, width, points):
         for pad, pad_net, px, py, reach in _PADS:
             if pad_net == net_name or not pad.IsOnLayer(layer):
                 continue
+            clearance = pair_clearance(net_name, pad_net)
             span = reach + half + clearance
             if (px - span > hi_x or px + span < lo_x
                     or py - span > hi_y or py + span < lo_y):
                 continue
-            if _segment_hits_pad(pad, start, end, half):
+            if _segment_hits_pad(pad, start, end, half, clearance):
                 ref = pad.GetParentFootprint().GetReference()
                 return (f"runs over {ref}.{pad.GetNumber()}"
                         f" ({pad_net or 'no net'}){where}")
         for via_net, vx, vy, radius in _PLACED_VIAS:
             if via_net == net_name:
                 continue
-            if _point_near_segment(vx, vy, start, end) < radius + half + clearance:
+            if (_point_near_segment(vx, vy, start, end)
+                    < radius + half + pair_clearance(net_name, via_net)):
                 return f"runs over a {via_net} via{where}"
     return None
 
@@ -656,6 +882,49 @@ def _point_near_segment(px, py, start, end):
         return math.hypot(px - ax, py - ay)
     t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
     return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+
+
+_MODEL = None
+_RULES = None
+_PROJECT_ROOT = None
+
+
+def clearance_model(board, rebuild=False):
+    """The manufacturing view of the board: mask openings, holes, clearances.
+
+    The generator's own short guard above knows about copper it has placed,
+    but nothing about solder-mask openings or hole spacing, which is how eight
+    data-spoke handover vias came to sit inside the mask keep-outs. This is the
+    same model tools/manufacturing.py hands the validator, so a via the
+    generator accepts is a via the checker accepts.
+
+    Rebuilding takes a full board survey, so it is done once per routing stage
+    rather than per via; copper placed after a rebuild registers itself.
+    """
+    global _MODEL, _RULES
+    import manufacturing as mfg
+    if _RULES is None:
+        _RULES = mfg.load_rules(_PROJECT_ROOT)
+    if _MODEL is None or rebuild:
+        _MODEL = mfg.ClearanceModel(board, _RULES)
+    return _MODEL
+
+
+def via_position_ok(board, net, position, diameter=None, drill=None):
+    """True if a via may legally sit here: mask target, clearance, holes."""
+    model = clearance_model(board)
+    return model.via_ok(mm_to_f(position.x), mm_to_f(position.y),
+                        VIA_DIAMETER if diameter is None else diameter,
+                        VIA_DRILL if drill is None else drill,
+                        net.GetNetname())
+
+
+def first_legal_via(board, net, candidates):
+    """The first candidate position a via may legally occupy, or None."""
+    for position in candidates:
+        if via_position_ok(board, net, position):
+            return position
+    return None
 
 
 def add_via(board, net, position, offset_mm=0.0):
@@ -679,6 +948,9 @@ def add_via(board, net, position, offset_mm=0.0):
     board.Add(via)
     _PLACED_VIAS.append((net.GetNetname(), target.x, target.y,
                          mm(VIA_DIAMETER / 2.0)))
+    if _MODEL is not None:
+        _MODEL.add_via(mm_to_f(target.x), mm_to_f(target.y),
+                       VIA_DIAMETER, VIA_DRILL, net.GetNetname())
     return target
 
 
@@ -687,9 +959,20 @@ def board_xy(point):
     return point.x / 1e6 - d.PAGE_CX, -(point.y / 1e6 - d.PAGE_CY)
 
 
+# Two waypoints closer together than this are the same point as far as the
+# fabricator is concerned. Keeping both leaves a few-micron segment that no
+# process can render and that the autorouter's cleanup pass sweeps away.
+COINCIDENT_MM = 0.01
+
+
 def dedupe(points):
-    return [p for i, p in enumerate(points)
-            if i == 0 or (p.x, p.y) != (points[i - 1].x, points[i - 1].y)]
+    kept = []
+    for point in points:
+        if kept and math.hypot(point.x - kept[-1].x,
+                               point.y - kept[-1].y) < mm(COINCIDENT_MM):
+            continue
+        kept.append(point)
+    return kept
 
 
 def polyline_45(waypoints):
@@ -760,8 +1043,9 @@ def try_paths(board, net, layer, width_mm, alternatives, locked=True):
     """
     blockers = collections.Counter()
     _TRACE_DETAIL.clear()
+    _CHOICE[:] = [None]
     first = None
-    for paths in alternatives:
+    for index, paths in enumerate(alternatives):
         cleaned = [p for p in (dedupe(list(path)) for path in paths)
                    if len(p) >= 2]
         if not cleaned:
@@ -784,6 +1068,7 @@ def try_paths(board, net, layer, width_mm, alternatives, locked=True):
                             f"{-(p.y / 1e6 - d.PAGE_CY):.2f}" for p in points))
                     print("   blocked:", blocked)
             continue
+        _CHOICE[:] = [index]
         return sum(add_track(board, net, layer, width_mm, points, locked,
                              guard=False)
                    for points in cleaned)
@@ -819,7 +1104,16 @@ def add_track(board, net, layer, width_mm, points, locked=True, guard=True):
 
     count = 0
     for a, b in zip(points, points[1:]):
+        # Two alternatives for the same net can share a leg - a data spoke that
+        # comes in to its lane before running along it retraces the piece it
+        # has already laid - and stacking identical copper on itself is
+        # untidy at best and a second object to keep in step at worst.
+        if any(existing["net"] == name and existing["layer"] == layer
+               and {existing["a"], existing["b"]} == {(a.x, a.y), (b.x, b.y)}
+               for existing in _PLACED):
+            continue
         track = pcbnew.PCB_TRACK(board)
+        _ADDED.append(track)
         track.SetStart(a)
         track.SetEnd(b)
         track.SetWidth(mm(width_mm))
@@ -831,6 +1125,11 @@ def add_track(board, net, layer, width_mm, points, locked=True, guard=True):
                         "a": (a.x, a.y), "b": (b.x, b.y),
                         "lo_x": min(a.x, b.x), "hi_x": max(a.x, b.x),
                         "lo_y": min(a.y, b.y), "hi_y": max(a.y, b.y)})
+        if _MODEL is not None:
+            import manufacturing as mfg
+            _MODEL.add_track(mm_to_f(a.x), mm_to_f(a.y), mm_to_f(b.x),
+                             mm_to_f(b.y), width_mm, name,
+                             mfg.SIDE_OF.get(layer))
         count += 1
     return count
 
@@ -1103,16 +1402,242 @@ def pad_axis_via(board, net, footprint, from_pad, to_pad, distance_mm=1.6):
     return add_via(board, net, target)
 
 
+
+# ---------------------------------------------------------------------------
+# Declared critical routing: the clock spine
+# ---------------------------------------------------------------------------
+# constraints.json states the requirement these three routines exist to meet:
+#
+#   audio_mclk       24.576 MHz   layer F.Cu   max_vias 0   33 ohm in series
+#   pdm_clock_root    3.072 MHz   layer F.Cu   max_vias 0   33 ohm in series
+#   pdm_clock_branches            8 branches, matched within 5.0 mm
+#
+# A via on either clock would put a 1.6 mm stub and a layer change in the
+# middle of the only edge-sensitive signals on the board, and "no vias" is not
+# something an autorouter can be asked for per net. The branches additionally
+# have to be length-matched, which is the classic case for generated geometry.
+# So the whole clock spine is laid down here, locked, and checked by
+# tools/critical_nets.py against constraints.json after every build.
+#
+# The lanes below are design intent, not measurements taken off an existing
+# board: each is a corridor chosen from the placement - under the module
+# socket row and above the oscillator, then down the clear side of the clock
+# block - and the first one that is actually free is used.
+# Below the oscillator, not above it: the master clock runs straight up from
+# R1 to its socket pin at x = -1.49, and a lane under the socket row would have
+# to cross it. Both nets are F.Cu with no via to their name, so one of them has
+# to go round, and it is this one - the master clock's straight shot is the
+# shorter and the faster of the two.
+CLOCK_ROOT_LANES_Y = (5.0, 4.7, 5.3, 4.4, 5.6)
+CLOCK_ROOT_LANES_X = (-9.5, -9.8, -10.1, -9.2, -10.4)
+# Room to leave between the fan-in rail and the package pads it passes: the
+# net class clearance, half the track, and a little margin so the rail does
+# not have to be re-checked every time a pad grows.
+CLOCK_RAIL_MARGIN = 0.20
+
+
+def design_y(point):
+    return -(point.y / 1e6 - d.PAGE_CY)
+
+
+def design_x(point):
+    return point.x / 1e6 - d.PAGE_CX
+
+
+def pad_edge_top(pad):
+    """Design-frame y of a pad's upper edge, whatever its rotation."""
+    return -(pad.GetBoundingBox().GetTop() / 1e6 - d.PAGE_CY)
+
+
+# How far past the end of a SOT-23-6 pad its escape stub runs. Far enough that
+# a route picking the stub up is clear of the neighbouring pads, short enough
+# that it commits nothing about where the net goes next.
+ESD_ESCAPE_MM = 0.55
+
+
+def route_esd_escapes(board, placed, pin_net, net_items):
+    """Give each ESD-array signal pad a straight escape along its own axis.
+
+    Declared fanout. A SOT-23-6 pad is 0.95 mm from its neighbour, and the
+    router measures a graze against a circle drawn round the whole pad, so it
+    reads any track ending on one pad as grazing the next and narrows it to
+    0.0998 mm to clear something that was never in the way - below the 0.127 mm
+    this board is built to. A stub on the pad's own axis, laid at the net's
+    real width and locked, gives the route somewhere to start that is already
+    clear of the neighbours.
+    """
+    count = 0
+    for ref in ("U3", "U4"):
+        footprint = placed[ref]
+        centre = footprint.GetPosition()
+        for pad in footprint.Pads():
+            name = pin_net.get((ref, pad.GetNumber()))
+            if name in (None, "GND", "TANG_3V3"):
+                continue        # ground stitches; the bias rail is linked above
+            position = pad.GetPosition()
+            reach = pad.GetSize().x / 2.0 + mm(ESD_ESCAPE_MM)
+            step = reach if position.x >= centre.x else -reach
+            end = pcbnew.VECTOR2I(int(position.x + step), position.y)
+            count += add_track(board, net_items[name], pcbnew.F_Cu,
+                               net_track_width(name), [position, end])
+    return count
+
+
+def route_esd_bias_link(board, placed, pin_net, net_items):
+    """Tie the two ESD arrays' bias pins together on F.Cu.
+
+    Declared local geometry, for the same reason a decoupling loop is: the two
+    clamp bias pins are the same net, sit on the same row 8.5 mm apart, and a
+    straight track between them is the whole connection. Left to the router,
+    TANG_3V3 was taken down to B.Cu and back with a via dropped on each pad -
+    via-in-pad, which this board's plugged-via process cannot have, and which
+    the mask keep-outs cannot forbid because the router treats the region round
+    a pad it is trying to reach as exempt.
+    """
+    source = pad_at(placed, "U3", 5)
+    target = pad_at(placed, "U4", 5)
+    return add_track(board, net_items["TANG_3V3"], pcbnew.F_Cu,
+                     net_track_width("TANG_3V3"), [source, target])
+
+
+def route_master_clock(board, placed, pin_net, net_items):
+    """The 24.576 MHz master clock, oscillator to module pin, on F.Cu.
+
+    Two hops: X1.3 into its series resistor, and R1.2 straight up into the
+    module socket pin directly above it. R1 was placed for this - the socket
+    pin sits 4.43 mm away with only a 0.06 mm sideways offset - so the second
+    hop is a single straight track with no corner, no layer change and no via.
+    """
+    count = 0
+    source, damped = pad_at(placed, "X1", 3), pad_at(placed, "R1", 1)
+    count += try_paths(board, net_items["MCLK_OSC"], pcbnew.F_Cu, CLOCK_WIDTH,
+                       [[polyline_45([source, damped])], [[source, damped]]])
+
+    start = pad_at(placed, "R1", 2)
+    target = pad_at(placed, "J2", 17)
+    # Ends 0.06 mm off the pad centre, which is well inside a 1.70 mm socket
+    # pad, rather than bending twice to hit the middle of it exactly.
+    count += add_track(board, net_items["AUDIO_MCLK"], pcbnew.F_Cu, CLOCK_WIDTH,
+                       [start, pcbnew.VECTOR2I(start.x, target.y)])
+    return count
+
+
+def route_clock_root(board, placed, pin_net, net_items):
+    """The PDM clock from the FPGA pin to all eight buffer inputs, on F.Cu.
+
+    Two parts, both zero-via by construction:
+
+    PDM_CLK_FPGA runs from module pin J2.14 along a lane under the socket row,
+    down the clear side of the oscillator block, and into the series resistor
+    from the left - the right-hand approach is taken by R2's own output pad.
+
+    PDM_CLK_IN is a fan-in, and the package decides its shape. A TSSOP-20 pad
+    row has 0.25 mm between neighbours, which no track and clearance fits
+    through, so the rail cannot cross the row: it enters over the top of the
+    package, runs down the centre line under the body where there is no
+    copper at all, and reaches each of the eight input pads with its own
+    straight rung. Every input is fed from the same spine, so the spread
+    between the first and last input is one package length of track.
+    """
+    count = 0
+    socket_ref, position = socket_pin_for("PDM_CLK_FPGA")
+    source = pad_at(placed, socket_ref, position)
+    resistor = pad_at(placed, "R2", 1)
+    alternatives = []
+    for lane_y in CLOCK_ROOT_LANES_Y:
+        for lane_x in CLOCK_ROOT_LANES_X:
+            alternatives.append([polyline_45([
+                source,
+                vec(*d.to_kicad(design_x(source), lane_y)),
+                vec(*d.to_kicad(lane_x, lane_y)),
+                vec(*d.to_kicad(lane_x, design_y(resistor))),
+                resistor])])
+    count += try_paths(board, net_items["PDM_CLK_FPGA"], pcbnew.F_Cu,
+                       CLOCK_WIDTH, alternatives)
+
+    net = net_items["PDM_CLK_IN"]
+    buffer_fp = placed["U2"]
+    inputs = [pad for pad in buffer_fp.Pads()
+              if pin_net.get(("U2", pad.GetNumber())) == "PDM_CLK_IN"]
+    spine_x = design_x(buffer_fp.GetPosition())
+    lane_y = (max(pad_edge_top(pad) for pad in buffer_fp.Pads())
+              + net_clearance("PDM_CLK_IN") / 1e6 + CLOCK_WIDTH / 2.0
+              + CLOCK_RAIL_MARGIN)
+    feed = pad_at(placed, "R2", 2)
+    bottom = min(design_y(pad.GetPosition()) for pad in inputs)
+
+    legs = [[feed, vec(*d.to_kicad(design_x(feed), lane_y)),
+             vec(*d.to_kicad(spine_x, lane_y)),
+             vec(*d.to_kicad(spine_x, bottom))]]
+    for pad in inputs:
+        rung_y = design_y(pad.GetPosition())
+        legs.append([vec(*d.to_kicad(spine_x, rung_y)), pad.GetPosition()])
+    for leg in legs:
+        count += add_track(board, net, pcbnew.F_Cu, CLOCK_WIDTH, leg)
+    return count
+
+
+# Every branch is routed to the same driver-to-load length, not to the shortest
+# route it can find. constraints.json asks for the eight branches to match
+# within 5 mm, and the geometry does not offer that for free: branches feeding
+# the bottom of the array have to go round the power row, the ESD arrays and
+# the Pi header, which costs about 20 mm that a branch leaving straight outward
+# never pays. So the branch with the least freedom sets the target and the
+# others are padded up to it, by arriving on the clock ring away from their
+# split angle and walking round to it. The ring is the right place to spend the
+# length: it is the one annulus on F.Cu with no data spokes in it.
+#
+# The arc alone is not enough. Every branch's two arms leave the ring radially,
+# so with eight branches there is a radial arm every 22.5 degrees and an arc
+# much longer than that has to cross one. The length is therefore spent twice
+# over: a short arc, and a radial zig-zag along it that stays inside the
+# branch's own sector where only its own copper runs.
+CLOCK_DETOUR_DEGREES = (0.0, 10.0, -10.0, 15.0, -15.0, 20.0, -20.0,
+                        30.0, -30.0)
+CLOCK_WEAVE_DEPTHS = (0.0, 1.0, 2.0, 3.0, 4.0, 5.0)
+# Chord step for the walk round the ring. Small enough that the polyline stays
+# within a tenth of a millimetre of the circle it approximates.
+CLOCK_RING_STEP_DEG = 8.0
+
+
+def polyline_mm(points):
+    """Length of a polyline in millimetres."""
+    return sum(math.hypot(b.x - a.x, b.y - a.y)
+               for a, b in zip(points, points[1:])) / 1e6
+
+
+def ring_points(radius, start_degrees, end_degrees, depth=0.0):
+    """Waypoints along the clock ring from one azimuth round to another.
+
+    With a depth, every other waypoint is pulled that far in towards the
+    centre, so the run zig-zags instead of following the circle. Each tooth
+    buys about twice its depth in length without taking any more of the ring
+    than the plain arc would.
+    """
+    span = end_degrees - start_degrees
+    steps = max(1, int(round(abs(span) / CLOCK_RING_STEP_DEG)))
+    return [polar_point(radius - (depth if index % 2 else 0.0),
+                        start_degrees + span * index / steps)
+            for index in range(steps + 1)]
+
+
 def route_clock_branches(board, placed, pin_net, net_items):
     """Route each PDM clock branch as a symmetric tree to its two channels.
 
-    The branch leaves its series resistor, drops to B.Cu for the run out
-    through the module-socket area, and comes back up at a split point placed
-    on the bisector of its two landing angles. The two arms from there are
-    mirror images, so the pair is length-matched by construction rather than by
-    tuning - which is the thing an autorouter could not give us.
+    The branch leaves its series resistor, runs out to the clock ring, and
+    splits on the bisector of its two landing angles. The two arms from there
+    are mirror images, so the pair is length-matched by construction rather
+    than by tuning - which is the thing an autorouter could not give us.
+
+    Across branches the matching is deliberate rather than incidental. Every
+    branch's shortest honest route is worked out first; the longest of those
+    eight becomes the target, and each branch then takes the route closest to
+    it. Branches are committed longest-first, because a branch that has to go
+    round the lower block has one workable route and a branch that pads itself
+    out on the ring has dozens - and the one with no choice should choose
+    first.
     """
-    count = 0
+    plans = []
     for branch in range(8):
         net = net_items[f"PDM_CLK_B{branch}"]
         resistor = placed[f"RC{branch + 1}"]
@@ -1125,34 +1650,125 @@ def route_clock_branches(board, placed, pin_net, net_items):
             landings.append(local_to_board(microphone, *MIC_ESCAPES["3"][-1]))
         split_angle = sum(board_angle(p) for p in landings) / 2.0
 
-        alternatives = []
+        options = []
         for radius in CLOCK_RING_RADII:
-            split = polar_point(radius, split_angle)
-            for trunk in clock_trunk_options(source, split, radius):
-                for bias in range(4):
-                    # Resistor to split point, staying on F.Cu. The data spokes
-                    # own B.Cu inside the handover radius and F.Cu only outside
-                    # it, so a clock ring under that radius separates the two
-                    # families by layer instead of letting them fight over the
-                    # same annulus. It also leaves every branch with no vias.
-                    paths = [thread_path(trunk, bias)]
-                    # split point -> each microphone, entering down the same
-                    # clear tangential lane the escape leaves by, so the arm
-                    # never crosses the channel's own resistors or capacitor
-                    entry_radius = arm_entry_radius(
-                        radius, [board_angle(p) for p in landings])
-                    for landing in landings:
-                        entry = polar_point(entry_radius, board_angle(landing))
-                        paths.append(thread_path([split, entry], bias))
-                        # The last leg is a single straight radial line, not a
-                        # 45-degree dogleg. Everything in the outer annulus -
-                        # the damping resistors, the decoupling caps, the
-                        # supply ring stubs - is arranged radially per channel,
-                        # so a dogleg sideways here lands on a neighbour.
-                        paths.append([entry, landing])
-                    alternatives.append(paths)
+            entry_radius = arm_entry_radius(
+                radius, [board_angle(p) for p in landings])
+            for detour, depth in itertools.product(CLOCK_DETOUR_DEGREES,
+                                                   CLOCK_WEAVE_DEPTHS):
+                # Reaching the ring away from the split angle and weaving round
+                # to it is how a short branch is padded out to the common
+                # target. Zero detour is the direct route and is tried on its
+                # merits like any other; there is nowhere to put a tooth on a
+                # run that does not go round.
+                if not detour and depth:
+                    continue
+                arrival = split_angle + detour
+                arrive = polar_point(radius, arrival)
+                split = polar_point(radius, split_angle)
+                walk = ([] if not detour
+                        else ring_points(radius, arrival, split_angle,
+                                         depth)[1:-1] + [split])
+                biases = range(4) if not detour else range(2)
+                for trunk in clock_trunk_options(source, arrive, radius):
+                    for bias in biases:
+                        # Resistor to split point, staying on F.Cu. The data
+                        # spokes own B.Cu inside the handover radius and F.Cu
+                        # only outside it, so a clock ring under that radius
+                        # separates the two families by layer instead of
+                        # letting them fight over the same annulus. It also
+                        # leaves every branch with no vias.
+                        paths = [thread_path(trunk + walk, bias)]
+                        arms = []
+                        # split point -> each microphone, entering down the
+                        # same clear tangential lane the escape leaves by, so
+                        # the arm never crosses the channel's own resistors or
+                        # capacitor
+                        for landing in landings:
+                            entry = polar_point(entry_radius,
+                                                board_angle(landing))
+                            arm = [thread_path([split, entry], bias),
+                                   # The last leg is a single straight radial
+                                   # line, not a 45-degree dogleg. Everything
+                                   # in the outer annulus - the damping
+                                   # resistors, the decoupling caps, the supply
+                                   # ring stubs - is arranged radially per
+                                   # channel, so a dogleg sideways here lands
+                                   # on a neighbour.
+                                   [entry, landing]]
+                            paths.extend(arm)
+                            arms.append(sum(polyline_mm(leg) for leg in arm))
+                        driver_to_load = polyline_mm(paths[0]) + max(arms)
+                        options.append((driver_to_load, detour, paths))
 
-        count += try_paths(board, net, pcbnew.F_Cu, CLOCK_WIDTH, alternatives)
+        direct = [length for length, detour, _p in options if not detour]
+        plans.append({"net": net, "options": options,
+                      "shortest": min(direct) if direct else min(
+                          length for length, _d, _p in options)})
+
+    # What a branch can reach on paper and what it can reach on this board are
+    # different numbers: a branch whose direct route is blocked ends up 15 mm
+    # longer than its own best case. Matching to the paper figure would leave
+    # that branch stranded on its own, so the target is measured instead - one
+    # throwaway pass that lets every branch take its shortest workable route,
+    # then the board is put back exactly as it was.
+    order = sorted(plans, key=lambda p: -p["shortest"])
+    mark = mark_copper()
+    for plan in order:
+        ranked = sorted(plan["options"], key=lambda option: option[0])
+        try_paths(board, plan["net"], pcbnew.F_Cu, CLOCK_WIDTH,
+                  [paths for _length, _detour, paths in ranked])
+        plan["reachable"] = (ranked[_CHOICE[0]][0]
+                             if _CHOICE[0] is not None else plan["shortest"])
+    rewind(board, mark)
+
+    target = max(plan["reachable"] for plan in plans)
+
+    def place(order):
+        """Route every branch in this order. Returns (segments, failures)."""
+        placed, failed = 0, []
+        for plan in order:
+            # Closest to the common target first, so a branch with a free
+            # choice spends it on matching rather than on being as short as it
+            # can be.
+            ranked = sorted(plan["options"], key=lambda o: abs(o[0] - target))
+            placed += try_paths(board, plan["net"], pcbnew.F_Cu, CLOCK_WIDTH,
+                                [paths for _length, _detour, paths in ranked])
+            plan["taken"] = (ranked[_CHOICE[0]][0]
+                             if _CHOICE[0] is not None else None)
+            if plan["taken"] is None:
+                failed.append(plan)
+        return placed, failed
+
+    # A padded route takes more of the board than a direct one, so a branch
+    # left until last can find its own lane already spent. Whichever branch
+    # that turns out to be goes first next time round; there are only eight of
+    # them, so this settles quickly or not at all.
+    order = sorted(plans, key=lambda p: -p["reachable"])
+    count, best = 0, None
+    for _attempt in range(len(plans)):
+        mark = mark_copper()
+        count, failed = place(order)
+        if not failed:
+            best = None
+            break
+        # Keep the least bad attempt. Rewinding the last one and stopping would
+        # leave the board with no branch copper at all and nothing in REFUSED
+        # to say so, because the rewind takes the refusals with it.
+        if best is None or len(failed) < best[0]:
+            best = (len(failed), list(order))
+        rewind(board, mark)
+        order = failed[:1] + [plan for plan in order if plan is not failed[0]]
+    else:
+        count, failed = place(best[1])
+        for plan in failed:
+            REFUSED.append((plan["net"].GetNetname(), "F.Cu",
+                            "no clear route to the branch's split point"))
+    for plan in order:
+        print("  {} target {:.1f} mm, took {}".format(
+            plan["net"].GetNetname(), target,
+            "{:.1f} mm".format(plan["taken"]) if plan["taken"] is not None
+            else "no clear route"))
     return count
 
 
@@ -1264,6 +1880,11 @@ def socket_pin_for(net_name):
     raise SystemExit(f"{net_name} is not assigned to a module pin")
 
 
+# Offsets from the nominal handover radius, nearest first, tried in turn.
+SPOKE_HANDOVER_STEPS = [0.0] + [sign * 0.1 * i
+                                for i in range(1, 26) for sign in (-1, 1)]
+
+
 def route_data_spokes(board, placed, pin_net, net_items):
     """Bring each pair's PDM data line in to its FPGA socket pin.
 
@@ -1274,6 +1895,9 @@ def route_data_spokes(board, placed, pin_net, net_items):
     board without ever meeting on a layer.
     """
     count = 0
+    # Everything that will share the board with these vias is down by now, so
+    # take one survey and check each handover point against it.
+    clearance_model(board, rebuild=True)
     for k in range(d.MIC_COUNT):
         pair = k // 2
         net = net_items[f"PDM_D{pair}"]
@@ -1282,7 +1906,20 @@ def route_data_spokes(board, placed, pin_net, net_items):
         source = next(p.GetPosition() for p in resistor.Pads()
                       if p.GetNumber() == "2")
 
-        entry = polar_point(SPOKE_HANDOVER_RADIUS, board_angle(source))
+        # The handover radius is a lane, not a landmark: the via only has to
+        # be far enough in that the spoke has left the microphone ring and far
+        # enough out that it still crosses the socket rows on B.Cu. Slide it
+        # along the spoke until it clears the solder-mask keep-outs and its
+        # neighbours' holes, rather than dropping it on the nominal radius and
+        # leaving the keep-out violation for DRC.
+        angle = board_angle(source)
+        entry = first_legal_via(board, net, [
+            polar_point(SPOKE_HANDOVER_RADIUS + step, angle)
+            for step in SPOKE_HANDOVER_STEPS])
+        if entry is None:
+            REFUSED.append((net.GetNetname(), "F.Cu",
+                            "no legal handover via on the spoke"))
+            continue
         if not add_track(board, net, pcbnew.F_Cu, DATA_WIDTH, [source, entry]):
             continue
         count += 1
@@ -1388,8 +2025,11 @@ def route_power_block(board, placed, pin_net, net_items):
     # Both rails run as a bus just above the component row. Routing along the
     # row itself collides with each part's own ground pad and stitching via.
     bus = -14.60
+    # The bus starts at the diode's own output pad, which already sits on the
+    # bus line. Starting it 1.6 mm further west, as this used to, ran the track
+    # out past the pad and then straight back over itself.
     count += chain(board, net_items, "+5V", pcbnew.F_Cu, POWER_WIDTH, [
-        ("D1", 1), (-15.50, bus), (-7.45, bus), ("C4", 1)], placed)
+        ("D1", 1), (-7.45, bus), ("C4", 1)], placed)
     count += chain(board, net_items, "+5V", pcbnew.F_Cu, POWER_WIDTH, [
         (-7.45, bus), (-2.28, bus), ("C1", 1)], placed)
     count += chain(board, net_items, "+5V", pcbnew.F_Cu, POWER_WIDTH, [
@@ -1624,11 +2264,26 @@ def link_microphone_straps(board, placed, pin_net, net_items):
 def place_ground_stitching(board, placed, pin_net, net_items):
     """Give every ground pad its own via into the inner planes.
 
-    The via is pushed straight out from the footprint centre past the pad edge,
-    and a short track ties the pad to it on the pad's own copper layer.
+    The preferred direction for each via is design intent - straight out from
+    the footprint, inward for the channel decoupling caps, downward on the
+    power row - but a preference is not a guarantee. Every candidate is checked
+    against the real manufacturing rules before it is committed: mask target,
+    per-net-class clearance, hole-to-hole and hole-to-copper. If the preferred
+    spot is illegal the via walks outward along that direction and then around
+    it until a legal spot is found.
+
+    Placing these blind is what produced shorts to PI_5V and +5V, hole
+    clearance failures against RH4 and U1, and 37 vias inside the mask
+    keep-outs on the previous board.
     """
+    import manufacturing as mfg
+
     gnd = net_items["GND"]
     count = 0
+    model = clearance_model(board, rebuild=True)
+    via_d, via_k = VIA_DIAMETER, VIA_DRILL
+    stub_w = 0.3
+    rejected = []
 
     # Every pad on the board, so a stitching via never lands on a neighbour.
     obstacles = []
@@ -1676,7 +2331,17 @@ def place_ground_stitching(board, placed, pin_net, net_items):
                                                 obstacles, vias_placed)
             if target is None:
                 continue
+            target = legalise_stitch(model, position, target, via_d, via_k,
+                                     stub_w, "back" if on_bottom else "front")
+            if target is None:
+                rejected.append((ref, pad.GetNumber()))
+                continue
             vias_placed.append(target)
+            model.add_via(mm_to_f(target.x), mm_to_f(target.y), via_d, via_k,
+                          "GND")
+            model.add_track(mm_to_f(position.x), mm_to_f(position.y),
+                            mm_to_f(target.x), mm_to_f(target.y), stub_w,
+                            "GND", "back" if on_bottom else "front")
 
             via = pcbnew.PCB_VIA(board)
             via.SetPosition(target)
@@ -1698,13 +2363,74 @@ def place_ground_stitching(board, placed, pin_net, net_items):
             track.SetNet(gnd)
             board.Add(track)
             count += 1
+    if rejected:
+        print("no legal stitching spot for: "
+              + ", ".join("{}.{}".format(r, p) for r, p in rejected))
     return count
+
+
+# Where a test-point legend may sit, relative to its pad: how far out along the
+# radius, and how far round it. Nearest and straightest first, so a legend only
+# moves as much as it has to and the reading order round the arc survives.
+LEGEND_PLACEMENTS = [(extra, swing)
+                     for extra in (2.5, 3.0, 2.1, 3.6, 4.2, 1.8, 4.8, 5.4)
+                     for swing in (0.0, 3.0, -3.0, 6.0, -6.0, 9.0, -9.0,
+                                   12.0, -12.0)]
+LEGEND_MAX_RADIUS = 46.0
+
+
+def place_test_point_legends(board, build):
+    """Label each test point, somewhere its label actually fits.
+
+    tools/place_testpoints.py records each pad in design-frame cartesian
+    coordinates: it chooses positions against the routed copper, so a polar
+    description would not survive a reroute. The legend used to be pushed
+    2.5 mm straight out from the pad and left there, which put twelve of them
+    on top of a damping resistor's outline or its pads - 43 silkscreen
+    violations between them. Now each one is measured against the mask
+    openings and the footprint silkscreen already on the board, and takes the
+    first position that clears both, working outward from where it would have
+    been.
+    """
+    import manufacturing as mfg
+    rules = mfg.load_rules(_PROJECT_ROOT)
+    obstacles = mfg.silk_obstacles(board, rules)
+    obstacles += [mfg.bounding_box(item) for item in board.GetDrawings()
+                  if item.GetLayer() == pcbnew.F_SilkS]
+    limit = BOARD_RULES["min_silk_clearance"]
+    homeless = []
+
+    for _ref, net, _footprint, x, y in d.TEST_POINTS:
+        radius = math.hypot(x, y)
+        angle = math.degrees(math.atan2(y, x))
+        chosen = None
+        for extra, swing in LEGEND_PLACEMENTS:
+            if radius < 1e-6:
+                lx, ly = x, y + extra
+            elif radius + extra > LEGEND_MAX_RADIUS:
+                continue          # out here it would be in the channel numbers
+            else:
+                lx, ly = d.polar(radius + extra, angle + swing)
+            item = build(net, *d.to_kicad(lx, ly), size=1.0, thickness=0.15)
+            shape = mfg.bounding_box(item)
+            if all(shape.distance(other) >= limit for other in obstacles):
+                chosen = (item, shape)
+                break
+        if chosen is None:
+            homeless.append(net)
+            continue
+        board.Add(chosen[0])
+        obstacles.append(chosen[1])
+
+    if homeless:
+        print("no clear silkscreen position for: " + ", ".join(homeless))
+    return len(d.TEST_POINTS) - len(homeless)
 
 
 def add_silkscreen(board):
     """Channel numbers, cardinal marks and board identity."""
-    def text(value, x, y, size=1.2, layer=pcbnew.F_SilkS, angle=0.0,
-             thickness=0.16, mirrored=False):
+    def build(value, x, y, size=1.2, layer=pcbnew.F_SilkS, angle=0.0,
+              thickness=0.16, mirrored=False):
         item = pcbnew.PCB_TEXT(board)
         item.SetText(value)
         item.SetPosition(vec(x, y))
@@ -1714,7 +2440,12 @@ def add_silkscreen(board):
         item.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_CENTER)
         item.SetTextAngleDegrees(angle)
         item.SetMirrored(mirrored)
+        return item
+
+    def text(value, x, y, **kwargs):
+        item = build(value, x, y, **kwargs)
         board.Add(item)
+        return item
 
     # Channel numbers sit just inside the rim. They are deliberately left
     # unrotated: KiCad bounds text with an axis-aligned box, so tangential
@@ -1729,22 +2460,11 @@ def add_silkscreen(board):
     text("+X", *d.to_kicad(30.0, 0.0), size=1.4)
     text("-X", *d.to_kicad(-16.0, 0.0), size=1.4)
 
-    # Short legend for each test point, pushed radially outward from its pad.
-    # tools/place_testpoints.py records each pad as (ref, net, footprint, x, y)
-    # in design-frame cartesian coordinates - it chooses positions against the
-    # routed copper, so a polar description would not survive a reroute.
-    for _ref, net, _footprint, x, y in d.TEST_POINTS:
-        radius = math.hypot(x, y)
-        if radius < 1e-6:
-            lx, ly = x, y + 2.5
-        else:
-            scale = (radius + 2.5) / radius
-            lx, ly = x * scale, y * scale
-        text(net, *d.to_kicad(lx, ly), size=1.0, thickness=0.15)
-
     text("16-CH PDM MIC ARRAY  rev A", *d.to_kicad(0.0, 18.0), size=1.4)
     text("PORTS FACE UP - DO NOT WASH", *d.to_kicad(0.0, 15.5), size=1.2)
     text("CH0..CH15 CCW FROM +X", *d.to_kicad(0.0, 20.5), size=1.2)
+
+    place_test_point_legends(board, build)
 
     # The module and host connector are on the reverse, so label them there.
     text("TANG NANO 9K - USB-C THIS END", d.PAGE_CX + 24.0, d.PAGE_CY,
@@ -1754,10 +2474,17 @@ def add_silkscreen(board):
 
 
 if __name__ == "__main__":
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, here)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", default=os.path.dirname(here),
+                        help="directory to build into (default: the project)")
+    parser.add_argument("--no-escapes", action="store_true",
+                        help="omit the pre-routed microphone escapes")
+    options = parser.parse_args()
+    root = os.path.abspath(options.output)
     path, comps, nets, stitches, straps = build(
-        root, with_escapes="--no-escapes" not in sys.argv)
+        root, with_escapes=not options.no_escapes)
     print(f"wrote {path}")
     print(f"components {comps}  nets {nets}  ground stitching vias {stitches}  "
           f"routed segments {straps}")

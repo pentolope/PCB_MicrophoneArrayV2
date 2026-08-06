@@ -3,7 +3,7 @@
 A 120 mm circular, four-layer KiCad 10 carrier for sixteen `MSM261DHP006` PDM
 MEMS microphones running at 3.3 V. A socketed Sipeed Tang Nano 9K performs
 acquisition and decimation; a 2012 Raspberry Pi Model B collects the audio over
-SPI0 through a 26-way ribbon.
+SPI0 over a 26-way cable to the Pi's P1 header.
 
 The sixteen acoustic ports sit on a 54.00 mm radius at 22.5 degree intervals,
 channel 0 on +X, numbered counter-clockwise viewed from the component side.
@@ -53,7 +53,7 @@ cannot be assembled by JLCPCB. This is discussed in
 | Path | Contents |
 |---|---|
 | `microphone_array_v2.kicad_sch` | generated schematic - do not hand-edit |
-| `microphone_array_v2.kicad_pcb` | the board; no longer regenerated, see below |
+| `microphone_array_v2.kicad_pcb` | generated board - do not hand-edit, see below |
 | `microphone_array_v2.kicad_pro` | project settings, net classes, design rules |
 | `MicArrayV2.kicad_sym` | generated project symbols |
 | `MicArrayV2.pretty/` | project footprints: microphone, oscillator, silk-free probe pads |
@@ -65,10 +65,8 @@ cannot be assembled by JLCPCB. This is discussed in
 ## Source of truth
 
 `tools/netlist.py` holds the complete component list, netlist and placement.
-The schematic is generated from it. The board was too, until the host block was
-finished with an external autorouter; it is now edited in place by
-`tools/patch_board.py`, `tools/cleanup_tracks.py` and
-`tools/place_testpoints.py`, each of which records what it did. Three
+The schematic and the board are both generated from it. Nothing about the
+board is edited by hand; see [the build](#building-the-board) below. Three
 independent gates keep schematic and board in step:
 
 - `tools/check_netlist_parity.py` extracts the netlist from the generated
@@ -87,26 +85,58 @@ corners left with an interior angle under 90 degrees.
 
 Regeneration commands are in [docs/manufacturing.md](docs/manufacturing.md).
 
+## Building the board
+
+One command, from an empty directory, start to finish:
+
+```bash
+"C:/Program Files/KiCad/10.0/bin/python.exe" tools/build.py --install
+```
+
+It runs [tools/gen_pcb.py](tools/gen_pcb.py) to produce the pre-route board -
+outline, stackup, footprints, placement, zones, net classes, rules, the
+solder-mask via keep-outs and the declared critical routing, all locked - then
+hands it to KiCad Routing Tools under the recorded plan in
+[tools/routing_plan.json](tools/routing_plan.json), refills the zones and puts
+the result through KiCad ERC, KiCad DRC, the critical-net contract and the
+board's own manufacturability checks. The board is installed only if every gate
+passes. Drop `--install` to build and check without touching the project.
+
+Everything the run produced is kept in `build/`: the pre-route board, the routed
+candidate, the plan that was executed, every command with its output, and the
+validation reports.
+
+Copper is never edited after routing. A failure is fixed in whichever input
+caused it - the generator for placement and fanout, the rules or keep-outs for a
+manufacturing violation, the critical-route generator for a clock, the routing
+plan for anything else - and the board is built again from the beginning.
+
+**Critical routing, and why each is generated rather than routed.** The
+requirements come from `critical_routes` in
+[constraints.json](constraints.json) and are checked after every build by
+[tools/critical_nets.py](tools/critical_nets.py), which runs the validator's own
+topology rule:
+
+| Nets | Requirement | Why it is generated |
+| --- | --- | --- |
+| `MCLK_OSC`, `AUDIO_MCLK` | F.Cu, 0 vias | 24.576 MHz, the fastest edge on the board; a via would add a stub and a layer change in the middle of it |
+| `PDM_CLK_FPGA`, `PDM_CLK_IN` | F.Cu, 0 vias | a TSSOP-20 pad row has 0.25 mm between pads, so the fan-in shape is decided by the package |
+| `PDM_CLK_B0..7` | matched within 5 mm, F.Cu, 0 vias | inter-channel timing across the array; all eight are routed to one measured target |
+| microphone escapes, supply ring, data spokes, ground stitching | mask keep-outs, 0.40 mm to any opening | the 0.566 mm ring corner and the plugged-via rule leave no room for a search |
+
 ## Status
 
-**Fully routed and DRC clean.** KiCad reports 0 DRC violations, 0 unconnected
-items and 0 schematic parity issues; ERC, netlist parity and the placement audit
-all pass. The eight PDM clock branches keep their intended topology — F.Cu only,
-zero vias, length-matched to 21.5 mm — and both inner layers are still solid
-ground.
+**Generated, routed and DRC clean.** KiCad reports 0 DRC violations, 0
+unconnected items and 0 schematic parity issues; ERC, netlist parity and the
+placement audit all pass. Every via clears its nearest solder-mask opening by at
+least 0.40 mm, so the board needs no filled-and-capped or resin-plugged process.
+The eight PDM clock branches keep their intended topology - F.Cu only, zero
+vias, and now matched to 1.1 mm rather than 24 mm - and both inner layers are
+still solid ground.
 
-Two hard shorts found after routing (the regulator's enable pin and the 5 V
-input lane, both tied to ground by misplaced stitching vias) have been repaired
-by [tools/patch_board.py](tools/patch_board.py).
-
-The copper has been through a cleanup pass ([tools/cleanup_tracks.py](tools/cleanup_tracks.py)):
-no segment is under 0.05 mm and no corner is left with an interior angle under
-90°, so there are no acid traps. Fourteen of the twenty-four test points are
-back, each placed on top of a piece of its own net so it needs no track of its
-own; the other ten have nowhere on the top layer to go, and are listed in
-[docs/status.md](docs/status.md).
-
-The board is no longer regenerated by `tools/gen_pcb.py`.
+Fourteen of the twenty-four test points are placed, each on top of a piece of
+its own net so it needs no track of its own; the other ten have nowhere on the
+top layer to go, and are listed in [docs/status.md](docs/status.md).
 
 A release package is sealed at `generated/release/` — Gerbers, drills, BOM, CPL,
 schematic PDF and a SHA-256 manifest, all built from one board revision in a

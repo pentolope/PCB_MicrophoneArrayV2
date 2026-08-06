@@ -26,6 +26,11 @@ def _native_stackup(ctx):
     ids = [l for l in board.GetEnabledLayers().CuStack()]
     zones = defaultdict(set)
     for zone in board.Zones():
+        # A rule area is a keep-out, not copper: it pours nothing and carries
+        # no net. Counting one made every layer carrying a via keep-out look
+        # like a layer carrying an unnamed plane.
+        if zone.GetIsRuleArea():
+            continue
         for layer in zone.GetLayerSet().CuStack():
             zones[layer].add(zone.GetNetname())
     stack = []

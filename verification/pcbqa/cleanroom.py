@@ -420,6 +420,17 @@ class CleanRun:
         return path
 
     # -- stage 6: prove the isolation --------------------------------------
+    def reaches_back(self, path):
+        """True if this path belongs to the original project rather than here.
+
+        Ownership decides it, not nesting. A board whose project root is the
+        repository itself keeps its attempts under that same root, so every
+        correctly isolated path in the run is also, trivially, inside the
+        origin tree; asking only "is it under the origin" called all twelve of
+        them a leak. What matters is whether the run produced it.
+        """
+        return _inside(path, self.origin_root) and not self.owns(path)
+
     def assert_isolated(self, derived):
         """Every authoritative path must be in-run, and none may reach back."""
         problems = []
@@ -429,17 +440,17 @@ class CleanRun:
                 continue
             resolved = derived.resolve(derived.get(key))
             checked[key] = resolved
-            if not self.owns(resolved):
-                problems.append({"key": key, "path": resolved,
-                                 "issue": "resolves outside the clean run"})
-            elif _inside(resolved, self.origin_root):
+            if self.reaches_back(resolved):
                 problems.append({"key": key, "path": resolved,
                                  "issue": "resolves into the original project"})
+            elif not self.owns(resolved):
+                problems.append({"key": key, "path": resolved,
+                                 "issue": "resolves outside the clean run"})
         report_root = derived.resolve(".")
         for pattern in derived.get("reports.files"):
             for path in glob.glob(os.path.join(report_root, pattern), recursive=True):
                 checked[f"reports:{os.path.basename(path)}"] = path
-                if not self.owns(path) or _inside(path, self.origin_root):
+                if not self.owns(path):
                     problems.append({"key": "reports.files", "path": path,
                                      "issue": "report is not from this run"})
         # And nothing may resolve into the outputs the origin already carries.

@@ -13,7 +13,7 @@
 - Host: 2012 Raspberry Pi Model B, 26-pin P1 header, SPI0 transport.
 - Power: Raspberry Pi 5 V only.
 - Assembly: every SMT part on the top side. The two module sockets and the
-  26-way IDC header are hand-fitted and marked DNP.
+  26-way host header are hand-fitted and marked DNP.
 
 ### How "outward-facing" is realised
 
@@ -160,8 +160,8 @@ The Tang Nano 9K exposes exactly one ground pin across both header rows
 (J6.23). Every signal between the carrier and the module shares that single
 return. This is a property of the module, not of this board. It is mitigated by
 keeping both inner layers as solid ground directly under the module, by series
-damping every fast net, and by keeping the SPI runs between the socket and the
-IDC header short. It remains the weakest part of the interconnect and is the
+damping every fast net, and by keeping the SPI runs between the module socket
+and the host header short. It remains the weakest part of the interconnect and is the
 first thing to examine if high-rate SPI proves marginal.
 
 ## Layer usage and return paths

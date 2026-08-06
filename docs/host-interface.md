@@ -2,10 +2,17 @@
 
 ## Physical connection
 
-`J1` is a keyed 2x13, 2.54 mm shrouded IDC header on the board bottom,
-hand-soldered and marked DNP for assembly. A straight-through 26-conductor
-ribbon connects it to the P1 header of a 2012 Raspberry Pi Model B. Pin 1 is
-marked on the silkscreen and by a square pad.
+`J1` is a 2x13, 2.54 mm pin header on the board bottom, hand-soldered and
+marked DNP for assembly. A 26-conductor cable connects it to the P1 header of
+a 2012 Raspberry Pi Model B. Pin 1 is marked on the silkscreen and by a square
+pad.
+
+Mating the two boards directly instead, which the HOST_DIRECT_STACK contract
+asks for, is the better link electrically - it would remove about 150 mm of
+unshielded cable and its shared return - but it is not a connector swap. It
+needs the host fan re-laid for a socket's mirrored pin rows, and it needs the
+Tang Nano 9K off the underside, because that is where the Raspberry Pi would
+be. Recorded in [status.md](status.md).
 
 Only pins that are identical on Model B revision 1.0 and revision 2.0 are used,
 so the board works with either. In particular the revision-dependent pins 3, 5
@@ -53,9 +60,9 @@ integer, so the usable settings near the top are 15.625 MHz (divider 16) and
 
 The hardware is designed for 25 MHz: series damping on every line, ESD arrays
 with 3 pF loading, and short runs between the socket and the connector. Whether
-25 MHz is actually reliable depends on ribbon length and on the single-ground
-return described in [architecture.md](architecture.md); treat 16 kHz mode as the
-fallback if it is not.
+25 MHz is actually reliable depends on cable length and on the single-ground
+return described in [architecture.md](architecture.md); treat 16 kHz mode as
+the fallback if it is not.
 
 ## Proposed wire protocol
 
