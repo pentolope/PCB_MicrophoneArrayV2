@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "10.0.5"
     },
-    "CreationDate": "2026-08-03T07:07:46-07:00"
+    "CreationDate": "2026-08-06T18:37:57-07:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "microphone_array_v2",
       "GUID": "6d696372-6f70-4686-9f6e-655f61727261",
-      "Revision": "A"
+      "Revision": "rev?"
     },
     "Size": {
       "X": 120.1,

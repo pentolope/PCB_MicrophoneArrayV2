@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.kicad.org/erc.v1.json",
+  "coordinate_units": "mm",
+  "date": "2026-08-06T18:37:51",
+  "ignored_checks": [],
+  "included_severities": [
+    "error",
+    "warning",
+    "exclusion"
+  ],
+  "kicad_version": "10.0.5",
+  "sheets": [
+    {
+      "path": "/",
+      "uuid_path": "/542ebc9c-55cd-767f-dcff-872aca4eb5a9",
+      "violations": []
+    }
+  ],
+  "source": "microphone_array_v2.kicad_sch",
+  "source_sha256": "37135a846d9c262220819e357258deef3eb62b912046349fac988293b27c4997",
+  "source_closure_sha256": "e8aa93bfec59cd6e3772b9187004bb8dedff7568b4fb178c1062e6873b8f8dc1"
+}

@@ -250,13 +250,8 @@ def build():
         b.connect(board_net, (res, 2))
 
     # ------------------------------------------------------------------
-    # Mechanical and test provisions
+    # Test provisions
     # ------------------------------------------------------------------
-    for i, angle in enumerate(d.MOUNT_ANGLES):
-        mx, my = d.polar(d.MOUNT_RADIUS, angle)
-        b.add(f"H{i + 1}", "M3", "Mechanical:MountingHole", d.KI_FP["mount"],
-              mx, my, 0.0, in_bom=False, description="M3 mounting hole")
-
     # Probe pads. Their positions are not on a ring any more - each one sits on
     # a piece of its own net that is already routed, so it needs no track of
     # its own, and where that could go depends on the routing rather than on

@@ -108,7 +108,6 @@ def block_layout(components):
                    ["U3", "U4"] + [f"RH{i + 1}" for i in range(8)]))
     blocks.append(("Tang Nano 9K sockets", ["J2", "J3"]))
     blocks.append(("Raspberry Pi P1 header", ["J1"]))
-    blocks.append(("Mounting holes", ["H1", "H2", "H3", "H4"]))
     for start in range(0, len(d.TEST_POINTS), 8):
         chunk = d.TEST_POINTS[start:start + 8]
         blocks.append((f"Test points {chunk[0][0]}-{chunk[-1][0]}",

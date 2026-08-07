@@ -29,16 +29,10 @@ MIC_PORT_OFFSET = 0.78
 MIC_BODY_RADIUS = MIC_PORT_RADIUS - MIC_PORT_OFFSET
 MIC_PITCH_DEG = 360.0 / MIC_COUNT
 
-# Mounting holes and ring bulk capacitors sit on angles halfway between
-# microphone channels so they clear the per-channel component clusters.
-MOUNT_RADIUS = 38.0
-# Mounting holes sit on the gaps *between* microphone pairs. Each pair's clock
-# branch fans out along its own bisector at 11.25 + 45n degrees and its two
-# arms sweep the 22.5 degrees between its microphones, which leaves the sectors
-# centred on 33.75 + 45n free. Two of the old angles were pair bisectors, so
-# branch 1 and branch 7 ran straight into a screw hole.
-MOUNT_ANGLES = (33.75, 123.75, 213.75, 303.75)
-MOUNT_DRILL = 3.2
+# The board carries no mounting holes. It hangs from J1 on the Raspberry Pi's
+# P1 pins and nothing else: the Pi's own holes are two on revision 2.0 and none
+# at all on revision 1.0, and this design supports both, so there was nothing
+# for a hole at any radius to line up with.
 BULK_RADIUS = 45.5
 BULK_ANGLES = (33.75, 123.75, 213.75, 303.75)
 
@@ -68,10 +62,20 @@ TANG_SPAN = (TANG_PINS - 1) * TANG_PITCH  # 58.42 mm
 # middle of the stack, each signal ran out to the resistors and back past the
 # connector, and those doubling-back paths crossed each other.
 #
-# Note the header's second row sits 2.54 mm *inward* of its origin row, not
-# outward, so the stack below has to clear -29.19 mm rather than the nominal
-# header centre.
-PI_HEADER_POS = (0.0, -33.0)
+# Moved out 2.54 mm from where the pin header sat. A socket numbers its
+# second row on the far side, so its pads would otherwise have reached
+# 2.54 mm further toward the rim - straight into the 34.5 mm clock ring,
+# where the branch feeding the bottom of the array splits. Shifting the
+# connector puts its two rows back in exactly the band the rest of the
+# board was laid out around; what changed is which row is which.
+PI_HEADER_POS = (0.0, -30.46)
+# The odd pins sit on this row; the even pins are one pitch further out, toward
+# the rim, because the socket footprint numbers its second row on the far side
+# - see KI_FP["host2x13"]. The header this board used to carry put them on the
+# near side instead, so anything that has to cross the connector reads the band
+# from here rather than assuming which way the second row lies.
+PI_HEADER_ROW_Y = PI_HEADER_POS[1] + 1.27
+PI_HEADER_ROWS = (PI_HEADER_ROW_Y, PI_HEADER_ROW_Y - 2.54)
 POWER_ROW_Y = -17.0
 # The second power row was at -20.2, which left only 0.57 mm between the bulk
 # capacitors and the host series resistors - too narrow for the 5 V input feed
@@ -123,20 +127,19 @@ KI_FP = {
     "sma": "Diode_SMD:D_SMA",
     "fuse1812": "Fuse:Fuse_1812_4532Metric",
     "hdr1x24": "Connector_PinHeader_2.54mm:PinHeader_1x24_P2.54mm_Vertical",
-    # Plain 2x13 pin header, not a shrouded IDC: the smaller courtyard
-    # (6.2 x 34.1 mm against 10.0 x 41.8 mm) is what lets the host block stack
-    # in signal order instead of doubling back.
+    # The mating half of the Raspberry Pi's P1: a 2x13 female socket on the
+    # underside, pressed straight down onto the Pi's pins.
     #
-    # A female socket here would mate with the Pi directly, and the manifest's
-    # HOST_DIRECT_STACK contract asks for exactly that - but it is not a
-    # drop-in swap. KiCad's PinSocket footprint numbers its second row on the
-    # opposite side (pin 2 at x = -2.54 rather than +2.54), which is what makes
-    # a socket mate face-to-face with a header, so every even pin moves to the
-    # other column and the whole host fan has to be re-laid. And direct
-    # stacking would put the Raspberry Pi where the Tang Nano 9K already is:
-    # J1, J2 and J3 are all on the underside of this board. See docs/status.md.
-    "host2x13": "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical",
-    "mount": "MountingHole:MountingHole_3.2mm_M3",
+    # Why the socket footprint and not the header one, mirrored by hand: a
+    # KiCad footprint is drawn as seen from its own component side, and
+    # PinSocket numbers its second row on the opposite side from PinHeader
+    # (pin 2 at x = -2.54 rather than +2.54). That mirroring is what makes a
+    # socket mate face to face with a header. This part sits on the back, so
+    # the top view shows it mirrored again, and pin 2 lands where the Pi's
+    # pin 2 is when the two boards are stacked and viewed from above. Using
+    # the header footprint here, or re-assigning nets to compensate, would put
+    # every even pin on the wrong side of the connector.
+    "host2x13": "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical",
     "testpoint": "TestPoint:TestPoint_Pad_D1.5mm",
     "mic": "MicArrayV2:MSM261DHP006_LGA-8_3x4mm_TopPort",
     "osc": "MicArrayV2:Oscillator_SMD_YXC_3.2x2.5mm_4Pin",
@@ -240,16 +243,23 @@ PI_HEADER = {
 # resistor row, the ESD arrays and the socket pins all run in the same order
 # and the eight lines never have to swap places. U3 takes the leftmost four
 # signals, U4 the rest.
+# Each net keeps the socket pin the Raspberry Pi gives it and the series
+# resistor its position in the row gives it; what is chosen here is which of
+# the four identical clamp channels it uses. Two signal pads share each side of
+# each array, and their taps climb side by side to the same resistor row, so
+# the pad further from that row has to turn up further out - which means it
+# belongs to the resistor further out too. Pairing them the other way round
+# makes every tap cross its neighbour on the way up.
 HOST_SIGNALS = [
     # (pi net, board net, unused, series resistor ref, esd part, esd pin)
-    ("PI_RESET_N", "HOST_RESET_N", None, "RH1", "U3", "1"),
-    ("PI_SCLK", "SPI_SCLK", None, "RH2", "U3", "3"),
-    ("PI_CS_N", "SPI_CS_N", None, "RH3", "U3", "4"),
-    ("PI_MISO", "SPI_MISO", None, "RH4", "U3", "6"),
-    ("PI_IRQ", "HOST_IRQ", None, "RH5", "U4", "1"),
-    ("PI_MOSI", "SPI_MOSI", None, "RH6", "U4", "3"),
-    ("PI_STATUS", "HOST_STATUS", None, "RH7", "U4", "4"),
-    ("PI_SYNC", "HOST_SYNC", None, "RH8", "U4", "6"),
+    ("PI_RESET_N", "HOST_RESET_N", None, "RH1", "U3", "3"),
+    ("PI_SCLK", "SPI_SCLK", None, "RH2", "U3", "1"),
+    ("PI_CS_N", "SPI_CS_N", None, "RH3", "U3", "6"),
+    ("PI_MISO", "SPI_MISO", None, "RH4", "U3", "4"),
+    ("PI_IRQ", "HOST_IRQ", None, "RH5", "U4", "3"),
+    ("PI_MOSI", "SPI_MOSI", None, "RH6", "U4", "1"),
+    ("PI_STATUS", "HOST_STATUS", None, "RH7", "U4", "6"),
+    ("PI_SYNC", "HOST_SYNC", None, "RH8", "U4", "4"),
 ]
 
 # Carrier net -> Tang module header position, chosen from 3.3 V banks only.

@@ -912,105 +912,6 @@
 		)
 		(embedded_fonts no)
 		)
-		(symbol "Mechanical:MountingHole"
-		(pin_names
-		(offset 1.016)
-		)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(in_pos_files yes)
-		(duplicate_pin_numbers_are_jumpers no)
-		(property "Reference" "H"
-		(at 0 5.08 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "Value" "MountingHole"
-		(at 0 3.175 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "Footprint" ""
-		(at 0 0 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(hide yes)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "Datasheet" ""
-		(at 0 0 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(hide yes)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "Description" "Mounting Hole without connection"
-		(at 0 0 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(hide yes)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "ki_keywords" "mounting hole"
-		(at 0 0 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(hide yes)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(property "ki_fp_filters" "MountingHole*"
-		(at 0 0 0)
-		(show_name no)
-		(do_not_autoplace no)
-		(hide yes)
-		(effects
-		(font
-		(size 1.27 1.27)
-		)
-		)
-		)
-		(symbol "MountingHole_0_1"
-		(circle
-		(center 0 0)
-		(radius 1.27)
-		(stroke
-		(width 1.27)
-		(type default)
-		)
-		(fill
-		(type none)
-		)
-		)
-		)
-		(embedded_fonts no)
-		)
 		(symbol "MicArrayV2:LP5907MFX-3.3"
 		(pin_names
 		(offset 0.508)
@@ -1573,7 +1474,7 @@
 		(justify left)
 		)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical"
+		(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical"
 		(at 0 -20.32 0)
 		(hide yes)
 		(effects
@@ -7531,143 +7432,143 @@
 	)
 	(wire
 		(pts
-			(xy 398.78 528.32) (xy 398.78 530.86)
+			(xy 398.78 431.8) (xy 398.78 434.34)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ba3da76b-848c-bbf2-d943-05c9a51c0113")
+		(uuid "6fff341e-8690-d3fb-f62a-abb118f0bfb2")
 	)
 	(wire
 		(pts
-			(xy 398.78 543.56) (xy 398.78 546.1)
+			(xy 398.78 447.04) (xy 398.78 449.58)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "98d954c0-3861-a539-0e19-ea2a5dd8d660")
+		(uuid "970d6716-6654-e49f-05c2-afce472aa010")
 	)
 	(wire
 		(pts
-			(xy 398.78 558.8) (xy 398.78 561.34)
+			(xy 398.78 462.28) (xy 398.78 464.82)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "5e0debee-9d3e-4b9d-3bbc-02417d018737")
+		(uuid "bb0ec86f-c26e-4f19-f515-e47686d8c2d1")
 	)
 	(wire
 		(pts
-			(xy 398.78 574.04) (xy 398.78 576.58)
+			(xy 398.78 477.52) (xy 398.78 480.06)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "5ac91824-6c45-9de2-c599-1c640eb2394b")
+		(uuid "de445a51-6129-2d66-3962-ae8cdd9b52c8")
 	)
 	(wire
 		(pts
-			(xy 398.78 589.28) (xy 398.78 591.82)
+			(xy 398.78 492.76) (xy 398.78 495.3)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "72b34436-02a0-6176-32a6-2a7cb7740219")
+		(uuid "7d462c1e-547c-5613-09d2-6dd4cff996cd")
 	)
 	(wire
 		(pts
-			(xy 398.78 604.52) (xy 398.78 607.06)
+			(xy 398.78 508) (xy 398.78 510.54)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "1efd504c-0e3c-1ac5-3269-9907a343549b")
+		(uuid "4e890222-6c60-f77b-5380-6179330e3751")
 	)
 	(wire
 		(pts
-			(xy 398.78 619.76) (xy 398.78 622.3)
+			(xy 398.78 523.24) (xy 398.78 525.78)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "21c4de71-41a8-bdec-a7cf-7c13460d6403")
+		(uuid "4515d0a3-be57-7392-56e7-775f00581e9d")
 	)
 	(wire
 		(pts
-			(xy 398.78 635) (xy 398.78 637.54)
+			(xy 398.78 538.48) (xy 398.78 541.02)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "467357f6-3f7b-76d1-bbbc-3e3844ec6c7b")
+		(uuid "8ec1d947-fc6f-3e5d-7db1-bde319dbfc4e")
 	)
 	(wire
 		(pts
-			(xy 398.78 665.48) (xy 398.78 668.02)
+			(xy 398.78 568.96) (xy 398.78 571.5)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "766fd361-7b46-88ab-f457-0b5faff123f5")
+		(uuid "44b6ce7d-2e3e-c07e-622e-1ebd1dd1c989")
 	)
 	(wire
 		(pts
-			(xy 398.78 680.72) (xy 398.78 683.26)
+			(xy 398.78 584.2) (xy 398.78 586.74)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "09154391-23c3-e023-6c80-68d8c2a87e84")
+		(uuid "2d44461d-7df3-51e2-f7cf-d033240ad013")
 	)
 	(wire
 		(pts
-			(xy 398.78 695.96) (xy 398.78 698.5)
+			(xy 398.78 599.44) (xy 398.78 601.98)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "a97d8d4e-027b-1cf1-15a8-77be3d69496d")
+		(uuid "f5467904-5854-1298-1b5e-bde2492c8f5f")
 	)
 	(wire
 		(pts
-			(xy 398.78 711.2) (xy 398.78 713.74)
+			(xy 398.78 614.68) (xy 398.78 617.22)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "506814ae-a490-7b69-6ced-02edeef921c7")
+		(uuid "6cec89a5-9f1b-e5a7-e9cc-cbadbc1957ac")
 	)
 	(wire
 		(pts
-			(xy 398.78 726.44) (xy 398.78 728.98)
+			(xy 398.78 629.92) (xy 398.78 632.46)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "56befac4-d25e-da98-dc8c-87f51d91e7ff")
+		(uuid "f659f31d-fa3a-b045-6b1a-feac0add1571")
 	)
 	(wire
 		(pts
-			(xy 398.78 741.68) (xy 398.78 744.22)
+			(xy 398.78 645.16) (xy 398.78 647.7)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "18a98689-5069-c7c5-994a-71c38dc014a6")
+		(uuid "961b7185-5908-6450-0557-200b4b039b8d")
 	)
 	(wire
 		(pts
@@ -13809,7 +13710,7 @@
 			)
 		)
 	)
-	(global_label "PI_RESET_N"
+	(global_label "PI_SCLK"
 		(shape bidirectional)
 		(at 383.54 30.48 180)
 		(effects
@@ -13818,7 +13719,7 @@
 			)
 			(justify right)
 		)
-		(uuid "7e4919ca-e39f-2349-79c0-d72382c36cd9")
+		(uuid "ab48b4a6-9e5b-236d-69bb-a85ef55f2f6d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 383.54 30.48 0)
 			(hide yes)
@@ -13849,7 +13750,7 @@
 			)
 		)
 	)
-	(global_label "PI_SCLK"
+	(global_label "PI_RESET_N"
 		(shape bidirectional)
 		(at 383.54 35.56 180)
 		(effects
@@ -13858,7 +13759,7 @@
 			)
 			(justify right)
 		)
-		(uuid "cef2b6a6-d0fe-054f-8504-3c511e969a5a")
+		(uuid "9f4afc97-e088-f0af-b87b-5f695c6b6250")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 383.54 35.56 0)
 			(hide yes)
@@ -13869,7 +13770,7 @@
 			)
 		)
 	)
-	(global_label "PI_CS_N"
+	(global_label "PI_MISO"
 		(shape bidirectional)
 		(at 414.02 30.48 0)
 		(effects
@@ -13878,7 +13779,7 @@
 			)
 			(justify left)
 		)
-		(uuid "9ca33987-3cb7-5cf0-a803-3ed879db89b9")
+		(uuid "22d84e62-51ea-beaa-dc11-e2de56d29fdb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 414.02 30.48 0)
 			(hide yes)
@@ -13909,7 +13810,7 @@
 			)
 		)
 	)
-	(global_label "PI_MISO"
+	(global_label "PI_CS_N"
 		(shape bidirectional)
 		(at 414.02 35.56 0)
 		(effects
@@ -13918,7 +13819,7 @@
 			)
 			(justify left)
 		)
-		(uuid "fae8ceb1-8440-542b-707a-1dd3ea6380eb")
+		(uuid "0212bf07-58db-2bd5-208d-a96cbb7f53e2")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 414.02 35.56 0)
 			(hide yes)
@@ -13929,7 +13830,7 @@
 			)
 		)
 	)
-	(global_label "PI_IRQ"
+	(global_label "PI_MOSI"
 		(shape bidirectional)
 		(at 383.54 50.8 180)
 		(effects
@@ -13938,7 +13839,7 @@
 			)
 			(justify right)
 		)
-		(uuid "207bf768-c59a-86a3-5514-b97924f14091")
+		(uuid "18458925-9065-0a11-7127-4114351247e4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 383.54 50.8 0)
 			(hide yes)
@@ -13969,7 +13870,7 @@
 			)
 		)
 	)
-	(global_label "PI_MOSI"
+	(global_label "PI_IRQ"
 		(shape bidirectional)
 		(at 383.54 55.88 180)
 		(effects
@@ -13978,7 +13879,7 @@
 			)
 			(justify right)
 		)
-		(uuid "2e23e47d-d4c1-6fbe-f643-801ec5f87173")
+		(uuid "57ad22a4-a913-a83e-44f0-4c8a61671a47")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 383.54 55.88 0)
 			(hide yes)
@@ -13989,7 +13890,7 @@
 			)
 		)
 	)
-	(global_label "PI_STATUS"
+	(global_label "PI_SYNC"
 		(shape bidirectional)
 		(at 414.02 50.8 0)
 		(effects
@@ -13998,7 +13899,7 @@
 			)
 			(justify left)
 		)
-		(uuid "fc6b8bb1-2124-28f1-7050-420508810bde")
+		(uuid "a85e57a5-b49f-4043-112b-18438b70db8e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 414.02 50.8 0)
 			(hide yes)
@@ -14029,7 +13930,7 @@
 			)
 		)
 	)
-	(global_label "PI_SYNC"
+	(global_label "PI_STATUS"
 		(shape bidirectional)
 		(at 414.02 55.88 0)
 		(effects
@@ -14038,7 +13939,7 @@
 			)
 			(justify left)
 		)
-		(uuid "ad603fbb-e1a3-b0e4-2bfb-14901297a591")
+		(uuid "d0f495e7-2d27-e7ab-7645-08974781498b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 414.02 55.88 0)
 			(hide yes)
@@ -15091,16 +14992,16 @@
 	)
 	(global_label "+5V"
 		(shape bidirectional)
-		(at 398.78 530.86 270)
+		(at 398.78 434.34 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "88c9a11e-06f9-949d-006b-87237dbe6ba1")
+		(uuid "47cfc4a8-95c7-89eb-7665-d355dbc686f4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 530.86 0)
+			(at 398.78 434.34 0)
 			(hide yes)
 			(effects
 				(font
@@ -15111,16 +15012,16 @@
 	)
 	(global_label "+3V3A"
 		(shape bidirectional)
-		(at 398.78 546.1 270)
+		(at 398.78 449.58 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "d9b87da6-46bb-4e75-4dc7-3ba52eb52942")
+		(uuid "63cf5d5a-49d1-4aaa-e22b-b8f527bfb016")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 546.1 0)
+			(at 398.78 449.58 0)
 			(hide yes)
 			(effects
 				(font
@@ -15131,16 +15032,16 @@
 	)
 	(global_label "+3V3_CLK"
 		(shape bidirectional)
-		(at 398.78 561.34 270)
+		(at 398.78 464.82 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "f956cb31-e85d-7f1e-da21-c463e95928a2")
+		(uuid "57e286b3-8e98-3cfe-3d1f-c8fec64fb8ca")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 561.34 0)
+			(at 398.78 464.82 0)
 			(hide yes)
 			(effects
 				(font
@@ -15151,16 +15052,16 @@
 	)
 	(global_label "GND"
 		(shape bidirectional)
-		(at 398.78 576.58 270)
+		(at 398.78 480.06 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "4232302e-c8a7-8b99-bbe6-61598d928b43")
+		(uuid "897d488f-a2db-4d12-3b09-67a7fa45c180")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 576.58 0)
+			(at 398.78 480.06 0)
 			(hide yes)
 			(effects
 				(font
@@ -15171,16 +15072,16 @@
 	)
 	(global_label "GND"
 		(shape bidirectional)
-		(at 398.78 591.82 270)
+		(at 398.78 495.3 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "f326bb2e-ffde-4e38-a43b-a3c3216b454b")
+		(uuid "63efa168-fe15-0225-241c-7a82fdf82a32")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 591.82 0)
+			(at 398.78 495.3 0)
 			(hide yes)
 			(effects
 				(font
@@ -15191,16 +15092,16 @@
 	)
 	(global_label "PDM_D0"
 		(shape bidirectional)
-		(at 398.78 607.06 270)
+		(at 398.78 510.54 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "8a06d86e-5467-6e00-f27b-bfa34b9002f1")
+		(uuid "3d827f26-9659-9f6a-2985-30dc63e3bc9e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 607.06 0)
+			(at 398.78 510.54 0)
 			(hide yes)
 			(effects
 				(font
@@ -15211,16 +15112,16 @@
 	)
 	(global_label "PDM_D1"
 		(shape bidirectional)
-		(at 398.78 622.3 270)
+		(at 398.78 525.78 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "aee44664-899c-1ec2-c97f-b1ba9bec11f0")
+		(uuid "23d72ec3-1415-1ebf-98cd-048a432da333")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 622.3 0)
+			(at 398.78 525.78 0)
 			(hide yes)
 			(effects
 				(font
@@ -15231,16 +15132,16 @@
 	)
 	(global_label "PDM_D2"
 		(shape bidirectional)
-		(at 398.78 637.54 270)
+		(at 398.78 541.02 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "ed93f5a8-b812-1c83-8c7b-2fa3e9e98b2d")
+		(uuid "4701da7f-709d-2bcc-ec49-e3d957e34658")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 637.54 0)
+			(at 398.78 541.02 0)
 			(hide yes)
 			(effects
 				(font
@@ -15251,16 +15152,16 @@
 	)
 	(global_label "PDM_D3"
 		(shape bidirectional)
-		(at 398.78 668.02 270)
+		(at 398.78 571.5 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "485845d7-92fb-a939-50a3-4e353b4de5c6")
+		(uuid "36a053e9-2b80-8383-06ab-03177a0ed93a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 668.02 0)
+			(at 398.78 571.5 0)
 			(hide yes)
 			(effects
 				(font
@@ -15271,16 +15172,16 @@
 	)
 	(global_label "PDM_D4"
 		(shape bidirectional)
-		(at 398.78 683.26 270)
+		(at 398.78 586.74 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "0bc3a4f8-f0df-4b3b-652e-a6cac8f0c8fe")
+		(uuid "aee1898c-d6a3-179d-766d-1ac7e4ae07eb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 683.26 0)
+			(at 398.78 586.74 0)
 			(hide yes)
 			(effects
 				(font
@@ -15291,16 +15192,16 @@
 	)
 	(global_label "PDM_D5"
 		(shape bidirectional)
-		(at 398.78 698.5 270)
+		(at 398.78 601.98 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "47f6d3e0-8680-aa6b-7414-6e205f26bc05")
+		(uuid "afc56154-8a6e-73c3-83d1-2566056b1bfd")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 698.5 0)
+			(at 398.78 601.98 0)
 			(hide yes)
 			(effects
 				(font
@@ -15311,16 +15212,16 @@
 	)
 	(global_label "PDM_D6"
 		(shape bidirectional)
-		(at 398.78 713.74 270)
+		(at 398.78 617.22 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "7d9841f2-ac4b-1d79-b36b-9eab857789f3")
+		(uuid "67341669-9a95-4c87-6eb1-aa912596fc8e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 713.74 0)
+			(at 398.78 617.22 0)
 			(hide yes)
 			(effects
 				(font
@@ -15331,16 +15232,16 @@
 	)
 	(global_label "PDM_D7"
 		(shape bidirectional)
-		(at 398.78 728.98 270)
+		(at 398.78 632.46 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "cb4fcf4b-81d3-5f7a-e35b-e75b7ca96409")
+		(uuid "2a5f7065-b2f0-b518-f3e1-9c307ce02cc9")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 728.98 0)
+			(at 398.78 632.46 0)
 			(hide yes)
 			(effects
 				(font
@@ -15351,16 +15252,16 @@
 	)
 	(global_label "HOST_STATUS"
 		(shape bidirectional)
-		(at 398.78 744.22 270)
+		(at 398.78 647.7 270)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify right)
 		)
-		(uuid "da8eae48-839f-759b-f457-c1470819cb39")
+		(uuid "b60ce4bb-5286-b319-3f66-ef07072e63ea")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 398.78 744.22 0)
+			(at 398.78 647.7 0)
 			(hide yes)
 			(effects
 				(font
@@ -15945,21 +15846,9 @@
 		)
 		(uuid "ae1cdb04-83ea-8574-5fbb-6c9ed210678f")
 	)
-	(text "Mounting holes"
-		(exclude_from_sim no)
-		(at 365.76 421.32 0)
-		(effects
-			(font
-				(size 2 2)
-				(bold yes)
-			)
-			(justify left bottom)
-		)
-		(uuid "24482a42-8142-0725-a3c7-c6faa209e3f3")
-	)
 	(text "Test points TP1-TP8"
 		(exclude_from_sim no)
-		(at 365.76 517.84 0)
+		(at 365.76 421.32 0)
 		(effects
 			(font
 				(size 2 2)
@@ -15971,7 +15860,7 @@
 	)
 	(text "Test points TP9-TP14"
 		(exclude_from_sim no)
-		(at 365.76 655 0)
+		(at 365.76 558.48 0)
 		(effects
 			(font
 				(size 2 2)
@@ -26335,7 +26224,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical"
+		(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical"
 			(at 398.78 386.08 0)
 			(hide yes)
 			(effects
@@ -26450,252 +26339,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Mechanical:MountingHole")
-		(at 398.78 434.34 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "b85edb01-f1c7-6eb1-2c5e-edf0d9e0b91e")
-		(property "Reference" "H1"
-			(at 398.78 429.26 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "M3"
-			(at 398.78 439.42 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-			(at 398.78 434.34 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 398.78 434.34 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "M3 mounting hole"
-			(at 398.78 434.34 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(instances
-			(project "microphone_array_v2"
-				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
-					(reference "H1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Mechanical:MountingHole")
-		(at 398.78 454.66 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "c172ca45-b118-af19-7345-440fd25eb454")
-		(property "Reference" "H2"
-			(at 398.78 449.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "M3"
-			(at 398.78 459.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-			(at 398.78 454.66 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 398.78 454.66 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "M3 mounting hole"
-			(at 398.78 454.66 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(instances
-			(project "microphone_array_v2"
-				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
-					(reference "H2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Mechanical:MountingHole")
-		(at 398.78 474.98 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "1e090519-a3d8-78db-bb9c-fdf8f5010ebe")
-		(property "Reference" "H3"
-			(at 398.78 469.9 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "M3"
-			(at 398.78 480.06 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-			(at 398.78 474.98 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 398.78 474.98 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "M3 mounting hole"
-			(at 398.78 474.98 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(instances
-			(project "microphone_array_v2"
-				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
-					(reference "H3")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Mechanical:MountingHole")
-		(at 398.78 495.3 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "6d7b4432-d476-bee3-3695-6b3b55a5e12e")
-		(property "Reference" "H4"
-			(at 398.78 490.22 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "M3"
-			(at 398.78 500.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-			(at 398.78 495.3 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 398.78 495.3 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "M3 mounting hole"
-			(at 398.78 495.3 0)
-			(hide yes)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(instances
-			(project "microphone_array_v2"
-				(path "/542ebc9c-55cd-767f-dcff-872aca4eb5a9"
-					(reference "H4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 528.32 0)
+		(at 398.78 431.8 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -26703,7 +26348,7 @@
 		(dnp no)
 		(uuid "a84d76fb-361c-1982-adb6-8b433ef4164f")
 		(property "Reference" "TP1"
-			(at 398.78 525.78 0)
+			(at 398.78 429.26 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26711,7 +26356,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 398.78 530.86 0)
+			(at 398.78 434.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26719,7 +26364,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk"
-			(at 398.78 528.32 0)
+			(at 398.78 431.8 0)
 			(hide yes)
 			(effects
 				(font
@@ -26728,7 +26373,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 528.32 0)
+			(at 398.78 431.8 0)
 			(hide yes)
 			(effects
 				(font
@@ -26737,7 +26382,7 @@
 			)
 		)
 		(property "Description" "test point on +5V"
-			(at 398.78 528.32 0)
+			(at 398.78 431.8 0)
 			(hide yes)
 			(effects
 				(font
@@ -26759,7 +26404,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 543.56 0)
+		(at 398.78 447.04 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -26767,7 +26412,7 @@
 		(dnp no)
 		(uuid "0ecd31b8-6df5-98e3-8a00-dcc9c5567389")
 		(property "Reference" "TP2"
-			(at 398.78 541.02 0)
+			(at 398.78 444.5 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26775,7 +26420,7 @@
 			)
 		)
 		(property "Value" "+3V3A"
-			(at 398.78 546.1 0)
+			(at 398.78 449.58 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26783,7 +26428,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 543.56 0)
+			(at 398.78 447.04 0)
 			(hide yes)
 			(effects
 				(font
@@ -26792,7 +26437,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 543.56 0)
+			(at 398.78 447.04 0)
 			(hide yes)
 			(effects
 				(font
@@ -26801,7 +26446,7 @@
 			)
 		)
 		(property "Description" "test point on +3V3A"
-			(at 398.78 543.56 0)
+			(at 398.78 447.04 0)
 			(hide yes)
 			(effects
 				(font
@@ -26823,7 +26468,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 558.8 0)
+		(at 398.78 462.28 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -26831,7 +26476,7 @@
 		(dnp no)
 		(uuid "1b831e53-155a-b137-fb53-fc529fa67ad8")
 		(property "Reference" "TP3"
-			(at 398.78 556.26 0)
+			(at 398.78 459.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26839,7 +26484,7 @@
 			)
 		)
 		(property "Value" "+3V3_CLK"
-			(at 398.78 561.34 0)
+			(at 398.78 464.82 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26847,7 +26492,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 558.8 0)
+			(at 398.78 462.28 0)
 			(hide yes)
 			(effects
 				(font
@@ -26856,7 +26501,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 558.8 0)
+			(at 398.78 462.28 0)
 			(hide yes)
 			(effects
 				(font
@@ -26865,7 +26510,7 @@
 			)
 		)
 		(property "Description" "test point on +3V3_CLK"
-			(at 398.78 558.8 0)
+			(at 398.78 462.28 0)
 			(hide yes)
 			(effects
 				(font
@@ -26887,7 +26532,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 574.04 0)
+		(at 398.78 477.52 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -26895,7 +26540,7 @@
 		(dnp no)
 		(uuid "90940799-e744-f132-135f-3be2643e5ded")
 		(property "Reference" "TP4"
-			(at 398.78 571.5 0)
+			(at 398.78 474.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26903,7 +26548,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 398.78 576.58 0)
+			(at 398.78 480.06 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26911,7 +26556,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 574.04 0)
+			(at 398.78 477.52 0)
 			(hide yes)
 			(effects
 				(font
@@ -26920,7 +26565,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 574.04 0)
+			(at 398.78 477.52 0)
 			(hide yes)
 			(effects
 				(font
@@ -26929,7 +26574,7 @@
 			)
 		)
 		(property "Description" "test point on GND"
-			(at 398.78 574.04 0)
+			(at 398.78 477.52 0)
 			(hide yes)
 			(effects
 				(font
@@ -26951,7 +26596,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 589.28 0)
+		(at 398.78 492.76 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -26959,7 +26604,7 @@
 		(dnp no)
 		(uuid "c779f88a-a21f-fecf-f344-7bd12adb7c9b")
 		(property "Reference" "TP5"
-			(at 398.78 586.74 0)
+			(at 398.78 490.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26967,7 +26612,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 398.78 591.82 0)
+			(at 398.78 495.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -26975,7 +26620,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 589.28 0)
+			(at 398.78 492.76 0)
 			(hide yes)
 			(effects
 				(font
@@ -26984,7 +26629,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 589.28 0)
+			(at 398.78 492.76 0)
 			(hide yes)
 			(effects
 				(font
@@ -26993,7 +26638,7 @@
 			)
 		)
 		(property "Description" "test point on GND"
-			(at 398.78 589.28 0)
+			(at 398.78 492.76 0)
 			(hide yes)
 			(effects
 				(font
@@ -27015,7 +26660,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 604.52 0)
+		(at 398.78 508 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27023,7 +26668,7 @@
 		(dnp no)
 		(uuid "7c7fcfd9-eaf8-c9b5-5439-c030eb78b903")
 		(property "Reference" "TP6"
-			(at 398.78 601.98 0)
+			(at 398.78 505.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27031,7 +26676,7 @@
 			)
 		)
 		(property "Value" "PDM_D0"
-			(at 398.78 607.06 0)
+			(at 398.78 510.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27039,7 +26684,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 604.52 0)
+			(at 398.78 508 0)
 			(hide yes)
 			(effects
 				(font
@@ -27048,7 +26693,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 604.52 0)
+			(at 398.78 508 0)
 			(hide yes)
 			(effects
 				(font
@@ -27057,7 +26702,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D0"
-			(at 398.78 604.52 0)
+			(at 398.78 508 0)
 			(hide yes)
 			(effects
 				(font
@@ -27079,7 +26724,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 619.76 0)
+		(at 398.78 523.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27087,7 +26732,7 @@
 		(dnp no)
 		(uuid "bb6f9789-0ed6-4b7e-eefd-8287190c6213")
 		(property "Reference" "TP7"
-			(at 398.78 617.22 0)
+			(at 398.78 520.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27095,7 +26740,7 @@
 			)
 		)
 		(property "Value" "PDM_D1"
-			(at 398.78 622.3 0)
+			(at 398.78 525.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27103,7 +26748,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 619.76 0)
+			(at 398.78 523.24 0)
 			(hide yes)
 			(effects
 				(font
@@ -27112,7 +26757,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 619.76 0)
+			(at 398.78 523.24 0)
 			(hide yes)
 			(effects
 				(font
@@ -27121,7 +26766,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D1"
-			(at 398.78 619.76 0)
+			(at 398.78 523.24 0)
 			(hide yes)
 			(effects
 				(font
@@ -27143,7 +26788,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 635 0)
+		(at 398.78 538.48 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27151,7 +26796,7 @@
 		(dnp no)
 		(uuid "3f69938c-1585-5451-933a-312892a1fe45")
 		(property "Reference" "TP8"
-			(at 398.78 632.46 0)
+			(at 398.78 535.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27159,7 +26804,7 @@
 			)
 		)
 		(property "Value" "PDM_D2"
-			(at 398.78 637.54 0)
+			(at 398.78 541.02 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27167,7 +26812,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 635 0)
+			(at 398.78 538.48 0)
 			(hide yes)
 			(effects
 				(font
@@ -27176,7 +26821,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 635 0)
+			(at 398.78 538.48 0)
 			(hide yes)
 			(effects
 				(font
@@ -27185,7 +26830,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D2"
-			(at 398.78 635 0)
+			(at 398.78 538.48 0)
 			(hide yes)
 			(effects
 				(font
@@ -27207,7 +26852,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 665.48 0)
+		(at 398.78 568.96 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27215,7 +26860,7 @@
 		(dnp no)
 		(uuid "55e1efa8-44d2-a5be-113d-b85ca5b3cf15")
 		(property "Reference" "TP9"
-			(at 398.78 662.94 0)
+			(at 398.78 566.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27223,7 +26868,7 @@
 			)
 		)
 		(property "Value" "PDM_D3"
-			(at 398.78 668.02 0)
+			(at 398.78 571.5 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27231,7 +26876,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 665.48 0)
+			(at 398.78 568.96 0)
 			(hide yes)
 			(effects
 				(font
@@ -27240,7 +26885,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 665.48 0)
+			(at 398.78 568.96 0)
 			(hide yes)
 			(effects
 				(font
@@ -27249,7 +26894,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D3"
-			(at 398.78 665.48 0)
+			(at 398.78 568.96 0)
 			(hide yes)
 			(effects
 				(font
@@ -27271,7 +26916,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 680.72 0)
+		(at 398.78 584.2 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27279,7 +26924,7 @@
 		(dnp no)
 		(uuid "c0b56969-1f3e-0032-f440-efa33c961a26")
 		(property "Reference" "TP10"
-			(at 398.78 678.18 0)
+			(at 398.78 581.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27287,7 +26932,7 @@
 			)
 		)
 		(property "Value" "PDM_D4"
-			(at 398.78 683.26 0)
+			(at 398.78 586.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27295,7 +26940,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 680.72 0)
+			(at 398.78 584.2 0)
 			(hide yes)
 			(effects
 				(font
@@ -27304,7 +26949,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 680.72 0)
+			(at 398.78 584.2 0)
 			(hide yes)
 			(effects
 				(font
@@ -27313,7 +26958,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D4"
-			(at 398.78 680.72 0)
+			(at 398.78 584.2 0)
 			(hide yes)
 			(effects
 				(font
@@ -27335,7 +26980,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 695.96 0)
+		(at 398.78 599.44 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27343,7 +26988,7 @@
 		(dnp no)
 		(uuid "55fd7597-f92a-3093-ddef-198d4789ae0c")
 		(property "Reference" "TP11"
-			(at 398.78 693.42 0)
+			(at 398.78 596.9 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27351,7 +26996,7 @@
 			)
 		)
 		(property "Value" "PDM_D5"
-			(at 398.78 698.5 0)
+			(at 398.78 601.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27359,7 +27004,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 695.96 0)
+			(at 398.78 599.44 0)
 			(hide yes)
 			(effects
 				(font
@@ -27368,7 +27013,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 695.96 0)
+			(at 398.78 599.44 0)
 			(hide yes)
 			(effects
 				(font
@@ -27377,7 +27022,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D5"
-			(at 398.78 695.96 0)
+			(at 398.78 599.44 0)
 			(hide yes)
 			(effects
 				(font
@@ -27399,7 +27044,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 711.2 0)
+		(at 398.78 614.68 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27407,7 +27052,7 @@
 		(dnp no)
 		(uuid "026ba240-e5a9-e141-051e-6ff32759ebfc")
 		(property "Reference" "TP12"
-			(at 398.78 708.66 0)
+			(at 398.78 612.14 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27415,7 +27060,7 @@
 			)
 		)
 		(property "Value" "PDM_D6"
-			(at 398.78 713.74 0)
+			(at 398.78 617.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27423,7 +27068,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 711.2 0)
+			(at 398.78 614.68 0)
 			(hide yes)
 			(effects
 				(font
@@ -27432,7 +27077,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 711.2 0)
+			(at 398.78 614.68 0)
 			(hide yes)
 			(effects
 				(font
@@ -27441,7 +27086,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D6"
-			(at 398.78 711.2 0)
+			(at 398.78 614.68 0)
 			(hide yes)
 			(effects
 				(font
@@ -27463,7 +27108,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 726.44 0)
+		(at 398.78 629.92 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27471,7 +27116,7 @@
 		(dnp no)
 		(uuid "3c8439bd-7829-6c8c-6e81-060048b39b80")
 		(property "Reference" "TP13"
-			(at 398.78 723.9 0)
+			(at 398.78 627.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27479,7 +27124,7 @@
 			)
 		)
 		(property "Value" "PDM_D7"
-			(at 398.78 728.98 0)
+			(at 398.78 632.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27487,7 +27132,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.5mm_NoSilk"
-			(at 398.78 726.44 0)
+			(at 398.78 629.92 0)
 			(hide yes)
 			(effects
 				(font
@@ -27496,7 +27141,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 726.44 0)
+			(at 398.78 629.92 0)
 			(hide yes)
 			(effects
 				(font
@@ -27505,7 +27150,7 @@
 			)
 		)
 		(property "Description" "test point on PDM_D7"
-			(at 398.78 726.44 0)
+			(at 398.78 629.92 0)
 			(hide yes)
 			(effects
 				(font
@@ -27527,7 +27172,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 398.78 741.68 0)
+		(at 398.78 645.16 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -27535,7 +27180,7 @@
 		(dnp no)
 		(uuid "478e384c-9f28-5c07-12f5-6f38ee9f1304")
 		(property "Reference" "TP14"
-			(at 398.78 739.14 0)
+			(at 398.78 642.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27543,7 +27188,7 @@
 			)
 		)
 		(property "Value" "HOST_STATUS"
-			(at 398.78 744.22 0)
+			(at 398.78 647.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -27551,7 +27196,7 @@
 			)
 		)
 		(property "Footprint" "MicArrayV2:TestPoint_Pad_D1.0mm_NoSilk"
-			(at 398.78 741.68 0)
+			(at 398.78 645.16 0)
 			(hide yes)
 			(effects
 				(font
@@ -27560,7 +27205,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 398.78 741.68 0)
+			(at 398.78 645.16 0)
 			(hide yes)
 			(effects
 				(font
@@ -27569,7 +27214,7 @@
 			)
 		)
 		(property "Description" "test point on HOST_STATUS"
-			(at 398.78 741.68 0)
+			(at 398.78 645.16 0)
 			(hide yes)
 			(effects
 				(font

@@ -41,14 +41,14 @@
     "cpl": "generated/release/cpl.csv",
     "position_tolerance_mm": 0.01,
     "cpl_fields": {
-      "designator": "Designator",
-      "x": "Mid X",
-      "y": "Mid Y",
-      "side": "Layer",
-      "rotation": "Rotation"
+      "designator": "Ref",
+      "x": "PosX",
+      "y": "PosY",
+      "side": "Side",
+      "rotation": "Rot"
     },
     "cpl_origin": {
-      "frame": "drill/plot origin at the page origin",
+      "frame": "absolute page origin",
       "offset_mm": [
         0.0,
         0.0
@@ -60,7 +60,8 @@
       "--no-protel-ext",
       "--use-drill-file-origin",
       "--subtract-soldermask"
-    ]
+    ],
+    "note": "These describe what the clean-room release writes. They used to describe tools/make_release.py, which derived the BOM and CPL from the Python model and has been retired for exactly that reason; the two layouts differ in field names and in origin, so a stale description reads every placement as wrong."
   },
   "checks": {
     "description": "The mandatory ERC/DRC options, severities and exit-code meanings are defined and verified by the validator (pcbqa.gates.g_checks), not here: a board that could relax them could pass a check it never ran. Only additional board-specific options belong in this block.",
@@ -390,8 +391,9 @@
       },
       {
         "file_function": "Drill/nonplated",
-        "require_payload": true,
-        "min_count": 1
+        "require_payload": false,
+        "min_count": 1,
+        "note": "The board has no non-plated holes: it carries no mounting holes, because it hangs from J1 on the Raspberry Pi's P1 pins and the Pi's own holes are two on revision 2.0 and none on revision 1.0. KiCad still emits the file, and it still has to be in the archive and named correctly - it just has nothing in it. Requiring payload here would mean adding a hole the design does not want."
       },
       {
         "file_function": "JobFile",
@@ -427,97 +429,66 @@
   },
   "waivers": [
     {
-      "id": "+3V3_CLK-track-not-centred-on-via-0596c92c",
+      "id": "PI_STATUS-track-not-centred-on-via-3606f0c0",
       "gate": "DRC.AUTHORITATIVE",
       "rule": "track_not_centered_on_via",
       "category": "violations",
       "items": [
         {
-          "description": "Track [+3V3_CLK] on F.Cu, length 0.8485 mm",
-          "uuid": "15a7e4fc-0171-487a-a549-9a0db30f731c",
+          "description": "Track [PI_STATUS] on F.Cu, length 0.2828 mm",
+          "uuid": "8b2ff47b-d876-43e4-8503-8808b63c1cde",
           "location_mm": [
-            154.6,
-            156.6
+            153.7,
+            183.2
           ]
         },
         {
-          "description": "Via [+3V3_CLK] on F.Cu - B.Cu",
-          "uuid": "0596c92c-6d7e-4fc9-83f3-9eb0b4fc705c",
+          "description": "Via [PI_STATUS] on F.Cu - B.Cu",
+          "uuid": "3606f0c0-911b-4048-95fb-8c4ceb246831",
           "location_mm": [
-            155.2,
-            155.9
+            153.8,
+            183.2
           ]
         }
       ],
       "reason": "The track ends one step of the router's own grid - 0.1 mm - from the via centre it connects to: a 0.2 mm track well inside a 0.45 mm annulus, overlapping it by more than the track's full width, connected and clear. What fails is the style rule that an entry be centred, not the connection. Every ordinary net on this board is routed by KiCad Routing Tools, which offers no setting to centre a terminal, and the only other correction is to move routed copper by hand, which this board's process forbids. Bound to this exact track and via on this exact revision: if either moves, or the board, rules, command or findings change, the waiver stops matching and the finding blocks again.",
       "reviewed_by": "pentolope",
-      "reviewed_utc": "2026-08-06T23:00:26Z",
-      "approved_source_sha256": "852bad5e3c63958140f8cf6209b8f2195a1dea77d4e404ee0f22b03f69e12969",
+      "reviewed_utc": "2026-08-07T01:19:46Z",
+      "approved_source_sha256": "9ddb432333d39293ecb6979d842bef17efb9f38816494ef6f0fb7cf6e8c26f4f",
       "approved_rules_sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027",
       "approved_command_sha256": "43c9102d9070ee5dbd74ea47655436ded2fd2b0db4dd53931bad3d4f0556236b",
-      "approved_report_sha256": "961b76a5377a4c4fb6c58719fba5d0b8d9cac309368ae9ef842371c5e47dd295"
+      "approved_report_sha256": "591ac156dccb6b11881891a0ec4ca90c49051282632143b8521016bba4072025"
     },
     {
-      "id": "+3V3_CLK-track-not-centred-on-via-13499483",
+      "id": "HOST_RESET_N-track-not-centred-on-via-cd18f18d",
       "gate": "DRC.AUTHORITATIVE",
       "rule": "track_not_centered_on_via",
       "category": "violations",
       "items": [
         {
-          "description": "Track [+3V3_CLK] on F.Cu, length 0.7071 mm",
-          "uuid": "bdbf491a-2f99-434a-9c5a-43fcdb378ab6",
+          "description": "Track [HOST_RESET_N] on B.Cu, length 9.6167 mm",
+          "uuid": "c546d56f-f70c-4060-85bf-588b825551ee",
           "location_mm": [
-            155.2,
-            150.5
-          ]
-        },
-        {
-          "description": "Via [+3V3_CLK] on F.Cu - B.Cu",
-          "uuid": "13499483-d0ab-45c1-b500-1c7367ad24c8",
-          "location_mm": [
-            155.2,
-            150.6
-          ]
-        }
-      ],
-      "reason": "The track ends one step of the router's own grid - 0.1 mm - from the via centre it connects to: a 0.2 mm track well inside a 0.45 mm annulus, overlapping it by more than the track's full width, connected and clear. What fails is the style rule that an entry be centred, not the connection. Every ordinary net on this board is routed by KiCad Routing Tools, which offers no setting to centre a terminal, and the only other correction is to move routed copper by hand, which this board's process forbids. Bound to this exact track and via on this exact revision: if either moves, or the board, rules, command or findings change, the waiver stops matching and the finding blocks again.",
-      "reviewed_by": "pentolope",
-      "reviewed_utc": "2026-08-06T23:00:26Z",
-      "approved_source_sha256": "852bad5e3c63958140f8cf6209b8f2195a1dea77d4e404ee0f22b03f69e12969",
-      "approved_rules_sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027",
-      "approved_command_sha256": "43c9102d9070ee5dbd74ea47655436ded2fd2b0db4dd53931bad3d4f0556236b",
-      "approved_report_sha256": "961b76a5377a4c4fb6c58719fba5d0b8d9cac309368ae9ef842371c5e47dd295"
-    },
-    {
-      "id": "HOST_RESET_N-track-not-centred-on-via-fcd60631",
-      "gate": "DRC.AUTHORITATIVE",
-      "rule": "track_not_centered_on_via",
-      "category": "violations",
-      "items": [
-        {
-          "description": "Track [HOST_RESET_N] on B.Cu, length 0.7071 mm",
-          "uuid": "67bd7455-35cf-47b3-b107-9a19abf76f2b",
-          "location_mm": [
-            130.1,
-            164.0
+            141.8,
+            168.2
           ]
         },
         {
           "description": "Via [HOST_RESET_N] on F.Cu - B.Cu",
-          "uuid": "fcd60631-0a0e-4fd5-824a-938cc4d6a67e",
+          "uuid": "cd18f18d-2541-4c9b-8958-6dd9410c0920",
           "location_mm": [
-            130.0,
-            164.0
+            141.8,
+            168.3
           ]
         }
       ],
       "reason": "The track ends one step of the router's own grid - 0.1 mm - from the via centre it connects to: a 0.2 mm track well inside a 0.45 mm annulus, overlapping it by more than the track's full width, connected and clear. What fails is the style rule that an entry be centred, not the connection. Every ordinary net on this board is routed by KiCad Routing Tools, which offers no setting to centre a terminal, and the only other correction is to move routed copper by hand, which this board's process forbids. Bound to this exact track and via on this exact revision: if either moves, or the board, rules, command or findings change, the waiver stops matching and the finding blocks again.",
       "reviewed_by": "pentolope",
-      "reviewed_utc": "2026-08-06T23:00:26Z",
-      "approved_source_sha256": "852bad5e3c63958140f8cf6209b8f2195a1dea77d4e404ee0f22b03f69e12969",
+      "reviewed_utc": "2026-08-07T01:19:46Z",
+      "approved_source_sha256": "9ddb432333d39293ecb6979d842bef17efb9f38816494ef6f0fb7cf6e8c26f4f",
       "approved_rules_sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027",
       "approved_command_sha256": "43c9102d9070ee5dbd74ea47655436ded2fd2b0db4dd53931bad3d4f0556236b",
-      "approved_report_sha256": "961b76a5377a4c4fb6c58719fba5d0b8d9cac309368ae9ef842371c5e47dd295"
+      "approved_report_sha256": "591ac156dccb6b11881891a0ec4ca90c49051282632143b8521016bba4072025"
     }
   ],
   "geometry_profile": {

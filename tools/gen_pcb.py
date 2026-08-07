@@ -249,8 +249,12 @@ def build(project_root, with_escapes=True):
         strap_count += route_power_block(board, placed, pin_net, net_items)
         # The clock spine before the branches: both are declared critical, and
         # the spine has one corridor each way while a branch has hundreds.
+        # Taps first: each clamp pin has one way off its pad and a short list
+        # of columns to turn up in, while the bias rail between the two arrays
+        # can go almost anywhere. The one with no choice chooses first.
+        strap_count += reserve_esd_ground(board, placed, pin_net, net_items)
+        strap_count += route_esd_taps(board, placed, pin_net, net_items)
         strap_count += route_esd_bias_link(board, placed, pin_net, net_items)
-        strap_count += route_esd_escapes(board, placed, pin_net, net_items)
         strap_count += route_master_clock(board, placed, pin_net, net_items)
         strap_count += route_clock_root(board, placed, pin_net, net_items)
         strap_count += route_clock_branches(board, placed, pin_net, net_items)
@@ -696,6 +700,9 @@ _CHOICE = [None]
 # Every track object laid down, in order, so a routine that needs to try
 # something and learn from it can put the board back exactly as it found it.
 _ADDED = []
+# Ground pads whose stitching via was placed early, before the copper that
+# would otherwise have taken the only spot it had.
+_STITCHED = set()
 
 
 def drop_redundant_copper(board):
@@ -761,6 +768,7 @@ def mark_copper():
 
 def reset_short_guard(board):
     del _PLACED[:], _PLACED_VIAS[:], _PADS[:], REFUSED[:], _ADDED[:]
+    _STITCHED.clear()
     for footprint in board.Footprints():
         for pad in footprint.Pads():
             position = pad.GetPosition()
@@ -1305,15 +1313,16 @@ def pin_rows():
     socket_x = [d.tang_socket_x(n) for n in range(1, d.TANG_PINS + 1)]
     header_x = [d.PI_HEADER_POS[0] + 15.24 - 2.54 * k for k in range(13)]
     half = d.TANG_ROW_SPACING / 2.0
-    header_low = d.PI_HEADER_POS[1] + 1.27
-    # (low y, high y, pin x positions). The Pi header is one band, not two
+    # (low y, high y, pin x positions). The host socket is one band, not two
     # rows: its rows are 2.54 mm apart, closer than the clearance a crossing
     # needs on either side, so a track that stepped over them one at a time
-    # zigzagged in and out of the gap between them.
+    # zigzagged in and out of the gap between them. The band comes from the
+    # design's own row positions - a hard-coded one sent every crossing through
+    # the pins the moment the second row moved to the other side.
     return [
         (half, half, socket_x),
         (-half, -half, socket_x),
-        (header_low, header_low + d.TANG_PITCH, header_x),
+        (min(d.PI_HEADER_ROWS), max(d.PI_HEADER_ROWS), header_x),
     ]
 
 
@@ -1449,37 +1458,127 @@ def pad_edge_top(pad):
     return -(pad.GetBoundingBox().GetTop() / 1e6 - d.PAGE_CY)
 
 
-# How far past the end of a SOT-23-6 pad its escape stub runs. Far enough that
-# a route picking the stub up is clear of the neighbouring pads, short enough
-# that it commits nothing about where the net goes next.
-ESD_ESCAPE_MM = 0.55
+# How far past the end of a SOT-23-6 pad a tap turns, nearest first. The pads
+# are 1.325 mm long, so 1.4 mm clears the package's own column and 2.9 mm
+# reaches the lane between the two arrays. The steps are 0.5 mm because two
+# taps off the same column need 0.4 mm between their centre lines - 0.2 mm of
+# track and 0.2 mm of clearance - and 0.35 mm steps left every alternative for
+# the second tap sitting on top of the first.
+# The innermost column is 1.9 mm out, not 1.4: the middle pad of each
+# column is ground, and its stitching via has to sit in the strip between
+# the pads and the first tap. At 1.4 mm that strip is 0.11 mm wide and the
+# via does not fit, which left U4's centre ground pad unstitched.
+ESD_TAP_REACH = (1.90, 2.40, 2.90, 3.40, 3.90)
 
 
-def route_esd_escapes(board, placed, pin_net, net_items):
-    """Give each ESD-array signal pad a straight escape along its own axis.
+def reserve_esd_ground(board, placed, pin_net, net_items):
+    """Stitch the ESD arrays' ground pads before anything else needs that space.
 
-    Declared fanout. A SOT-23-6 pad is 0.95 mm from its neighbour, and the
-    router measures a graze against a circle drawn round the whole pad, so it
-    reads any track ending on one pad as grazing the next and narrows it to
-    0.0998 mm to clear something that was never in the way - below the 0.127 mm
-    this board is built to. A stub on the pad's own axis, laid at the net's
-    real width and locked, gives the route somewhere to start that is already
-    clear of the neighbours.
+    The centre pad of each column on a SOT-23-6 is ground, and it has one way
+    out: straight along its own axis, into a strip a couple of millimetres
+    wide. The clamp taps leaving the pads either side of it want the same
+    strip, and they have four columns and a diagonal to choose from. Whichever
+    is laid first keeps its place, so it should be the one with no alternative
+    - stitch these two pads now and let the taps route around the vias.
     """
+    model = clearance_model(board, rebuild=True)
     count = 0
     for ref in ("U3", "U4"):
         footprint = placed[ref]
         centre = footprint.GetPosition()
         for pad in footprint.Pads():
-            name = pin_net.get((ref, pad.GetNumber()))
-            if name in (None, "GND", "TANG_3V3"):
-                continue        # ground stitches; the bias rail is linked above
+            if pin_net.get((ref, pad.GetNumber())) != "GND":
+                continue
             position = pad.GetPosition()
-            reach = pad.GetSize().x / 2.0 + mm(ESD_ESCAPE_MM)
-            step = reach if position.x >= centre.x else -reach
-            end = pcbnew.VECTOR2I(int(position.x + step), position.y)
-            count += add_track(board, net_items[name], pcbnew.F_Cu,
-                               net_track_width(name), [position, end])
+            outward = 1.0 if position.x >= centre.x else -1.0
+            preferred = pcbnew.VECTOR2I(
+                int(position.x + outward * mm(1.05)), position.y)
+            target = legalise_stitch(model, position, preferred, VIA_DIAMETER,
+                                     VIA_DRILL, 0.3, "front")
+            if target is None:
+                continue
+            add_via(board, net_items["GND"], target)
+            count += add_track(board, net_items["GND"], pcbnew.F_Cu, 0.3,
+                               [position, target])
+            model.add_via(mm_to_f(target.x), mm_to_f(target.y), VIA_DIAMETER,
+                          VIA_DRILL, "GND")
+            model.add_track(mm_to_f(position.x), mm_to_f(position.y),
+                            mm_to_f(target.x), mm_to_f(target.y), 0.3, "GND",
+                            "front")
+            _STITCHED.add((ref, pad.GetNumber()))
+    return count
+
+
+def route_esd_taps(board, placed, pin_net, net_items):
+    """Route each host line from its series resistor to its ESD clamp pin.
+
+    Declared local geometry, and the whole of it rather than a stub. A
+    SOT-23-6 pad is 0.95 mm from its neighbour and the router measures a graze
+    against a circle drawn round the entire pad, so it reads any track ending
+    on one pad as grazing the next and narrows itself to 0.0998 mm to clear
+    something that was never there - below the 0.127 mm this board is built to.
+    Handing it a 0.55 mm stub to start from fixed that, and left a stub
+    dangling on whichever pads the router then chose to approach from the other
+    side. Generating the link end to end leaves it nothing to get wrong: the
+    clamp pins stop being terminals for the router, which only has to bring
+    each line from the host socket to the resistor.
+
+    The tap is a stub off the line and wants to be short - a clamp on a 25 MHz
+    SPI net is a capacitance at the end of a spur. Each one leaves its pad
+    along the pad's own axis, which is the only way off a SOT-23-6, and turns
+    up to the resistor row in the gap beside the package.
+    """
+    # Which column each tap turns up in is decided, not searched. Two signal
+    # pads share each side of each package, and their taps run side by side up
+    # to the same resistor row; whichever pad is further from that row has to
+    # turn up further out, or the two cross. Searching for a free column gets
+    # this right only when the pads happen to be routed in the right order.
+    order = {}
+    for _p, _b, _u, _res, esd_ref, esd_pin in d.HOST_SIGNALS:
+        pad = pad_at(placed, esd_ref, esd_pin)
+        package = placed[esd_ref].GetPosition()
+        side = "right" if pad.x >= package.x else "left"
+        order.setdefault((esd_ref, side), []).append(
+            (abs(design_y(pad) - d.HOST_RESISTOR_ROW_Y), esd_pin))
+    rank = {}
+    for (esd_ref, _side), pads in order.items():
+        for index, (_distance, esd_pin) in enumerate(sorted(pads)):
+            rank[(esd_ref, esd_pin)] = index
+
+    count = 0
+    for _pi_net, _board_net, _unused, res, esd_ref, esd_pin in d.HOST_SIGNALS:
+        name = pin_net[(esd_ref, esd_pin)]
+        pad = pad_at(placed, esd_ref, esd_pin)
+        resistor = pad_at(placed, res, 1)
+        package = placed[esd_ref].GetPosition()
+        outward = 1.0 if pad.x >= package.x else -1.0
+        width = net_track_width(name)
+        nearest = rank[(esd_ref, esd_pin)]
+        reaches = ([ESD_TAP_REACH[nearest]]
+                   + [r for i, r in enumerate(ESD_TAP_REACH) if i != nearest])
+        alternatives = []
+        for reach in reaches:
+            leave_x = design_x(pad) + outward * reach
+            corner = vec(*d.to_kicad(leave_x, design_y(pad)))
+            # Straight for the resistor once clear of the package. Climbing to
+            # the resistor row first and running along it means a tap whose
+            # resistor sits back the other way doubles back across its
+            # neighbour's column - which is how both pads on U4's left side
+            # ended up crossing.
+            alternatives.append([polyline_45([pad, corner, resistor])])
+            alternatives.append([polyline_45([
+                pad, corner,
+                vec(*d.to_kicad(leave_x, design_y(resistor))),
+                resistor])])
+        # And, last, straight from the pad to the resistor - but only from the
+        # row nearest the resistors. From the far row that diagonal passes
+        # within a pad's width of the neighbour above, which is where that
+        # neighbour's ground via has to go; PI_IRQ took it and left U4's centre
+        # ground pad with nowhere to stitch.
+        if nearest == 0:
+            alternatives.append([polyline_45([pad, resistor])])
+        count += try_paths(board, net_items[name], pcbnew.F_Cu, width,
+                           alternatives)
     return count
 
 
@@ -1496,8 +1595,35 @@ def route_esd_bias_link(board, placed, pin_net, net_items):
     """
     source = pad_at(placed, "U3", 5)
     target = pad_at(placed, "U4", 5)
-    return add_track(board, net_items["TANG_3V3"], pcbnew.F_Cu,
-                     net_track_width("TANG_3V3"), [source, target])
+    # Over the top of U4, not straight across: the two bias pins are on the
+    # same row, and a straight line between them runs through U4's own pad 2.
+    # A SOT-23-6 leaves 0.35 mm between neighbouring pads, so nothing passes
+    # between them; the lane above the package is clear from the ESD row up to
+    # the host resistors.
+    # Sideways off the pad before anything else. Pads 4, 5 and 6 share a
+    # column, so leaving pad 5 towards the resistors runs into pad 6; the only
+    # way off a middle pad on a SOT-23-6 is straight out along its own axis.
+    #
+    # Under the arrays rather than over them. The lane above is the one every
+    # clamp tap climbs to reach its series resistor, and a rail across it fences
+    # four of the eight off from their resistors; below, between the packages
+    # and the host socket, nothing else needs to pass.
+    lane_y = d.ESD_ROW_Y - 2.10
+    # Down the corridor between each package's two pad columns, not out past
+    # them. Every clamp tap leaves its pad sideways and climbs north, so the
+    # whole outside of each array is spoken for; the 0.95 mm gap under the body
+    # is not, and a 0.25 mm rail with 0.2 mm clearance fits it with room over.
+    leave_x = design_x(placed["U3"].GetPosition())
+    approach_x = design_x(placed["U4"].GetPosition())
+    return try_paths(board, net_items["TANG_3V3"], pcbnew.F_Cu,
+                     net_track_width("TANG_3V3"),
+                     [[polyline_45([
+                         source,
+                         vec(*d.to_kicad(leave_x, design_y(source))),
+                         vec(*d.to_kicad(leave_x, lane_y)),
+                         vec(*d.to_kicad(approach_x, lane_y)),
+                         vec(*d.to_kicad(approach_x, design_y(target))),
+                         target])]])
 
 
 def route_master_clock(board, placed, pin_net, net_items):
@@ -1974,6 +2100,15 @@ POWER_WIDTH = 0.6
 SIGNAL_WIDTH = 0.2
 INPUT_WIDTH = 0.4
 PI_FEED_LANES = (-21.00, -21.15, -20.85, -21.30)
+# Where the feed turns inward, just past pin 1 of the host socket.
+PI_FEED_ESCAPE_X = (16.75, 16.95, 17.20)
+# Where the feed runs back inward, hugging the top edge of the host socket.
+# It has to stay off -28.8: that is where a clock corridor at x = 19 lands
+# on the 34.5 mm ring, and the branch feeding the bottom of the array has
+# nowhere else to come down. The socket's pads reach -28.34, and this net
+# wants 0.2 mm of half-track and 0.25 mm of clearance, so -27.70 clears
+# both with room to spare.
+PI_FEED_RETURN_Y = -27.70
 # Parts in the power row, whose ground vias must clear the supply bus.
 POWER_ROW_REFS = frozenset(["C1", "C2", "C3", "C4", "C5", "C9", "U1"])
 
@@ -2014,11 +2149,31 @@ def route_power_block(board, placed, pin_net, net_items):
     count += add_track(board, net, pcbnew.F_Cu, POWER_WIDTH,
                        [pad_at(placed, "J1", 2), pad_at(placed, "J1", 4)])
     fuse_x = -23.14
+    # Out past the end of the connector before turning inward. Pins 3 and 4
+    # share a column, and on a socket the even row is the outer one, so a track
+    # leaving pin 4 towards the board centre runs straight into pin 3. Between
+    # two pin columns there is 0.84 mm, and this net wants 0.4 mm of copper
+    # with 0.25 mm either side, so it cannot pass between them either: the only
+    # way off the even row is round the end, where pin 1 is 1.96 mm away.
+    # Hugging the connector matters: the clock branches heading for the bottom
+    # of the array drop through their own corridor at x = 19, and this feed is
+    # laid first, so every millimetre it reaches further out is one the
+    # branches lose. 16.75 leaves 0.66 mm to pin 1's pad, which a 0.4 mm track
+    # with 0.25 mm clearance needs 0.45 of.
+    # Come back inward below the ESD row before climbing to the lane, so the
+    # feed's long run along y = -21 still stops where it always did. Carried
+    # further right it becomes a fence across the one gap the clock branches
+    # heading for the bottom of the array descend through.
     count += try_paths(board, net, pcbnew.F_Cu, INPUT_WIDTH,
-                       [[thread_path([pad_at(placed, "J1", 4),
+                       [[thread_path([pad_at(placed, "J1", 2),
+                                      vec(*d.to_kicad(escape_x,
+                                                      min(d.PI_HEADER_ROWS))),
+                                      vec(*d.to_kicad(escape_x, PI_FEED_RETURN_Y)),
+                                      vec(*d.to_kicad(12.70, PI_FEED_RETURN_Y)),
                                       vec(*d.to_kicad(12.70, lane)),
                                       vec(*d.to_kicad(fuse_x, lane)),
                                       pad_at(placed, "F1", 1)])]
+                        for escape_x in PI_FEED_ESCAPE_X
                         for lane in PI_FEED_LANES])
     count += chain(board, net_items, "5V_FUSED", pcbnew.F_Cu, POWER_WIDTH, [
         ("F1", 2), ("D1", 2)], placed)
@@ -2300,6 +2455,8 @@ def place_ground_stitching(board, placed, pin_net, net_items):
         for pad in footprint.Pads():
             if pin_net.get((ref, pad.GetNumber())) != "GND":
                 continue
+            if (ref, pad.GetNumber()) in _STITCHED:
+                continue  # reserved before the routing that would have boxed it in
             if pad.GetAttribute() == pcbnew.PAD_ATTRIB_PTH:
                 continue  # plated holes already reach both planes
             if ref.startswith("MK") and pad.GetNumber() == "2":

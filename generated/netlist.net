@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\microphone_array_v2.kicad_sch")
-		(date "2026-08-06T15:55:27")
+		(date "2026-08-06T18:06:09")
 		(tool "Eeschema 10.0.5")
 		(sheet
 			(number "1")
@@ -2359,213 +2359,13 @@
 			)
 		)
 		(comp
-			(ref "H1")
-			(value "M3")
-			(footprint "MountingHole:MountingHole_3.2mm_M3")
-			(description "M3 mounting hole")
-			(fields
-				(field
-					(name "Footprint") "MountingHole:MountingHole_3.2mm_M3")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "M3 mounting hole")
-			)
-			(libsource
-				(lib "Mechanical")
-				(part "MountingHole")
-				(description "Mounting Hole without connection")
-			)
-			(property
-				(name "Sheetname")
-				(value "microphone_array_v2")
-			)
-			(property
-				(name "Sheetfile")
-				(value "microphone_array_v2.kicad_sch")
-			)
-			(property
-				(name "exclude_from_bom")
-			)
-			(property
-				(name "ki_keywords")
-				(value "mounting hole")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "MountingHole*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "b85edb01-f1c7-6eb1-2c5e-edf0d9e0b91e")
-			(units
-				(unit
-					(name "A")
-					(pins)
-				)
-			)
-		)
-		(comp
-			(ref "H2")
-			(value "M3")
-			(footprint "MountingHole:MountingHole_3.2mm_M3")
-			(description "M3 mounting hole")
-			(fields
-				(field
-					(name "Footprint") "MountingHole:MountingHole_3.2mm_M3")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "M3 mounting hole")
-			)
-			(libsource
-				(lib "Mechanical")
-				(part "MountingHole")
-				(description "Mounting Hole without connection")
-			)
-			(property
-				(name "Sheetname")
-				(value "microphone_array_v2")
-			)
-			(property
-				(name "Sheetfile")
-				(value "microphone_array_v2.kicad_sch")
-			)
-			(property
-				(name "exclude_from_bom")
-			)
-			(property
-				(name "ki_keywords")
-				(value "mounting hole")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "MountingHole*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "c172ca45-b118-af19-7345-440fd25eb454")
-			(units
-				(unit
-					(name "A")
-					(pins)
-				)
-			)
-		)
-		(comp
-			(ref "H3")
-			(value "M3")
-			(footprint "MountingHole:MountingHole_3.2mm_M3")
-			(description "M3 mounting hole")
-			(fields
-				(field
-					(name "Footprint") "MountingHole:MountingHole_3.2mm_M3")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "M3 mounting hole")
-			)
-			(libsource
-				(lib "Mechanical")
-				(part "MountingHole")
-				(description "Mounting Hole without connection")
-			)
-			(property
-				(name "Sheetname")
-				(value "microphone_array_v2")
-			)
-			(property
-				(name "Sheetfile")
-				(value "microphone_array_v2.kicad_sch")
-			)
-			(property
-				(name "exclude_from_bom")
-			)
-			(property
-				(name "ki_keywords")
-				(value "mounting hole")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "MountingHole*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "1e090519-a3d8-78db-bb9c-fdf8f5010ebe")
-			(units
-				(unit
-					(name "A")
-					(pins)
-				)
-			)
-		)
-		(comp
-			(ref "H4")
-			(value "M3")
-			(footprint "MountingHole:MountingHole_3.2mm_M3")
-			(description "M3 mounting hole")
-			(fields
-				(field
-					(name "Footprint") "MountingHole:MountingHole_3.2mm_M3")
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "M3 mounting hole")
-			)
-			(libsource
-				(lib "Mechanical")
-				(part "MountingHole")
-				(description "Mounting Hole without connection")
-			)
-			(property
-				(name "Sheetname")
-				(value "microphone_array_v2")
-			)
-			(property
-				(name "Sheetfile")
-				(value "microphone_array_v2.kicad_sch")
-			)
-			(property
-				(name "exclude_from_bom")
-			)
-			(property
-				(name "ki_keywords")
-				(value "mounting hole")
-			)
-			(property
-				(name "ki_fp_filters")
-				(value "MountingHole*")
-			)
-			(sheetpath
-				(names "/")
-				(tstamps "/")
-			)
-			(tstamps "6d7b4432-d476-bee3-3695-6b3b55a5e12e")
-			(units
-				(unit
-					(name "A")
-					(pins)
-				)
-			)
-		)
-		(comp
 			(ref "J1")
 			(value "RPi_P1_26")
-			(footprint "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical")
+			(footprint "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical")
 			(description "hand-soldered 26-way header to the 2012 Raspberry Pi P1 header")
 			(fields
 				(field
-					(name "Footprint") "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical")
+					(name "Footprint") "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical")
 				(field
 					(name "Datasheet")
 				)
@@ -9305,28 +9105,6 @@
 			)
 		)
 		(libpart
-			(lib "Mechanical")
-			(part "MountingHole")
-			(description "Mounting Hole without connection")
-			(footprints
-				(fp "MountingHole*")
-			)
-			(fields
-				(field
-					(name "Reference") "H")
-				(field
-					(name "Value") "MountingHole")
-				(field
-					(name "Footprint")
-				)
-				(field
-					(name "Datasheet")
-				)
-				(field
-					(name "Description") "Mounting Hole without connection")
-			)
-		)
-		(libpart
 			(lib "MicArrayV2")
 			(part "LP5907MFX-3.3")
 			(description "250 mA ultra-low-noise 3.3 V LDO, 10 uVrms, 82 dB PSRR at 1 kHz")
@@ -9481,7 +9259,7 @@
 				(field
 					(name "Value") "RPi_P1_26")
 				(field
-					(name "Footprint") "Connector_PinHeader_2.54mm:PinHeader_2x13_P2.54mm_Vertical")
+					(name "Footprint") "Connector_PinSocket_2.54mm:PinSocket_2x13_P2.54mm_Vertical")
 				(field
 					(name "Datasheet")
 				)
@@ -10080,10 +9858,6 @@
 		(library
 			(logical "Device")
 			(uri "${KICAD10_SYMBOL_DIR}/Device.kicad_sym")
-		)
-		(library
-			(logical "Mechanical")
-			(uri "${KICAD10_SYMBOL_DIR}/Mechanical.kicad_sym")
 		)
 		(library
 			(logical "MicArrayV2")
@@ -12390,8 +12164,8 @@
 			)
 			(node
 				(ref "U3")
-				(pin "4")
-				(pinfunction "IO3_4")
+				(pin "6")
+				(pinfunction "IO4_6")
 				(pintype "passive")
 			)
 		)
@@ -12412,8 +12186,8 @@
 			)
 			(node
 				(ref "U4")
-				(pin "1")
-				(pinfunction "IO1_1")
+				(pin "3")
+				(pinfunction "IO2_3")
 				(pintype "passive")
 			)
 		)
@@ -12434,8 +12208,8 @@
 			)
 			(node
 				(ref "U3")
-				(pin "6")
-				(pinfunction "IO4_6")
+				(pin "4")
+				(pinfunction "IO3_4")
 				(pintype "passive")
 			)
 		)
@@ -12456,8 +12230,8 @@
 			)
 			(node
 				(ref "U4")
-				(pin "3")
-				(pinfunction "IO2_3")
+				(pin "1")
+				(pinfunction "IO1_1")
 				(pintype "passive")
 			)
 		)
@@ -12478,8 +12252,8 @@
 			)
 			(node
 				(ref "U3")
-				(pin "1")
-				(pinfunction "IO1_1")
+				(pin "3")
+				(pinfunction "IO2_3")
 				(pintype "passive")
 			)
 		)
@@ -12500,8 +12274,8 @@
 			)
 			(node
 				(ref "U3")
-				(pin "3")
-				(pinfunction "IO2_3")
+				(pin "1")
+				(pinfunction "IO1_1")
 				(pintype "passive")
 			)
 		)
@@ -12522,8 +12296,8 @@
 			)
 			(node
 				(ref "U4")
-				(pin "4")
-				(pinfunction "IO3_4")
+				(pin "6")
+				(pinfunction "IO4_6")
 				(pintype "passive")
 			)
 		)
@@ -12544,8 +12318,8 @@
 			)
 			(node
 				(ref "U4")
-				(pin "6")
-				(pinfunction "IO4_6")
+				(pin "4")
+				(pinfunction "IO3_4")
 				(pintype "passive")
 			)
 		)

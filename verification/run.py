@@ -210,7 +210,13 @@ def _release_attempt(manifest, layout, attempt, profile, mandatory):
             result = by_id.get(gate_id)
             if result is None:
                 blockers.append((gate_id, "MISSING", "mandatory gate did not run"))
-            elif result.status != Status.PASS:
+            elif result.status not in (Status.PASS, Status.ADVISORY):
+                # ADVISORY is a decision the board wrote down: the gate ran, it
+                # found what it found, and the manifest says with reasons that
+                # this finding does not stop a release. It stays on the
+                # mandatory list so it still has to run and still has to be
+                # reported - deleting the manifest's advisory entry is all it
+                # takes to make it block again.
                 blockers.append((gate_id, result.status, result.reason[:110]))
         for r in results:
             if r.status in Status.BLOCKING and r.gate_id not in mandatory:

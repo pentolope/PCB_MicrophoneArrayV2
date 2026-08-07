@@ -308,7 +308,26 @@ class Build:
                         "{} ERC violations".format(violations))
         ok &= self.critical(board, doc, "candidate")
         ok &= self.preserved(board)
+        ok &= self.mechanical(board)
         ok &= self.dfm(board)
+        return ok
+
+    def mechanical(self, board):
+        """The host connector mates, and the stack has room for the module."""
+        import check_host_mating
+        import check_stack
+        ok = True
+        for name, rows in (("host_mating", check_host_mating.check(board)),
+                           ("pi_clearance", check_stack.check(board)[0])):
+            failed = [label for label, passed, _d in rows if not passed]
+            ok &= self.gate(name, not failed,
+                            "{} checks, {} failed{}".format(
+                                len(rows), len(failed),
+                                "; " + ", ".join(failed) if failed else ""))
+            with open(os.path.join(self.root, "reports", name + ".json"), "w",
+                      encoding="utf-8") as fh:
+                json.dump([{"check": label, "pass": passed, "detail": str(detail)}
+                           for label, passed, detail in rows], fh, indent=2)
         return ok
 
     def preserved(self, board):
