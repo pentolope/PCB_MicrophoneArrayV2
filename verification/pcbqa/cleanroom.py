@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import copy
 import fnmatch
+import csv
 import glob
 import hashlib
 import json
@@ -293,6 +294,76 @@ class CleanRun:
             self.blockers.append((f"generate:{name}", "ERROR",
                                   "mandatory release artifact was not generated"))
 
+    # -- stage 3b: put the assembly data in the fab's own columns ----------
+    def format_for_fab(self):
+        """Rewrite the BOM and CPL into the column names the fab expects.
+
+        kicad-cli names its columns for KiCad: `Ref`, `PosX`, `Side`. The
+        assembly house reads `Designator`, `Mid X`, `Layer`, and rejects the
+        file outright when they are absent - "Failed processing CPL file",
+        with nothing to say which column it wanted. The numbers are not
+        touched: every value here comes from the native export, and this only
+        relabels the columns and normalises `top` to `Top`.
+
+        A missing source column blocks the release. Shipping a placement file
+        the fab cannot read is not something to discover at the order desk.
+        """
+        spec = self.cfg.get("fab_format")
+        if not spec:
+            return
+        for kind in ("cpl", "bom"):
+            rules = spec.get(kind)
+            if not rules:
+                continue
+            path = os.path.join(self.release, self.cfg[kind]["output"])
+            if not os.path.isfile(path):
+                continue
+            with open(path, newline="", encoding="utf-8") as fh:
+                rows = list(csv.DictReader(fh))
+            columns = rules["columns"]
+            missing = sorted({c["from"] for c in columns}
+                             - set(rows[0].keys() if rows else ()))
+            if missing:
+                self.blockers.append((
+                    "release:fab_format", "ERROR",
+                    "{} export has no {} column(s); the fab format cannot be "
+                    "built from it".format(kind, ", ".join(missing))))
+                continue
+            out = []
+            for row in rows:
+                entry = {}
+                for column in columns:
+                    value = (row.get(column["from"]) or "").strip()
+                    values = column.get("values")
+                    if values:
+                        if value not in values:
+                            self.blockers.append((
+                                "release:fab_format", "ERROR",
+                                "{} column {!r} holds {!r}, which the fab "
+                                "format does not know how to say".format(
+                                    kind, column["from"], value)))
+                            value = ""
+                        else:
+                            value = values[value]
+                    entry[column["label"]] = value
+                out.append(entry)
+            labels = [c["label"] for c in columns]
+            absent = [name for name in rules.get("required_columns", [])
+                      if name not in labels]
+            if absent:
+                self.blockers.append((
+                    "release:fab_format", "ERROR",
+                    "the {} format would ship without {}, which the fab "
+                    "requires".format(kind, ", ".join(absent))))
+                continue
+            with open(path, "w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=labels)
+                writer.writeheader()
+                writer.writerows(out)
+            self.log.append({"step": "fab_format:" + kind, "exit": 0, "ok": True,
+                             "command": ["relabel", os.path.basename(path)],
+                             "rows": len(out)})
+
     def bind_reports(self, manifest):
         """Bind the source closure into every report this run produced.
 
@@ -403,9 +474,14 @@ class CleanRun:
                                                 cfg["bom"]["output"])
         data["artifacts"]["cpl"] = os.path.join(self.release,
                                                 cfg["cpl"]["output"])
-        data["artifacts"]["cpl_fields"] = cfg["cpl"]["field_map"]
+        fab = cfg.get("fab_format") or {}
+        data["artifacts"]["cpl_fields"] = (
+            fab["cpl"]["field_map"] if fab.get("cpl")
+            else cfg["cpl"]["field_map"])
         data["artifacts"]["cpl_origin"] = cfg["cpl"]["origin"]
-        data["assembly"]["bom_fields"] = cfg["bom"]["field_map"]
+        data["assembly"]["bom_fields"] = (
+            fab["bom"]["field_map"] if fab.get("bom")
+            else cfg["bom"]["field_map"])
         data["archive"]["zip"] = os.path.join(self.release,
                                               cfg["archive"]["zip"])
         data["archive"]["manifest"] = os.path.join(self.release,
@@ -478,6 +554,7 @@ class CleanRun:
         # actually exported and packaged, which is the one that would ship.
         self.load_policy()
         self.generate()
+        self.format_for_fab()
         self.freeze()
         derived = load_manifest(self.derive_manifest())
         self.bind_reports(derived)

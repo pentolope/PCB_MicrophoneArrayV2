@@ -41,14 +41,14 @@
     "cpl": "generated/release/cpl.csv",
     "position_tolerance_mm": 0.01,
     "cpl_fields": {
-      "designator": "Ref",
-      "x": "PosX",
-      "y": "PosY",
-      "side": "Side",
-      "rotation": "Rot"
+      "designator": "Designator",
+      "x": "Mid X",
+      "y": "Mid Y",
+      "side": "Layer",
+      "rotation": "Rotation"
     },
     "cpl_origin": {
-      "frame": "absolute page origin",
+      "frame": "absolute page origin; the board's plot/drill origin is 0,0, so the Gerbers, the drills and this file share one frame",
       "offset_mm": [
         0.0,
         0.0
@@ -720,6 +720,88 @@
     "archive": {
       "zip": "microphone_array_v2-revA-fabrication.zip",
       "manifest": "MANIFEST.md"
+    },
+    "fab_format": {
+      "description": "The columns the assembly house reads, and where each one comes from in kicad-cli's own export. Only the labels and the Top/Bottom spelling change; every number is the native export's. JLCPCB looks for Designator, Mid X, Mid Y, Layer and Rotation, and rejects the whole file with 'Failed processing CPL file' if they are not there - which is what KiCad's native Ref/PosX/PosY/Side/Rot headers produce.",
+      "cpl": {
+        "columns": [
+          {
+            "label": "Designator",
+            "from": "Ref"
+          },
+          {
+            "label": "Mid X",
+            "from": "PosX"
+          },
+          {
+            "label": "Mid Y",
+            "from": "PosY"
+          },
+          {
+            "label": "Layer",
+            "from": "Side",
+            "values": {
+              "top": "Top",
+              "bottom": "Bottom"
+            }
+          },
+          {
+            "label": "Rotation",
+            "from": "Rot"
+          }
+        ],
+        "field_map": {
+          "designator": "Designator",
+          "x": "Mid X",
+          "y": "Mid Y",
+          "side": "Layer",
+          "rotation": "Rotation"
+        },
+        "required_columns": [
+          "Designator",
+          "Mid X",
+          "Mid Y",
+          "Layer",
+          "Rotation"
+        ]
+      },
+      "bom": {
+        "columns": [
+          {
+            "label": "Comment",
+            "from": "Comment"
+          },
+          {
+            "label": "Designator",
+            "from": "Designator"
+          },
+          {
+            "label": "Footprint",
+            "from": "Footprint"
+          },
+          {
+            "label": "LCSC Part #",
+            "from": "LCSC Part #"
+          },
+          {
+            "label": "Quantity",
+            "from": "Quantity"
+          }
+        ],
+        "field_map": {
+          "designators": "Designator",
+          "value": "Comment",
+          "footprint": "Footprint",
+          "quantity": "Quantity",
+          "LCSC": "LCSC Part #"
+        },
+        "required_columns": [
+          "Comment",
+          "Designator",
+          "Footprint",
+          "LCSC Part #"
+        ]
+      }
     }
   },
   "advisory_gates": [
