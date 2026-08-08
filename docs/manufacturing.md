@@ -54,11 +54,11 @@ name, carrying real geometry, free of X2 attributes - and that `.G2L` and
 and `In2.Cu`. Renaming is all that is done to these files; their contents are
 KiCad's, byte for byte.
 
-One consequence worth knowing: `--disable-aperture-macros` makes KiCad draw
-each rounded pad corner as a single chord rather than an arc. The front mask
-loses 1.4% of its area and pad corners are chamfered by up to 0.073 mm. That
-is a rendering difference, not a design change - every clearance it affects,
-it widens - and the geometry gates account for it explicitly.
+Aperture macros are left enabled. Disabling them made KiCad draw each rounded
+pad corner as a single chord instead of an arc, which cost the front mask 1.4%
+of its area and chamfered pad corners by up to 0.073 mm. Nothing needed it -
+the layer identification is carried entirely by the filenames - so the artwork
+keeps its true pad shapes and the export matches the board to within 0.01 mm.
 
 Gerbers, drills and the CPL share one origin. Verified rather than assumed:
 `MK1` appears in the CPL at 53.220 mm from the board centre on the +X axis at

@@ -59,7 +59,6 @@
       "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts",
       "--no-x2",
       "--no-netlist",
-      "--disable-aperture-macros",
       "--use-drill-file-origin",
       "--subtract-soldermask"
     ],
@@ -536,15 +535,9 @@
         "why": "aperture and drill diameters are written to 6 dp."
       },
       "clearance_match_mm": {
-        "value": 0.085,
+        "value": 0.01,
         "units": "mm",
-        "why": "How closely a clearance measured on the exported artwork has to agree with the same clearance measured on the native board. Two effects: 1 um of polygonisation either side, and the chamfer that --disable-aperture-macros introduces. The fab needs that flag, and with it KiCad draws each rounded pad corner as a single chord rather than an arc, which pulls the corner in by r*(1-1/sqrt(2)). The largest corner radius on this board is 0.25 mm (F1, D1), giving 0.0732 mm - and the measured Hausdorff distance between a macro and a macro-free render of F.Mask is 0.0732 mm exactly, so that is the whole of it. 0.0732 plus 0.01 of numerical agreement, rounded to 0.085. This bounds a rendering difference, not a manufacturing one: every clearance the chamfer changes it makes larger, and the gate still catches a via that is missing, on the wrong layer or displaced.",
-        "derivation": {
-          "max_roundrect_corner_radius_mm": 0.25,
-          "chamfer_error_mm": 0.0732,
-          "measured_hausdorff_front_mask_mm": 0.0732,
-          "numerical_agreement_mm": 0.01
-        }
+        "why": "native shapes are polygonised outward at 1 um; Gerber apertures are re-polygonised independently, so identical geometry can differ by a few chord errors."
       },
       "layer_symmetric_difference_mm2": {
         "value": 0.05,
