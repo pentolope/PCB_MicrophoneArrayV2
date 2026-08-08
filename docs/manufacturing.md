@@ -18,18 +18,47 @@ derived from the thing being manufactured.
 
 | File | Contents |
 |---|---|
-| `microphone_array_v2-revA-fabrication.zip` | 11 Gerbers, 2 Excellon drills, 2 drill maps, X2 job file |
+| `microphone_array_v2-revA-fabrication.zip` | 11 Gerbers and 2 Excellon drills, Protel-named |
 | `bom.csv` | JLCPCB BOM, 15 lines |
 | `cpl.csv` | JLCPCB pick-and-place, 103 placements, all top side |
-| `positions.csv` | KiCad native position export the CPL is derived from |
 | `schematic.pdf` | full schematic |
-| `renders/` | top and bottom |
+| `renders/` | top, bottom, underside, the stacking plan and the four copper layers |
 | `MANIFEST.md` | SHA-256 of the archive, board and each data file |
 
-Layer order is carried in the Gerber X2 `FileFunction` attributes - `Copper,L1,Top`,
-`Copper,L2,Inr`, `Copper,L3,Inr`, `Copper,L4,Bot` - so the inner layers being
-named `GND1` and `GND2` rather than `In1.Cu` and `In2.Cu` does not make the
-stackup ambiguous.
+### Why the layers are named the way they are
+
+The archive says how many copper layers this board has in its **filenames**,
+and nowhere else:
+
+| File | Layer | KiCad |
+|---|---|---|
+| `microphone_array_v2.GTL` | L1, top copper | `F.Cu` |
+| `microphone_array_v2.G2L` | L2, inner ground | `In1.Cu`, exported as `.g1` |
+| `microphone_array_v2.G3L` | L3, inner ground | `In2.Cu`, exported as `.g2` |
+| `microphone_array_v2.GBL` | L4, bottom copper | `B.Cu` |
+
+Layer order used to travel in the Gerber X2 `FileFunction` attributes while the
+files themselves were called `GND1.gbr` and `GND2.gbr`. JLCPCB does not
+reliably read those attributes, and a board whose inner layers are named after
+the net they carry has nothing left that says they are copper at all - it can
+be quoted and built as two-layer. So the export now passes `--no-x2`, ships
+Protel extensions, and carries no job file: there is exactly one statement of
+the stackup and it is the one the fabricator actually reads.
+
+The mapping lives in `fabrication_naming` in
+[verification/boards/live.json](../verification/boards/live.json). The release
+renames by it, the archive gate admits by it, and `FAB.LAYER_IDENTITY` proves
+after every release that the four copper files are present, distinguishable by
+name, carrying real geometry, free of X2 attributes - and that `.G2L` and
+`.G3L` are geometrically identical to a fresh single-layer export of `In1.Cu`
+and `In2.Cu`. Renaming is all that is done to these files; their contents are
+KiCad's, byte for byte.
+
+One consequence worth knowing: `--disable-aperture-macros` makes KiCad draw
+each rounded pad corner as a single chord rather than an arc. The front mask
+loses 1.4% of its area and pad corners are chamfered by up to 0.073 mm. That
+is a rendering difference, not a design change - every clearance it affects,
+it widens - and the geometry gates account for it explicitly.
 
 Gerbers, drills and the CPL share one origin. Verified rather than assumed:
 `MK1` appears in the CPL at 53.220 mm from the board centre on the +X axis at

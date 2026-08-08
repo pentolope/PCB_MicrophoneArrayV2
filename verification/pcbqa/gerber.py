@@ -386,6 +386,31 @@ class ExcellonFile:
                               f"plated/non-plated cannot be established")
 
 
+def sniff(path):
+    """What a file is, from the first thing it says. Never from its name.
+
+    A fabrication archive is named for whoever reads it, and those names are
+    conventions rather than types: the same layer ships as `.gbr` to one
+    house and under a Protel extension to another. Reading the header is the
+    only way to know what is in a file, and the only way this parser survives
+    a change of convention - keying on one extension made every export in the
+    other unreadable, which is a validator that quietly checks nothing rather
+    than one that complains.
+    """
+    with open(path, "rb") as fh:
+        head = fh.read(4096).decode("utf-8", "ignore")
+    stripped = head.lstrip()
+    if stripped.startswith("{"):
+        return "json"                     # a Gerber job file
+    for line in head.splitlines()[:40]:
+        text = line.strip()
+        if text.startswith("M48"):
+            return "drill"
+        if text.startswith(("%FS", "%MO", "%TF", "%AD", "G04", "G75", "G01")):
+            return "gerber"
+    return None
+
+
 def load_layers(directory):
     """Parse every Gerber and drill file in a directory."""
     gerbers, drills, unparsed = {}, {}, []
@@ -393,11 +418,11 @@ def load_layers(directory):
         path = os.path.join(directory, name)
         if not os.path.isfile(path):
             continue
-        low = name.lower()
         try:
-            if low.endswith((".gbr", ".gbrjob")) and not low.endswith(".gbrjob"):
+            kind = sniff(path)
+            if kind == "gerber":
                 gerbers[name] = GerberFile(path)
-            elif low.endswith(".drl"):
+            elif kind == "drill":
                 drills[name] = ExcellonFile(path)
             else:
                 unparsed.append(name)

@@ -215,15 +215,22 @@ class BomMutations(_Base):
         board.Save(path)
         self._assert_finds(box, "do-not-populate differs", refs=[reference])
 
-    def test_the_unmutated_copy_reports_only_the_known_authority_gap(self):
-        """Every failure above is caused by its mutation, not by the fixture."""
+    def test_the_unmutated_copy_reports_nothing(self):
+        """Every failure above is caused by its mutation, not by the fixture.
+
+        This used to require the fixture's mounting holes, test pads and
+        hand-fitted connectors to be reported as absent from the schematic.
+        They never were absent: the comparison read the schematic through a
+        BOM export, which cannot carry a symbol marked exclude-from-BOM, so
+        every such part looked missing. With that corrected the unmutated copy
+        has nothing to report, and the mutation tests above are the only thing
+        producing findings - which is what this test is really for.
+        """
         box = self._copy("baseline")
         findings = self._baseline_findings(box)
-        self.assertTrue(findings, "Rev A's board-only footprints must still show")
-        for f in findings:
-            self.assertIn("in no schematic symbol", f.get("issue", ""),
-                          "the unmutated fixture has an unexpected BOM "
-                          "disagreement: {}".format(f))
+        self.assertEqual(findings, [],
+                         "the unmutated fixture has an unexpected BOM "
+                         "disagreement: {}".format(findings))
 
 
 class CplMutations(_Base):

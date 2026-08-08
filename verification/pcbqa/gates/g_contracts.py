@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import fnmatch
 import re
 import zipfile
 from collections import Counter
@@ -151,27 +152,42 @@ def archive_contents(ctx, res):
         for name in names:
             data = zf.read(name)
             kind, function, empty = _classify(name, data)
-            seen[function] += 1
-            rule = next((a for a in allow if a["file_function"] == function), None)
-            banned = next((d for d in deny if d["file_function"] == function), None)
+            rule = archive_rule(allow, name, function)
+            banned = archive_rule(deny, name, function)
+            seen[rule_key(rule) if rule else name] += 1
             if banned:
-                problems.append({"entry": name, "file_function": function,
-                                 "issue": banned["reason"]})
+                problems.append({"entry": name, "issue": banned["reason"]})
                 continue
             if rule is None:
                 problems.append({"entry": name, "file_function": function,
-                                 "issue": "file function is not on the allowlist"})
+                                 "issue": "not on the archive allowlist"})
                 continue
+            # The name declares the role; the content has to back it up. A
+            # file named as a copper layer that does not parse as a Gerber,
+            # or parses but
+            # draws nothing, is exactly the failure this archive exists to
+            # make impossible.
+            # Where a board identifies its files by name, the name is only a
+            # claim; the content still has to be the kind of thing it says.
+            role = rule.get("role")
+            if role:
+                expected_kind = "drill" if role == "drill" else "gerber"
+                if kind != expected_kind:
+                    problems.append({"entry": name, "role": role,
+                                     "issue": "content is {}, not {}".format(
+                                         kind, expected_kind)})
+                    continue
             if rule.get("require_payload", False) and empty:
-                problems.append({"entry": name, "file_function": function,
+                problems.append({"entry": name, "role": role,
                                  "issue": "layer is present but carries no geometry"})
     for rule in allow:
         need = rule.get("min_count")
-        if need is not None and seen[rule["file_function"]] < need:
-            problems.append({"file_function": rule["file_function"],
+        if need is not None and seen[rule_key(rule)] < need:
+            problems.append({"artifact": rule_key(rule),
                              "issue": "required artifact missing from the archive",
-                             "expected_min": need, "found": seen[rule["file_function"]]})
-    res.measurements["by_function"] = dict(seen)
+                             "expected_min": need,
+                             "found": seen[rule_key(rule)]})
+    res.measurements["by_artifact"] = dict(seen)
     for p in problems[:60]:
         res.finding(**p)
     if problems:
@@ -179,8 +195,41 @@ def archive_contents(ctx, res):
     return res.passed("archive contains exactly the approved fabrication artifacts")
 
 
+def archive_rule(rules, name, function):
+    """The allow/deny entry covering an archive member, or None.
+
+    A board identifies its fabrication data one of two ways. Most declare a
+    Gerber X2 file function, which is what the format was designed for. A
+    board whose fabricator does not read X2 - and some do not - has to say
+    what each file is in its *name* instead, and declares `file` rather than
+    `file_function`. Both are honoured, so a board moving to filenames does
+    not silently disarm every other board's archive check.
+    """
+    for rule in rules:
+        if "file" in rule:
+            if fnmatch.fnmatch(name, rule["file"]):
+                return rule
+        elif rule.get("file_function") == function:
+            return rule
+        elif "file_glob" in rule and fnmatch.fnmatch(name, rule["file_glob"]):
+            return rule
+    return None
+
+
+def rule_key(rule):
+    """How an allow/deny entry names what it covers, for counting and errors."""
+    return rule.get("file") or rule.get("file_glob") or rule["file_function"]
+
+
 def _classify(name, data):
-    """Identify an archive entry by content, never by filename."""
+    """What kind of file this is, from its content alone.
+
+    Deliberately blind to the filename: the caller decides what a file is
+    *supposed* to be from its name, and this says what it actually is, so the
+    two can be compared. The X2 file function is reported when present but is
+    not relied on - this board's export switches X2 off, because the fab does
+    not read it.
+    """
     text = data.decode("utf-8", errors="ignore")
     if text.lstrip().startswith("M48") or "\nM48" in text[:200]:
         m = re.search(r"TF\.FileFunction,([^\r\n*]+)", text)

@@ -294,6 +294,87 @@ class CleanRun:
             self.blockers.append((f"generate:{name}", "ERROR",
                                   "mandatory release artifact was not generated"))
 
+    # -- stage 3a: give every exported file the name the fab reads --------
+    def name_for_fab(self):
+        """Rename the export to fab-identifiable filenames. Contents untouched.
+
+        The fab decides what it is looking at from the filename. KiCad names
+        an inner layer after whatever the board calls it, which says nothing
+        about where it sits in the stack, and the layer's real role travels in
+        a Gerber X2 attribute that a board declaring this block does not write
+        and whose fabricator does not reliably read. A multilayer board can be
+        quoted and built with layers missing on the strength of that.
+
+        The mapping is keyed on KiCad's own extension, which is fixed by the
+        layer being plotted: `.g1` is the first inner copper layer and `.g2`
+        the second, whatever they are named. Every declared file must appear
+        exactly once, and anything left over blocks: an unrecognised file in
+        the fabrication directory is either something new that nobody has
+        approved or a rename that silently did not happen.
+        """
+        spec = self.manifest.get("fabrication_naming", None)
+        if not spec:
+            return
+        wanted, by_suffix = {}, []
+        for row in spec["files"]:
+            if row.get("kicad_suffix"):
+                # Both drill files end in .drl, so the extension cannot tell
+                # them apart; the plated one is matched by its own suffix.
+                by_suffix.append(row)
+            else:
+                wanted[row["kicad_ext"].lower()] = row
+
+        excluded, renamed, unknown = [], {}, []
+        for path in sorted(glob.glob(os.path.join(self.gerbers, "*"))):
+            if not os.path.isfile(path):
+                continue
+            name = os.path.basename(path)
+            if _matches(name, [e["glob"] for e in spec.get("exclude", [])]):
+                os.unlink(path)
+                excluded.append(name)
+                continue
+            row = next((r for r in by_suffix
+                        if name.lower().endswith(r["kicad_suffix"].lower())),
+                       None)
+            if row is None:
+                ext = os.path.splitext(name)[1].lstrip(".").lower()
+                row = wanted.get(ext)
+            if row is None:
+                unknown.append(name)
+                continue
+            if row["ship_as"] in renamed:
+                self.blockers.append((
+                    "release:fab_naming", "ERROR",
+                    "two exported files claim to be {}: {} and {}".format(
+                        row["ship_as"], renamed[row["ship_as"]], name)))
+                continue
+            target = os.path.join(self.gerbers, row["ship_as"])
+            # Two steps, because a rename that only changes case is a no-op on
+            # a case-insensitive filesystem and the archive would ship the
+            # name KiCad chose rather than the one declared here.
+            staging = target + ".renaming"
+            os.rename(path, staging)
+            os.rename(staging, target)
+            renamed[row["ship_as"]] = name
+
+        for row in spec["files"]:
+            if row["ship_as"] in renamed:
+                continue
+            self.blockers.append((
+                "release:fab_naming", "ERROR",
+                "the export produced no {} file, so {} cannot be shipped"
+                .format(row["kicad_layer"], row["ship_as"])))
+        for name in unknown:
+            self.blockers.append((
+                "release:fab_naming", "ERROR",
+                "{} is not a file this board knows how to name for the fab"
+                .format(name)))
+        self.log.append({
+            "step": "fab_naming", "exit": 0, "ok": not unknown,
+            "command": ["rename", "{} file(s)".format(len(renamed))],
+            "renamed": renamed, "excluded": excluded,
+        })
+
     # -- stage 3b: put the assembly data in the fab's own columns ----------
     def format_for_fab(self):
         """Rewrite the BOM and CPL into the column names the fab expects.
@@ -391,29 +472,30 @@ class CleanRun:
 
     # -- stage 4: package only approved fabrication data -------------------
     def package(self):
-        from .gates.g_contracts import _classify
-        allow = {a["file_function"] for a in self.manifest.get("archive.allow")}
-        deny = {d["file_function"] for d in self.manifest.get("archive.deny", [])}
+        # A board says what its fabrication data is either by Gerber X2 file
+        # function or, where the fabricator does not read X2, by filename. The
+        # shared helper honours whichever this board declared.
+        from .gates.g_contracts import _classify, archive_rule
+        allow = self.manifest.get("archive.allow")
+        deny = self.manifest.get("archive.deny", [])
         chosen, rejected = [], []
         for path in sorted(glob.glob(os.path.join(self.gerbers, "*"))):
             if not os.path.isfile(path):
                 continue
+            name = os.path.basename(path)
             with open(path, "rb") as fh:
-                data = fh.read()
-            _kind, function, _empty = _classify(os.path.basename(path), data)
-            if function in deny or function not in allow:
+                _kind, function, _empty = _classify(name, fh.read())
+            if archive_rule(deny, name, function) is not None or \
+                    archive_rule(allow, name, function) is None:
                 # Courtyard, fabrication, adhesive, margin and user layers all
                 # land here. They are kept out of the archive *and* they block:
                 # a release that quietly dropped them would hide the fact that
                 # the export step produced something nobody approved.
-                rejected.append({"file": os.path.basename(path),
-                                 "file_function": function,
+                rejected.append({"file": name,
                                  "issue": "not approved fabrication data"})
                 self.blockers.append(
                     ("release:fabrication_allowlist", "ERROR",
-                     f"{os.path.basename(path)} has file function "
-                     f"{function!r}, which the archive allowlist does not "
-                     f"permit"))
+                     f"{name} is not on the archive allowlist"))
                 continue
             chosen.append(path)
         self.rejected_layers = rejected
@@ -449,9 +531,9 @@ class CleanRun:
                 lines.append(f"- `{os.path.basename(path)}` sha256 "
                              f"`{sha256_file(path)}`")
         lines += ["", "## excluded from the archive", ""]
-        for entry in rejected or [{"file": "(none)", "file_function": "-",
+        for entry in rejected or [{"file": "(none)",
                                    "issue": "every exported layer was approved"}]:
-            lines.append(f"- `{entry['file']}` ({entry['file_function']}): "
+            lines.append(f"- `{entry['file']}`: "
                          f"{entry['issue']}")
         lines.append("")
         mpath = os.path.join(self.release, self.cfg["archive"]["manifest"])
@@ -554,6 +636,7 @@ class CleanRun:
         # actually exported and packaged, which is the one that would ship.
         self.load_policy()
         self.generate()
+        self.name_for_fab()
         self.format_for_fab()
         self.freeze()
         derived = load_manifest(self.derive_manifest())

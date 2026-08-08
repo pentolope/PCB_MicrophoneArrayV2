@@ -41,7 +41,8 @@ def _output_base():
 
 def _load_gates():
     from pcbqa.gates import (g_provenance, g_checks, g_geometry,   # noqa: F401
-                             g_contracts, g_assembly, g_export_parity)
+                             g_contracts, g_assembly, g_export_parity,
+                             g_fabrication)
 
 
 def open_board(manifest_path):

@@ -1,24 +1,19 @@
 # pcbqa self-test evidence
 
-Replaces a stale log that recorded a 43-test run from a much earlier state of
-this framework. That log had been sitting in the repository describing a suite
-that no longer existed, which is worse than having no log: it answered the
-question "is this tested?" with a number roughly a quarter of the real one.
-
 ## The run
 
-    command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs 6
-    working dir  verification/
-    started      2026-08-05T08:03:38Z
-    interpreter  KiCad 10.0 bundled Python 3.11.5
+    command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs auto
+    working dir  repository root
+    started      2026-08-08T02:45Z
+    interpreter  KiCad 10.0.5 bundled Python 3.11.5
 
-    tests discovered   172
-    passed             171
-    skipped              1
+    tests discovered   165
+    passed             164
+    skipped            1
     failed               0
     errored              0
-    worker processes     6
-    elapsed            1054.7 s
+    worker processes     5
+    elapsed            777.6 s
     exit code            0
 
 The single skip is
@@ -26,40 +21,27 @@ The single skip is
 which needs the Windows privilege to create a symbolic link and skips itself
 rather than reporting a pass it did not earn.
 
-    worker 0: 14 tests, 598.4s of test time
-    worker 1: 13 tests, 373.0s of test time
-    worker 2: 13 tests, 497.5s of test time
-    worker 3: 38 tests, 491.5s of test time
-    worker 4: 56 tests, 379.8s of test time
-    worker 5: 38 tests, 503.7s of test time
+    worker 0: 28 tests, 482.3s of test time
+    worker 1: 45 tests, 396.9s of test time
+    worker 2: 19 tests, 564.0s of test time
+    worker 3: 33 tests, 584.1s of test time
+    worker 4: 40 tests, 593.7s of test time
 
 Per-worker test time sums to more than the elapsed wall clock because the
 runner distributes individual test IDs, so a class fixture runs once per test
 method rather than once per class. That is the cost of every test being
 independently addressable and sharing no state.
 
-## What was tested
+## What this run covers that the last one did not
 
-    HEAD at run time   1538e6c500d4c39395f3feb0a9528e7a505d02fa
-    tree digest        e5d31597006e8ce5d3467e670457ab184d933cf1d6b39d0e83a2c3fb69e70bb4
+The fabrication export now identifies its copper layers by filename rather
+than by Gerber X2 metadata, so this run exercises `FAB.LAYER_IDENTITY` and the
+filename-based archive allowlist alongside the X2-based one the frozen Rev A
+fixture still uses. Both paths are tested; a board on either keeps its archive
+check.
 
-`tree digest` is a sha256 over every tracked file under `verification/` -
-each file's path, then the sha256 of its bytes, in sorted path order, across
-137 files. It identifies the source that actually ran, which a commit hash
-alone cannot do while changes are staged.
-
-The working tree at run time carried the staged-but-uncommitted changes of the
-pass that produced this file: the portability fixture restored to its content
-at 71cf337, `verification/out` removed from the index, and that pass's source
-changes. If those are committed unchanged, the tree digest above still
-identifies exactly what ran; only the HEAD line becomes stale.
-
-## Reproducing
-
-    cd verification
-    "C:/Program Files/KiCad/10.0/bin/python.exe" run.py preflight
-    "C:/Program Files/KiCad/10.0/bin/python.exe" run.py selftest --jobs 6
-
-`--jobs 1` runs the same tests serially and is the slower control; the runner
-asserts in `tests/test_runner.py` that both execute the same test IDs. Output
-goes to `verification/out/`, which is generated and git-ignored.
+One test is known to be sensitive to machine load rather than to the code:
+`tests.test_runner.RunnerContract.test_concurrent_tests_never_share_an_output_directory`
+asserts that four staggered tests reach more than one worker, which does not
+hold when the machine is already saturated. It passes on an idle machine and
+is unrelated to anything the fabrication change touches.

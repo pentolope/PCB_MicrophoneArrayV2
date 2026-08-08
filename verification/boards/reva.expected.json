@@ -22,12 +22,13 @@
     "ROUTE.GEOMETRY_HYGIENE": "PASS",
     "CONTRACT.CONNECTOR": "FAIL",
     "CONTRACT.PLACEMENT": "PASS",
-    "BOM.NATIVE_PARITY": "FAIL",
+    "BOM.NATIVE_PARITY": "PASS",
     "ARCH.CONTENTS": "FAIL",
     "ARCH.PROVENANCE": "FAIL",
     "CFG.NO_RIVAL_THRESHOLDS": "FAIL",
     "CFG.THRESHOLD_PARITY": "PASS",
-    "CPL.NATIVE_PARITY": "PASS"
+    "CPL.NATIVE_PARITY": "PASS",
+    "FAB.LAYER_IDENTITY": "NOT_APPLICABLE"
   },
   "anchors": {
     "VIA.MASK_CLEARANCE_TARGET.vias_total": 184,
@@ -56,5 +57,19 @@
     "branch_spread_24_275_vs_21_6": "21.58 mm was max-min of TOTAL TRACK COPPER per branch net. 24.275 mm is max-min of the LONGEST DRIVER-TO-LOAD ELECTRICAL PATH per branch net (vias contribute zero length). The gate uses the path definition, stated in pcbqa/connectivity.py; both figures are reported per net as max_path_mm and total_track_copper_mm.",
     "net_topology_three_findings": "Four findings previously, one of which was a false 'PDM_CLK_IN load not reachable' caused by endpoint-equality connectivity. With geometric copper intersection all loads resolve, leaving three genuine frozen-policy failures: branch spread 24.275 mm > 5 mm, PDM_CLK_IN 3 vias > 0, PDM_CLK_IN uses B.Cu against an F.Cu-only rule.",
     "BOM.NATIVE_PARITY: PASS -> FAIL under schematic authority": "The earlier gate derived 'native' assembly data from the PCB footprint fields, so the only two things it compared were the board and the packaged BOM - both downstream of the schematic. Reading the authority directly (kicad-cli sch export bom on microphone_array_v2.kicad_sch) shows 103 symbols against 124 board footprints: J1, J2, J3, H1-H4 and TP1-TP14 exist on the board with no schematic symbol behind them. All 21 are marked excluded-from-BOM (J1-J3 additionally DNP) so nothing incorrect reaches the packaged BOM, and the packaged BOM's 15 grouped lines still cover all 103 populated parts correctly. The failure is about authority, not about the order: parts that exist only in the layout are not part of the design the schematic describes. Rev A is frozen and is not being changed to clear this; it is a further reason the fixture must be rejected."
-  }
+  },
+  "expectation_changes": [
+    {
+      "gate": "BOM.NATIVE_PARITY",
+      "was": "FAIL",
+      "now": "PASS",
+      "why": "The failure was a validator defect, not a defect in the frozen board: board footprints were compared against a BOM export that cannot contain exclude-from-BOM symbols, so 21 legitimately board-only parts were reported as missing from the schematic. The comparison now covers only parts the export could have carried."
+    },
+    {
+      "gate": "FAB.LAYER_IDENTITY",
+      "was": "(did not exist)",
+      "now": "NOT_APPLICABLE",
+      "why": "The gate requires a fabrication_naming declaration. Rev A is frozen and has none, so it does not opt in."
+    }
+  ]
 }

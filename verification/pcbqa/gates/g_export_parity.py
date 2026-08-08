@@ -32,31 +32,70 @@ def _to_gerber(x_mm, y_mm):
     return (x_mm, -y_mm)
 
 
-def _find_layers(directory):
+def _find_layers(directory, manifest=None):
+    """Every exported layer, indexed by the role its filename declares.
+
+    Layers are found through their Gerber X2 file function where one exists.
+    A board whose fabricator does not read X2 exports without it, and a lookup
+    through an attribute that is not there finds nothing at all and quietly
+    compares no layers. Such a board declares `fabrication_naming` - the same
+    mapping the release renames by - so what is looked up here is what was
+    shipped.
+    """
     layers, drills, _extra = gerber.load_layers(directory)
-    by_function = {}
-    for name, f in layers.items():
-        fn = (f.file_function or "").strip()
-        by_function.setdefault(fn, []).append((name, f))
-    return layers, drills, by_function
+    by_role = {}
+    spec = manifest.get("fabrication_naming", None) if manifest else None
+    if spec:
+        for row in spec["files"]:
+            # A directory here is either the shipped archive, where files
+            # carry their fabrication names, or a fresh export straight out of
+            # KiCad, where they still carry KiCad's. Both have to resolve,
+            # because the whole point of comparing them is to show they are
+            # the same copper under two names.
+            name, entry = None, None
+            for candidate in (row["ship_as"],):
+                if candidate in layers:
+                    name, entry = candidate, layers[candidate]
+                    break
+            if entry is None:
+                suffix = row.get("kicad_suffix") or ("." + row["kicad_ext"])
+                for candidate in sorted(layers):
+                    if candidate.lower().endswith(suffix.lower()):
+                        name, entry = candidate, layers[candidate]
+                        break
+            if entry is None:
+                continue
+            key = (row["role"], row.get("side"))
+            by_role.setdefault(key, []).append((name, entry))
+            by_role.setdefault(("layer", row["kicad_layer"]), []).append(
+                (name, entry))
+    else:                                   # boards that still ship X2
+        for name, f in layers.items():
+            fn = (f.file_function or "").strip().lower()
+            if fn.startswith("copper,"):
+                side = "front" if fn.endswith(",top") else (
+                    "back" if fn.endswith(",bot") else None)
+                by_role.setdefault(("copper", side), []).append((name, f))
+                # The identity a copper layer is compared *by*. For a board
+                # naming its files, that is the KiCad layer; for one shipping
+                # X2, the file function. Without this the per-layer comparison
+                # below finds no layers on an X2 board and passes having
+                # compared nothing, which is worse than failing.
+                by_role.setdefault(("layer", fn), []).append((name, f))
+            elif fn.startswith("soldermask,"):
+                side = "front" if fn.endswith(",top") else "back"
+                by_role.setdefault(("soldermask", side), []).append((name, f))
+    return layers, drills, by_role
 
 
-def _mask_for(by_function, side):
-    want = "Soldermask,Top" if side == "front" else "Soldermask,Bot"
-    for fn, entries in by_function.items():
-        if fn.lower().startswith(want.lower()):
-            return entries[0]
-    return None
+def _mask_for(by_role, side):
+    entries = by_role.get(("soldermask", side))
+    return entries[0] if entries else None
 
 
-def _copper_for(by_function, side):
-    for fn, entries in by_function.items():
-        low = fn.lower()
-        if low.startswith("copper,") and (
-                (side == "front" and low.endswith(",top")) or
-                (side == "back" and low.endswith(",bot"))):
-            return entries[0]
-    return None
+def _copper_for(by_role, side):
+    entries = by_role.get(("copper", side))
+    return entries[0] if entries else None
 
 
 def _classify(annulus, centre, openings, target, process, contact_tol, tie_tol):
@@ -118,7 +157,7 @@ def via_export_parity(ctx, res):
         cid="via_mask.process.limit_mm")).value
 
     _geom, native_rows = _via_survey(ctx)
-    _layers, drills, by_function = _find_layers(directory)
+    _layers, drills, by_function = _find_layers(directory, ctx.manifest)
     plated = [(x, y, dia) for f in drills.values() if f.plated
               for (x, y, dia, _p) in f.holes]
 
@@ -292,32 +331,37 @@ def stack_gerber_parity(ctx, res):
     if proc.returncode != 0:
         return res.errored("fresh Gerber export failed: " + proc.stderr.strip()[:300])
 
-    _s_layers, _s_drills, shipped = _find_layers(shipped_dir)
-    _f_layers, _f_drills, fresh = _find_layers(fresh_dir)
+    _s_layers, _s_drills, shipped = _find_layers(shipped_dir, ctx.manifest)
+    _f_layers, _f_drills, fresh = _find_layers(fresh_dir, ctx.manifest)
 
     def coppers(table):
-        return {fn: entries[0] for fn, entries in table.items()
-                if fn.lower().startswith("copper,")}
+        # Keyed on whatever identifies a copper layer for this board, which
+        # is the one name both directories agree on: an inner layer ships
+        # under one extension and comes out of KiCad under another, and they
+        # are the same plot.
+        return {key[1]: entries[0] for key, entries in table.items()
+                if key[0] == "layer" and (key[1].endswith(".Cu")
+                                          or key[1].startswith("copper,"))}
 
     shipped_cu, fresh_cu = coppers(shipped), coppers(fresh)
-    res.measurements["shipped_copper_functions"] = sorted(shipped_cu)
-    res.measurements["fresh_copper_functions"] = sorted(fresh_cu)
+    res.measurements["shipped_copper_layers"] = sorted(shipped_cu)
+    res.measurements["fresh_copper_layers"] = sorted(fresh_cu)
 
     problems = []
     for fn in sorted(set(shipped_cu) | set(fresh_cu)):
         if fn not in shipped_cu:
-            problems.append({"file_function": fn,
+            problems.append({"layer": fn,
                              "issue": "layer present in a fresh export but not shipped"})
             continue
         if fn not in fresh_cu:
-            problems.append({"file_function": fn,
+            problems.append({"layer": fn,
                              "issue": "layer shipped but not produced by the board"})
             continue
         s_name, s_file = shipped_cu[fn]
         f_name, f_file = fresh_cu[fn]
         s_union, f_union = s_file.union(), f_file.union()
         if s_union is None or f_union is None:
-            problems.append({"file_function": fn, "shipped": s_name,
+            problems.append({"layer": fn, "shipped": s_name,
                              "issue": "copper layer carries no geometry"})
             continue
         diff = s_union.symmetric_difference(f_union).area
@@ -329,7 +373,7 @@ def stack_gerber_parity(ctx, res):
         }
         if diff > tol:
             problems.append({
-                "file_function": fn, "shipped": s_name,
+                "layer": fn, "shipped": s_name,
                 "issue": "shipped copper geometry differs from a fresh export",
                 "symmetric_difference_mm2": round(diff, 6),
                 "limit_mm2": tol,

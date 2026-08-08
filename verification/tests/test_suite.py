@@ -459,7 +459,10 @@ class Mutations(unittest.TestCase):
         results, _ = validate(REVA)
         arch = results["ARCH.CONTENTS"]
         self.assertEqual(arch["status"], Status.FAIL)
-        self.assertTrue(any(f.get("file_function") == "Drillmap"
+        # Named by the entry rather than by its X2 file function: a board may
+        # identify its fabrication data either way, and this one has to be
+        # refused under both.
+        self.assertTrue(any("drl_map" in str(f.get("entry", ""))
                             for f in arch["findings"]), arch["findings"])
 
     def test_adding_a_new_disallowed_file_to_the_archive_is_detected(self):
