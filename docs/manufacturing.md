@@ -85,7 +85,10 @@ Every populated part carries an explicit reviewed entry in the registry at
 part numbers, **including the twelve whose offset is zero**. "Nobody has looked
 at this one" and "looked at, needs nothing" are different statements and only
 the second may ship, so there is no default: generation refuses a part with no
-entry rather than quietly assuming zero. Three parts need a turn:
+entry rather than quietly assuming zero. An entry counts only when its
+`review_status` is exactly `reviewed` - `pending`, `unreviewed`, blank or
+absent all block generation, because a half-written entry looks like coverage
+and is worse than none. Three parts need a turn:
 
 | LCSC | Part | Package | Offset | JLC library zero vs KiCad |
 |---|---|---|---:|---|
@@ -103,23 +106,44 @@ Each offset was derived from JLCPCB's own library footprint, read through the
 EasyEDA API, by comparing every pad against the KiCad footprint rather than
 just pin 1: a pin-1 match alone cannot tell a rotation from a mirror. The
 retrieval and scoring live in
-[tools/jlc_orientation.py](../tools/jlc_orientation.py), and the pads it
-scored are frozen per part under
-[fabrication/jlc_orientation/](../fabrication/jlc_orientation) with the source
-URL, the retrieval date and the SHA-256 of the exact response body - so the
-derivation reruns offline, and a change to JLC's library shows up as a digest
-mismatch instead of a silent re-derivation:
+[tools/jlc_orientation.py](../tools/jlc_orientation.py).
+
+The evidence itself is committed, not summarised. Under
+[fabrication/jlc_orientation/](../fabrication/jlc_orientation) each part has two
+files: `raw/<LCSC>.json`, the response body byte for byte, and `<LCSC>.json`, a
+normalised extract of it recording the source URL, the retrieval date, and the
+length and SHA-256 of that body. The extract is a convenience and never an
+authority - every offline command re-derives the pads from the raw file and
+fails if the extract disagrees. Three things could move an offset and all three
+fail: editing the raw body breaks its digest, editing the extract makes it
+disagree with the body, and editing the registry makes it disagree with the
+score.
 
 ```bash
 "C:/Program Files/KiCad/10.0/bin/python.exe" tools/jlc_orientation.py check
 ```
 
-`CPL.ORIENTATION` then re-scores that frozen evidence on every release and
-requires the registry to agree with it, checks the registry covers everything
-the BOM and the board say will be fitted, and recomputes each shipped angle as
-the board angle plus the reviewed offset, normalised. Checking the shipped file
-against the table the generator used would only prove a program can apply its
-own table twice.
+That is offline, as is `report`. Neither the test suite nor a clean release
+touches the network, so EasyEDA being down cannot fail a release. The one
+command that does look upstream is separate and reports the two failures
+apart - exit 1 means the committed evidence is corrupt, exit 2 means JLC has
+changed their library since it was frozen, which is a prompt to re-freeze and
+re-review rather than a release failure:
+
+```bash
+"C:/Program Files/KiCad/10.0/bin/python.exe" tools/jlc_orientation.py check-live
+```
+
+`CPL.ORIENTATION` re-scores that frozen evidence on every release and requires
+the registry to agree with it, checks the registry covers everything the BOM
+and the board say will be fitted, and recomputes each shipped angle as the
+board angle plus the reviewed offset, normalised into `[0, 360)` - half-open,
+so `0` is a placement angle and `360` is not, including when rounding would
+otherwise carry a value up to it. Checking the shipped file against the table
+the generator used would only prove a program can apply its own table twice.
+`PROV.SOURCE_CLOSURE` separately requires the script, this schema and both
+evidence files for all fifteen entries to be inside the release's source
+closure, so an input cannot quietly stop being tracked.
 
 Nothing else takes an offset, and that is measured rather than assumed. When
 JLCPCB revised the first production upload they corrected 11 of the 16

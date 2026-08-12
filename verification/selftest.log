@@ -4,16 +4,16 @@
 
     command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs auto
     working dir  repository root
-    started      2026-08-12T11:41Z
+    started      2026-08-12T17:03Z
     interpreter  KiCad 10.0.5 bundled Python 3.11.5
 
-    tests discovered   183
-    passed             182
+    tests discovered   205
+    passed             204
     skipped            1
     failed               0
     errored              0
     worker processes     5
-    elapsed             796.2 s
+    elapsed             875.2 s
     exit code            0
 
 The single skip is
@@ -21,11 +21,11 @@ The single skip is
 which needs the Windows privilege to create a symbolic link and skips itself
 rather than reporting a pass it did not earn.
 
-    worker 0: 33 tests, 600.0s of test time
-    worker 1: 11 tests, 497.2s of test time
-    worker 2: 44 tests, 399.2s of test time
-    worker 3: 72 tests, 575.3s of test time
-    worker 4: 23 tests, 607.2s of test time
+    worker 0:  9 tests, 687.6s of test time
+    worker 1: 41 tests, 478.2s of test time
+    worker 2: 27 tests, 652.2s of test time
+    worker 3: 89 tests, 601.7s of test time
+    worker 4: 39 tests, 560.2s of test time
 
 Per-worker test time sums to more than the elapsed wall clock because the
 runner distributes individual test IDs, so a class fixture runs once per test
@@ -34,22 +34,35 @@ independently addressable and sharing no state.
 
 ## What this run covers that the last one did not
 
-Where the placement-orientation offsets come from. The registry is no longer a
-table the generator applies and the gate then reads back - which would only
-prove a program can apply its own table twice. `tests/test_cpl_orientation.py`
-grew to 18 tests covering the registry as an authority: that every populated
-part number carries an explicit reviewed entry including the twelve at zero
-offset, that each declared offset re-derives from the frozen library evidence
-under `fabrication/jlc_orientation/` and matches its recorded digest, that
-normalisation lands in [0, 360), that references sharing a part number are
-corrected identically, and that the 36 fractional array angles survive
-generation unrounded.
+Four things about placement orientation that the previous run took on trust.
 
-The regression test for the defect that started it removes `C7668` - U2's part
-number - from the registry and runs the real generation code, not an edited
-output: U2 must receive no angle at all and the failure must name that part.
-There is no default offset, so a part nobody has reviewed cannot ship as if it
-had been.
+*The evidence is committed, not described.* `fabrication/jlc_orientation/raw/`
+now holds each EasyEDA response body byte for byte, and the normalised extract
+beside it is re-derived from that body every time it is read. Tests damage each
+of the three things an edit could reach - the body, the extract, the registry's
+offset - and require each to fail. One test replaces the extract's pads with
+their negations and asserts the scored offset does not move, because scoring
+reads the body.
+
+*Only finished reviews ship.* `review_status` must be exactly `reviewed`.
+Mutation tests set it to `unreviewed`, `pending`, an empty string, a
+near-miss like `Reviewed`, and remove the field entirely; each must block
+generation and fail the gate, naming the part.
+
+*The range is half-open.* The validator used to allow exactly 360 through a
+tolerance on the upper bound, which contradicted the file it was checking.
+Boundary tests require 0 and 359.9999 to pass, 360 and -90 to fail, and
+normalisation never to return the open end - including the case where rounding
+to four decimals would carry 359.99999 up to it.
+
+*The refusal is end to end.* The earlier regression test drove generation and
+the gate separately, which cannot show that a release is impossible.
+`ACleanReleaseRefusesAnUnreviewedPart` copies the project, removes `C7668` -
+U2's part number - from the registry, and calls the same `cmd_release` entry
+point a real release uses. It requires a non-zero result naming the part and
+the missing mapping, no published directory, no `latest.json`, and the release
+committed in this repository to be byte-identical afterwards. It takes about 90
+seconds, which is what an end-to-end test of a release costs.
 
 One test is sensitive to machine load rather than to the code:
 `tests.test_runner.RunnerContract.test_concurrent_tests_never_share_an_output_directory`

@@ -13,8 +13,11 @@ driven through the real generation code rather than by editing an output.
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import csv
+import hashlib
+import io
 import json
 import os
 import shutil
@@ -46,6 +49,13 @@ EXPECTED_FRACTIONAL = {
     "CB1": 33.75, "CB3": 213.75, "CM2": 202.5, "CM10": 22.5,
     "MK1": 270.0, "MK2": 292.5, "RD8": 337.5, "RV16": 337.5,
 }
+
+
+# The validator, its output tree and the routing scratch are not the project
+# being released. A clean run copies the project itself, so a test copy that
+# dragged verification/out along would be copying gigabytes of past attempts.
+_NOT_THE_PROJECT = shutil.ignore_patterns(".git", "verification", "build",
+                                          "candidates", "__pycache__", "*.pyc")
 
 
 def _manifest_doc():
@@ -123,7 +133,7 @@ class RegistryIsReviewedAndComplete(unittest.TestCase):
                             "{} cites missing evidence".format(lcsc))
             with open(path, encoding="utf-8") as fh:
                 evidence = json.load(fh)
-            self.assertEqual(evidence["response_sha256"],
+            self.assertEqual(evidence["raw_sha256"],
                              row["evidence_sha256"],
                              "{}: recorded digest is not the evidence's"
                              .format(lcsc))
@@ -323,6 +333,386 @@ class ShippedPlacementsAreCorrect(unittest.TestCase):
             self.assertEqual(turn, want,
                              "{} was turned {} but its part is registered at "
                              "{}".format(ref, turn, want))
+
+
+# ---------------------------------------------------------------------------
+# review status
+# ---------------------------------------------------------------------------
+
+class OnlyReviewedEntriesMayBeUsed(unittest.TestCase):
+    """"Somebody started looking at this" is not "somebody finished".
+
+    The registry is a list of statements about parts, and a half-written one
+    is more dangerous than an absent one: it looks like coverage. The rule is
+    enforced in the shared registry so the generator and the gate cannot come
+    to different conclusions about the same row.
+    """
+
+    def _spec_with_status(self, status):
+        spec = copy.deepcopy(_spec())
+        for row in spec["registry"]:
+            if row["lcsc"] == "C7668":
+                if status is None:
+                    row.pop("review_status", None)
+                else:
+                    row["review_status"] = status
+        return spec
+
+    def test_an_unreviewed_entry_cannot_be_used(self):
+        registry = Registry(self._spec_with_status("unreviewed"))
+        with self.assertRaises(OrientationError) as caught:
+            registry.offset("C7668")
+        self.assertIn("unreviewed", str(caught.exception))
+        self.assertFalse(registry.covers("C7668"))
+
+    def test_a_missing_status_cannot_be_used(self):
+        registry = Registry(self._spec_with_status(None))
+        with self.assertRaises(OrientationError):
+            registry.offset("C7668")
+
+    def test_pending_and_empty_are_no_better(self):
+        for status in ("pending", "", "   ", "Reviewed", "reviewed?"):
+            registry = Registry(self._spec_with_status(status))
+            with self.assertRaises(OrientationError,
+                                   msg="{!r} was accepted".format(status)):
+                registry.offset("C7668")
+
+    def test_an_unusable_entry_is_reported_as_a_defect(self):
+        registry = Registry(self._spec_with_status("pending"))
+        defects = [d for d in registry.defects() if d.get("lcsc") == "C7668"]
+        self.assertTrue(defects)
+        self.assertIn("pending", str(defects[0]))
+
+    def test_generation_refuses_it_and_names_the_part(self):
+        spec = self._spec_with_status("unreviewed")
+        board = _board_numbers_and_angles()
+        populated = sorted(row["Designator"] for row in _cpl_rows())
+        rows = [{"Designator": ref,
+                 "Rotation": "{:.6f}".format(board[ref][1])}
+                for ref in populated]
+        numbers = {ref: board[ref][0] for ref in populated}
+        applied, problems = apply_to_rows(rows, Registry(spec), numbers,
+                                          "Designator", "Rotation")
+        self.assertNotIn("U2", applied)
+        self.assertEqual([p["reference"] for p in problems], ["U2"])
+        self.assertEqual(problems[0]["lcsc"], "C7668")
+        self.assertIn("review_status", problems[0]["issue"])
+
+    def test_the_gate_refuses_it_too(self):
+        doc = _manifest_doc()
+        for row in doc["release_generation"]["cpl_orientation"]["registry"]:
+            if row["lcsc"] == "C7668":
+                row["review_status"] = "unreviewed"
+        work = tempfile.mkdtemp(prefix="pcbqa_orient_status_")
+        doc["project_root"] = PROJECT
+        doc["fixture"] = {"attributes_file": os.path.join(PROJECT,
+                                                          ".gitattributes")}
+        path = os.path.join(work, "manifest.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        gate = _run_gate(path)
+        self.assertEqual(gate["status"], Status.FAIL)
+        self.assertTrue(any(f.get("lcsc") == "C7668"
+                            for f in gate["findings"]), gate["findings"])
+
+    def test_the_shipped_registry_marks_every_entry_reviewed(self):
+        registry = Registry(_spec())
+        self.assertEqual(registry.unusable, {})
+        self.assertEqual(len(registry.entries), 15)
+
+
+# ---------------------------------------------------------------------------
+# the range, which is half-open
+# ---------------------------------------------------------------------------
+
+class TheAngleRangeIsHalfOpen(unittest.TestCase):
+    """[0, 360) with a tolerance on the upper end is [0, 360].
+
+    360 and 0 are the same orientation, so letting 360 through changes no
+    part - but the file then contradicts what the manifest says it contains,
+    and an assembly house that range-checks the column rejects the upload.
+    Tolerance is for comparing two angles that should agree; it has no
+    business widening the range itself.
+    """
+
+    def _gate_with_rotation(self, value):
+        """Run the gate over a CPL whose one row carries `value`."""
+        work = tempfile.mkdtemp(prefix="pcbqa_orient_range_")
+        release = os.path.join(work, "generated", "release")
+        os.makedirs(release)
+        shutil.copytree(os.path.join(PROJECT, "generated", "release"),
+                        release, dirs_exist_ok=True)
+        rows = _cpl_rows()
+        rows[0]["Rotation"] = value
+        with open(os.path.join(release, "cpl.csv"), "w", newline="",
+                  encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        doc = _manifest_doc()
+        doc["project_root"] = work
+        doc["fixture"] = {"attributes_file": os.path.join(PROJECT,
+                                                          ".gitattributes")}
+        for key in ("pcb", "schematic", "project"):
+            doc["sources"][key] = os.path.join(
+                PROJECT, doc["sources"][key])
+        doc["artifacts"]["bom"] = os.path.join(
+            PROJECT, doc["artifacts"]["bom"])
+        path = os.path.join(work, "manifest.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        return _run_gate(path), rows[0]["Designator"]
+
+    def test_zero_is_inside_the_range(self):
+        self.assertAlmostEqual(normalise(0.0), 0.0)
+        self.assertAlmostEqual(normalise(720.0), 0.0)
+
+    def test_just_below_the_top_is_inside_the_range(self):
+        self.assertAlmostEqual(normalise(359.9999), 359.9999, places=6)
+        self.assertLess(normalise(-0.0001), 360.0)
+
+    def test_normalisation_never_returns_the_open_end(self):
+        for angle in (360.0, -360.0, 720.0, -1e-18, -1e-13, 359.9999999999999):
+            self.assertLess(normalise(angle), 360.0,
+                            "{} normalised onto the open end".format(angle))
+            self.assertGreaterEqual(normalise(angle), 0.0)
+
+    def test_rounding_cannot_carry_a_value_up_to_the_open_end(self):
+        """359.99999 written to four decimals is 360.0000, which must not ship."""
+        registry = Registry(_spec())
+        zero = next(lcsc for lcsc, row in registry.entries.items()
+                    if float(row["offset_deg"]) == 0.0)
+        rows = [{"Designator": "X", "Rotation": "359.99999"}]
+        applied, problems = apply_to_rows(rows, registry, {"X": zero},
+                                          "Designator", "Rotation")
+        self.assertEqual(problems, [])
+        self.assertEqual(rows[0]["Rotation"], "0.0000")
+        self.assertEqual(applied["X"]["shipped_deg"], 0.0)
+
+    def test_the_gate_rejects_exactly_360(self):
+        gate, ref = self._gate_with_rotation("360.0000")
+        self.assertEqual(gate["status"], Status.FAIL)
+        self.assertTrue(
+            any(f.get("reference") == ref and "360" in str(f.get("issue"))
+                for f in gate["findings"]), gate["findings"])
+
+    def test_the_gate_rejects_a_negative_angle(self):
+        gate, ref = self._gate_with_rotation("-90.0000")
+        self.assertEqual(gate["status"], Status.FAIL)
+        self.assertTrue(any(f.get("reference") == ref
+                            for f in gate["findings"]), gate["findings"])
+
+    def test_the_gate_accepts_just_below_the_top(self):
+        """The boundary is the only thing being rejected, not the neighbourhood."""
+        gate, ref = self._gate_with_rotation("359.9999")
+        outside = [f for f in gate["findings"]
+                   if f.get("reference") == ref and "outside" in
+                   str(f.get("issue"))]
+        self.assertEqual(outside, [], gate["findings"])
+
+
+# ---------------------------------------------------------------------------
+# the evidence itself
+# ---------------------------------------------------------------------------
+
+class TheEvidenceIsTheCommittedResponse(unittest.TestCase):
+    """What is committed is the response body, not a summary of it.
+
+    An extract that only says what the response contained is a claim about
+    evidence rather than evidence. Both files are committed, the extract is
+    re-derived from the body every time it is read, and each of the three
+    things a determined edit could touch is checked separately.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, os.path.join(PROJECT, "tools"))
+        import jlc_orientation
+        cls.jo = jlc_orientation
+
+    def setUp(self):
+        # Pinned rather than inherited: these tests must not depend on what
+        # some earlier test in the same worker left the module pointing at.
+        self.saved = self.jo.FIXTURES
+        self.jo.FIXTURES = os.path.join(PROJECT, "fabrication",
+                                        "jlc_orientation")
+
+    def tearDown(self):
+        self.jo.FIXTURES = self.saved
+
+    def _sandbox(self):
+        """A private copy of the frozen evidence, safe to damage."""
+        work = tempfile.mkdtemp(prefix="pcbqa_evidence_")
+        shutil.copytree(self.saved, os.path.join(work, "jlc_orientation"))
+        self.jo.FIXTURES = os.path.join(work, "jlc_orientation")
+        return self.jo.FIXTURES
+
+    def test_every_part_commits_its_raw_body(self):
+        registry = Registry(_spec())
+        for lcsc, row in sorted(registry.entries.items()):
+            raw = os.path.join(PROJECT, row["raw_file"])
+            self.assertTrue(os.path.isfile(raw),
+                            "{}: raw response is not committed".format(lcsc))
+            with open(raw, "rb") as fh:
+                body = fh.read()
+            with open(os.path.join(PROJECT, row["evidence_file"]),
+                      encoding="utf-8") as fh:
+                record = json.load(fh)
+            self.assertEqual(hashlib.sha256(body).hexdigest(),
+                             record["raw_sha256"], lcsc)
+            self.assertEqual(len(body), record["raw_bytes"], lcsc)
+            self.assertEqual(record["raw_sha256"], row["evidence_sha256"], lcsc)
+            self.assertTrue(record["source_url"].startswith("https://"))
+            self.assertTrue(record["retrieved_utc"].endswith("Z"))
+
+    def test_the_extract_is_derivable_from_the_body(self):
+        for lcsc in self.jo.frozen_parts():
+            problems, pads = self.jo.verify(lcsc)
+            self.assertEqual(problems, [], lcsc)
+            record = self.jo.load(lcsc)
+            self.assertEqual(record["pads"], pads, lcsc)
+            self.assertEqual(record["kind"], "normalised extract", lcsc)
+
+    def test_editing_the_raw_body_is_caught(self):
+        root = self._sandbox()
+        path = os.path.join(root, "raw", "C7668.json")
+        with open(path, "rb") as fh:
+            body = fh.read()
+        with open(path, "wb") as fh:
+            fh.write(body + b" ")           # one byte, still valid JSON
+        problems, _pads = self.jo.verify("C7668")
+        self.assertTrue(problems)
+        self.assertIn("digest", " ".join(p["issue"] for p in problems))
+
+    def test_editing_the_extract_is_caught(self):
+        root = self._sandbox()
+        path = os.path.join(root, "C7668.json")
+        with open(path, encoding="utf-8") as fh:
+            record = json.load(fh)
+        record["pads"]["1"] = [0.0, 0.0]
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(record, fh, indent=2)
+        problems, _pads = self.jo.verify("C7668")
+        self.assertIn("not what the raw response derives",
+                      " ".join(p["issue"] for p in problems))
+
+    def test_a_missing_raw_body_is_caught(self):
+        root = self._sandbox()
+        os.remove(os.path.join(root, "raw", "C7668.json"))
+        problems, pads = self.jo.verify("C7668")
+        self.assertIsNone(pads)
+        self.assertIn("not committed", problems[0]["issue"])
+
+    def test_scoring_reads_the_body_rather_than_the_extract(self):
+        """An edited extract cannot move an offset even if verify were skipped."""
+        root = self._sandbox()
+        path = os.path.join(root, "C7668.json")
+        with open(path, encoding="utf-8") as fh:
+            record = json.load(fh)
+        record["pads"] = {n: [-p[0], -p[1]] for n, p in record["pads"].items()}
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(record, fh, indent=2)
+        derived = self.jo.derive("LCSC")
+        self.assertAlmostEqual(derived["C7668"]["best_offset_deg"], -90.0,
+                               places=3)
+        self.assertTrue(derived["C7668"]["evidence_problems"])
+
+    def test_the_offline_commands_never_touch_the_network(self):
+        """A release must not depend on EasyEDA being up."""
+        def refuse(*_a, **_k):
+            raise AssertionError("the offline path reached the network")
+        saved = self.jo.fetch
+        self.jo.fetch = refuse
+        try:
+            derived = self.jo.derive("LCSC")
+        finally:
+            self.jo.fetch = saved
+        self.assertEqual(len(derived), 15)
+        for lcsc, row in derived.items():
+            self.assertEqual(row["evidence_problems"], [], lcsc)
+
+
+# ---------------------------------------------------------------------------
+# the release, end to end
+# ---------------------------------------------------------------------------
+
+class ACleanReleaseRefusesAnUnreviewedPart(unittest.TestCase):
+    """The whole path, not the two halves of it.
+
+    apply_to_rows() refusing and the gate objecting are each worth testing and
+    neither proves that a release cannot ship. This drives the same entry point
+    a real release uses, against an isolated copy of the project whose registry
+    has lost U2's part number, and requires that nothing is published and that
+    the release committed in this repository is not touched.
+    """
+
+    def _tree_digest(self, root):
+        out = {}
+        for base, _dirs, files in os.walk(root):
+            for name in sorted(files):
+                path = os.path.join(base, name)
+                with open(path, "rb") as fh:
+                    out[os.path.relpath(path, root)] = hashlib.sha256(
+                        fh.read()).hexdigest()
+        return out
+
+    def test_it_is_rejected_and_nothing_is_published(self):
+        import run
+
+        committed = os.path.join(PROJECT, "generated", "release")
+        before = self._tree_digest(committed)
+
+        work = tempfile.mkdtemp(prefix="pcbqa_release_missing_")
+        project = os.path.join(work, "project")
+        shutil.copytree(PROJECT, project, ignore=_NOT_THE_PROJECT)
+
+        doc = _manifest_doc()
+        doc["board_id"] = "orientation-missing-mapping"
+        doc["project_root"] = project
+        spec = doc["release_generation"]["cpl_orientation"]
+        was = len(spec["registry"])
+        spec["registry"] = [row for row in spec["registry"]
+                            if row["lcsc"] != "C7668"]
+        self.assertEqual(len(spec["registry"]), was - 1,
+                         "C7668 must have been in the registry to remove")
+        manifest_path = os.path.join(work, "manifest.json")
+        with open(manifest_path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+
+        from pcbqa.parallel import ENV_OUTPUT_ROOT
+        saved = os.environ.get(ENV_OUTPUT_ROOT)
+        os.environ[ENV_OUTPUT_ROOT] = work
+        captured = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(captured):
+                code = run.cmd_release(manifest_path)
+        finally:
+            if saved is None:
+                os.environ.pop(ENV_OUTPUT_ROOT, None)
+            else:
+                os.environ[ENV_OUTPUT_ROOT] = saved
+        printed = captured.getvalue()
+
+        self.assertNotEqual(code, 0, "a release shipped without U2 reviewed")
+        self.assertIn("RELEASE BLOCKED", printed)
+        blamed = [line for line in printed.splitlines()
+                  if "C7668" in line or "U2" in line]
+        self.assertTrue(blamed,
+                        "the refusal never names the missing part:\n"
+                        + printed[-4000:])
+        self.assertTrue(
+            any("reviewed orientation" in line for line in blamed),
+            "the refusal names the part but not the missing mapping:\n"
+            + "\n".join(blamed))
+
+        board_out = os.path.join(work, "out", doc["board_id"])
+        published = os.path.join(board_out, "published")
+        self.assertFalse(os.path.isdir(published) and os.listdir(published),
+                         "a candidate was published anyway")
+        self.assertFalse(os.path.isfile(os.path.join(board_out, "latest.json")),
+                         "a latest.json was written for a rejected release")
+        self.assertEqual(self._tree_digest(committed), before,
+                         "the committed release was modified by a failed run")
 
 
 if __name__ == "__main__":

@@ -15,14 +15,23 @@ offset is scored by the worst angular disagreement over all pads, so the answer
 is decided by every pin rather than by pin 1 alone: a pin-1 match cannot tell a
 rotation from a mirror.
 
-The fetched pads are frozen under fabrication/jlc_orientation/ with
-the source URL, the retrieval date and the digest of the exact response body,
-so the scoring is reproducible offline and a later change to JLC's library
-shows up as a digest mismatch rather than as a silent re-derivation.
+Two files are frozen per part under fabrication/jlc_orientation/. The response
+body exactly as served is kept under raw/, and beside it a normalised extract
+recording the source URL, the retrieval date, the response length and its
+SHA-256. The extract is not the response and is never described as one: it is
+derived from it, and every offline command re-derives it rather than trusting
+it, so tampering with the raw payload, with the extraction, or with the
+registry's offset all fail rather than pass.
 
     tools/jlc_orientation.py freeze [LCSC ...]   fetch and record the evidence
     tools/jlc_orientation.py report              score every frozen part
     tools/jlc_orientation.py check               non-zero if any offset moved
+    tools/jlc_orientation.py check-live          frozen evidence vs JLC today
+
+Only freeze and check-live use the network. report and check read the frozen
+files alone, so the test suite and the clean release never reach upstream, and
+JLC changing their library is reported as upstream drift rather than as
+corruption of what is committed here.
 """
 
 from __future__ import annotations
@@ -76,13 +85,15 @@ def fetch(lcsc, timeout=45):
         return url, response.read()
 
 
-def normalise(lcsc, url, raw):
-    """Pad centres in millimetres, in a top view, keyed by pad number.
+def extract(lcsc, raw):
+    """Read a raw response body. {"mpn", "package", "pads"}, nothing else.
 
-    EasyEDA's PAD record is a tilde-separated row whose third and fourth
-    fields are the pad centre and whose ninth is the pad number. Y is negated
-    here so that a larger value means further up, which is how every other
-    coordinate in this project is read.
+    Deliberately a pure function of the bytes: this is what makes the frozen
+    extract checkable rather than merely present. EasyEDA's PAD record is a
+    tilde-separated row whose third and fourth fields are the pad centre and
+    whose ninth is the pad number. Y is negated here so that a larger value
+    means further up, which is how every other coordinate in this project is
+    read.
     """
     document = json.loads(raw.decode("utf-8"))
     result = document.get("result") or {}
@@ -102,20 +113,39 @@ def normalise(lcsc, url, raw):
         pads[number] = [round(float(field[2]) * UNIT_MM, 6),
                         round(-float(field[3]) * UNIT_MM, 6)]
     if not pads:
-        raise SystemExit("{}: the response carries no pads".format(lcsc))
+        raise ValueError("{}: the response carries no pads".format(lcsc))
 
     return {
-        "lcsc": lcsc,
         "mpn": result.get("title", "").strip(),
         "package": parameters.get("package", "").strip(),
+        "pads": dict(sorted(pads.items(), key=_pad_sort)),
+    }
+
+
+def normalise(lcsc, url, raw, retrieved_utc=None):
+    """The extract, plus where the bytes it came from were obtained."""
+    fields = extract(lcsc, raw)
+    return {
+        "kind": "normalised extract",
+        "note": "Derived from the raw response body, which is committed "
+                "verbatim at raw_file. This file is not the response. Every "
+                "offline command re-derives these pads from that file and "
+                "fails on a disagreement.",
+        "lcsc": lcsc,
+        "mpn": fields["mpn"],
+        "package": fields["package"],
         "source_url": url,
-        "retrieved_utc": datetime.datetime.now(
+        "retrieved_utc": retrieved_utc or datetime.datetime.now(
             datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "response_sha256": hashlib.sha256(raw).hexdigest(),
-        "response_bytes": len(raw),
+        "raw_file": os.path.relpath(raw_path(lcsc), HERE).replace("\\", "/"),
+        "raw_bytes": len(raw),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
         "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units "
                  "with Y down and both conversions are applied here",
-        "pads": dict(sorted(pads.items(), key=_pad_sort)),
+        "derivation": "PAD~ records of result.packageDetail.dataStr.shape; "
+                      "field 3 and field 4 are the pad centre in 10-mil units "
+                      "and field 9 is the pad number",
+        "pads": fields["pads"],
     }
 
 
@@ -130,6 +160,12 @@ def fixture_path(lcsc):
     return os.path.join(FIXTURES, "{}.json".format(lcsc))
 
 
+def raw_path(lcsc):
+    # Derived from FIXTURES rather than fixed at import, because the release
+    # gate repoints FIXTURES at its own copy of the project.
+    return os.path.join(FIXTURES, "raw", "{}.json".format(lcsc))
+
+
 def load(lcsc):
     with open(fixture_path(lcsc), encoding="utf-8") as fh:
         return json.load(fh)
@@ -140,6 +176,71 @@ def frozen_parts():
         return []
     return sorted(name[:-5] for name in os.listdir(FIXTURES)
                   if name.endswith(".json"))
+
+
+def verify(lcsc):
+    """Check one part's frozen evidence end to end. (problems, pads).
+
+    The pads returned are the ones re-derived from the committed raw body, not
+    the ones the extract states, so scoring downstream cannot be fooled by an
+    edited extract even if this check were skipped.
+    """
+    problems = []
+    try:
+        record = load(lcsc)
+    except (OSError, ValueError) as exc:
+        return [{"lcsc": lcsc, "issue": "the normalised extract cannot be "
+                                        "read", "detail": str(exc)}], None
+    path = raw_path(lcsc)
+    if not os.path.isfile(path):
+        return problems + [{
+            "lcsc": lcsc,
+            "issue": "the raw response body is not committed, so the extract "
+                     "cannot be re-derived from anything",
+            "expected_file": os.path.relpath(path, HERE).replace("\\", "/"),
+        }], None
+    with open(path, "rb") as fh:
+        raw = fh.read()
+
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != record.get("raw_sha256"):
+        problems.append({"lcsc": lcsc,
+                         "issue": "the committed raw response does not match "
+                                  "the digest recorded for it",
+                         "recorded": record.get("raw_sha256"),
+                         "on_disk": digest})
+    if len(raw) != record.get("raw_bytes"):
+        problems.append({"lcsc": lcsc,
+                         "issue": "the committed raw response is not the "
+                                  "recorded length",
+                         "recorded": record.get("raw_bytes"),
+                         "on_disk": len(raw)})
+    try:
+        derived = extract(lcsc, raw)
+    except (ValueError, KeyError, IndexError) as exc:
+        return problems + [{"lcsc": lcsc,
+                            "issue": "the committed raw response cannot be "
+                                     "read as a footprint",
+                            "detail": str(exc)}], None
+
+    for field in ("mpn", "package"):
+        if record.get(field) != derived[field]:
+            problems.append({"lcsc": lcsc,
+                             "issue": "the extract's {} is not what the raw "
+                                      "response says".format(field),
+                             "extract": record.get(field),
+                             "raw": derived[field]})
+    if record.get("pads") != derived["pads"]:
+        stated, actual = record.get("pads") or {}, derived["pads"]
+        differing = sorted(n for n in set(stated) | set(actual)
+                           if stated.get(n) != actual.get(n))
+        problems.append({"lcsc": lcsc,
+                         "issue": "the extract's pads are not what the raw "
+                                  "response derives",
+                         "pads_disagreeing": differing[:8],
+                         "pad_count": "{} stated, {} derived".format(
+                             len(stated), len(actual))})
+    return problems, derived["pads"]
 
 
 # ---------------------------------------------------------------------------
@@ -264,12 +365,18 @@ def derive(part_number_field="LCSC", board_path=BOARD):
     board = board_parts(board_path, part_number_field)
     out = {}
     for lcsc in frozen_parts():
+        problems, pads = verify(lcsc)
+        if pads is None:
+            out[lcsc] = {"error": problems[0]["issue"],
+                         "evidence_problems": problems}
+            continue
         evidence = load(lcsc)
         if lcsc not in board:
             out[lcsc] = {"error": "no footprint on the board carries this "
-                                  "part number"}
+                                  "part number",
+                         "evidence_problems": problems}
             continue
-        entry = dict(score(evidence["pads"], board[lcsc]["pads"]))
+        entry = dict(score(pads, board[lcsc]["pads"]))
         entry.update({
             "mpn": evidence["mpn"],
             "package": evidence["package"],
@@ -277,7 +384,10 @@ def derive(part_number_field="LCSC", board_path=BOARD):
             "references": board[lcsc]["references"],
             "evidence_file": os.path.relpath(
                 fixture_path(lcsc), HERE).replace("\\", "/"),
-            "evidence_sha256": evidence["response_sha256"],
+            "raw_file": os.path.relpath(
+                raw_path(lcsc), HERE).replace("\\", "/"),
+            "evidence_sha256": evidence["raw_sha256"],
+            "evidence_problems": problems,
         })
         out[lcsc] = entry
     return out
@@ -288,17 +398,22 @@ def derive(part_number_field="LCSC", board_path=BOARD):
 # ---------------------------------------------------------------------------
 
 def cmd_freeze(args):
-    os.makedirs(FIXTURES, exist_ok=True)
+    os.makedirs(os.path.join(FIXTURES, "raw"), exist_ok=True)
     wanted = args.lcsc or sorted(board_parts(BOARD, args.field))
     for lcsc in wanted:
         url, raw = fetch(lcsc)
+        # The body goes down byte for byte. Nothing is re-encoded, re-indented
+        # or given a trailing newline: an evidence file that is not what the
+        # server sent proves nothing about what the server sent.
+        with open(raw_path(lcsc), "wb") as fh:
+            fh.write(raw)
         record = normalise(lcsc, url, raw)
         with open(fixture_path(lcsc), "w", encoding="utf-8", newline="\n") as fh:
             json.dump(record, fh, indent=2, sort_keys=False)
             fh.write("\n")
-        print("  froze {:<10} {:<28} {:>2} pads  sha256 {}".format(
+        print("  froze {:<10} {:<28} {:>2} pads  {:>6} B  sha256 {}".format(
             lcsc, record["mpn"][:28], len(record["pads"]),
-            record["response_sha256"][:16]))
+            record["raw_bytes"], record["raw_sha256"][:16]))
     return 0
 
 
@@ -306,9 +421,11 @@ def cmd_report(args):
     derived = derive(args.field)
     print("%-11s %-26s %5s %8s %8s  %s" % (
         "LCSC", "part", "offset", "worst", "margin", "references"))
+    bad = 0
     for lcsc, row in sorted(derived.items()):
         if "error" in row:
             print("%-11s %s" % (lcsc, row["error"]))
+            bad += 1
             continue
         print("%-11s %-26s %5.0f %7.1f%s %7.1f%s  %s" % (
             lcsc, row["mpn"][:26], row["best_offset_deg"],
@@ -318,7 +435,10 @@ def cmd_report(args):
         if not row["decisive"]:
             print("%-11s   NOT DECISIVE - candidates are too close to choose"
                   % "")
-    return 0
+        for problem in row.get("evidence_problems", []):
+            print("%-11s   EVIDENCE: %s" % ("", problem["issue"]))
+            bad += 1
+    return 1 if bad else 0
 
 
 def cmd_check(args):
@@ -327,12 +447,19 @@ def cmd_check(args):
         registry = json.load(fh)["release_generation"]["cpl_orientation"]
     declared = {row["lcsc"]: float(row["offset_deg"])
                 for row in registry["registry"]}
+    reviewed = {row["lcsc"] for row in registry["registry"]
+                if str(row.get("review_status", "")).strip() == "reviewed"}
     derived = derive(registry.get("part_number_field", "LCSC"))
     problems = []
     for lcsc, row in sorted(derived.items()):
+        for problem in row.get("evidence_problems", []):
+            problems.append("{}: {}".format(lcsc, problem["issue"]))
         if "error" in row:
             problems.append("{}: {}".format(lcsc, row["error"]))
             continue
+        if lcsc in declared and lcsc not in reviewed:
+            problems.append("{}: the entry is not marked reviewed, so it may "
+                            "not be used".format(lcsc))
         if lcsc not in declared:
             problems.append("{}: evidence is frozen but the registry has no "
                             "entry".format(lcsc))
@@ -355,6 +482,58 @@ def cmd_check(args):
     return 1 if problems else 0
 
 
+def cmd_check_live(args):
+    """Compare the frozen evidence with what JLC serves today.
+
+    Kept apart from `check` on purpose, and given its own exit code. JLC
+    revising a footprint is news, but it is not the committed evidence being
+    wrong, and a release must not start failing because an upstream site
+    changed under it. Corruption of what is committed here still reports as
+    corruption, and outranks drift.
+    """
+    corrupt, drift = [], []
+    for lcsc in frozen_parts():
+        problems, pads = verify(lcsc)
+        corrupt.extend("{}: {}".format(lcsc, p["issue"]) for p in problems)
+        if pads is None:
+            continue
+        record = load(lcsc)
+        try:
+            url, raw = fetch(lcsc, timeout=args.timeout)
+        except Exception as exc:                       # noqa: BLE001 - network
+            drift.append("{}: could not be retrieved ({})".format(lcsc, exc))
+            continue
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest == record["raw_sha256"]:
+            print("  {:<11} unchanged upstream".format(lcsc))
+            continue
+        try:
+            now = extract(lcsc, raw)
+        except (ValueError, KeyError, IndexError) as exc:
+            drift.append("{}: today's response cannot be read ({})".format(
+                lcsc, exc))
+            continue
+        moved = sorted(n for n in set(pads) | set(now["pads"])
+                       if pads.get(n) != now["pads"].get(n))
+        if moved:
+            drift.append("{}: JLC's footprint geometry has CHANGED - pads {} "
+                         "differ; re-freeze and re-review the offset".format(
+                             lcsc, ", ".join(moved[:8])))
+        else:
+            drift.append("{}: response body changed but the pad geometry is "
+                         "identical, so the derived offset is unaffected"
+                         .format(lcsc))
+    for line in corrupt:
+        print("  COMMITTED EVIDENCE CORRUPT  " + line)
+    for line in drift:
+        print("  UPSTREAM DRIFT              " + line)
+    print("{} part(s) compared with {}: {} corrupt, {} drifted".format(
+        len(frozen_parts()), SOURCE.split("/api")[0], len(corrupt), len(drift)))
+    if corrupt:
+        return 1
+    return 2 if drift else 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--field", default="LCSC",
@@ -372,6 +551,12 @@ def main(argv=None):
     check.add_argument("--registry", default=os.path.join(
         HERE, "verification", "boards", "live.json"))
     check.set_defaults(func=cmd_check)
+
+    live = sub.add_parser("check-live",
+                          help="frozen evidence against JLC today (network); "
+                               "exit 1 corrupt, 2 upstream drift")
+    live.add_argument("--timeout", type=int, default=45)
+    live.set_defaults(func=cmd_check_live)
 
     args = parser.parse_args(argv)
     return args.func(args)

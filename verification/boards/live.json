@@ -90,7 +90,11 @@
       "**/*.kicad_sch",
       "*.kicad_pcb",
       "*.kicad_pro",
-      "*.kicad_dru"
+      "*.kicad_dru",
+      "tools/jlc_orientation.py",
+      "fabrication/jlc_orientation/*.json",
+      "fabrication/jlc_orientation/raw/*.json",
+      "fabrication/jlc_orientation/README.md"
     ],
     "source_hash_field": "source_sha256",
     "closure_field": "source_closure_sha256"
@@ -624,6 +628,7 @@
       "PROV.FIXTURE_INTEGRITY",
       "PROV.SOURCE_AUTHORITY",
       "PROV.REPORT_FRESHNESS",
+      "PROV.SOURCE_CLOSURE",
       "ERC.AUTHORITATIVE",
       "DRC.AUTHORITATIVE",
       "DRC.NO_SUPPRESSED_RULES",
@@ -835,11 +840,16 @@
       "angle_decimals": 4,
       "sign_convention": "offset_deg is ADDED to the KiCad rotation and the sum normalised. Positive is counter-clockwise, which is what both KiCad and the assembly house use for a top-side part.",
       "evidence": {
-        "method": "tools/jlc_orientation.py fetches the footprint JLCPCB actually uses - EasyEDA is their EDA and serves it - normalises the pads into a top view in millimetres, and scores each 90-degree candidate by the worst pad-direction disagreement against this board's KiCad footprint with its placement rotation removed. Every pad votes, so the answer cannot rest on pin 1 alone: a pin-1 match cannot tell a rotation from a mirror.",
+        "method": "tools/jlc_orientation.py fetches the footprint JLCPCB actually uses - EasyEDA is their EDA and serves it - reads the pads into a top view in millimetres, and scores each 90-degree candidate by the worst pad-direction disagreement against this board's KiCad footprint with its placement rotation removed. Every pad votes, so the answer cannot rest on pin 1 alone: a pin-1 match cannot tell a rotation from a mirror.",
         "fixtures": "fabrication/jlc_orientation/<LCSC>.json",
-        "fixture_contents": "pad centres in millimetres in a top view, the source URL, the retrieval date and the SHA-256 of the exact response body, so the derivation runs offline and a change to JLC's library shows up as a digest mismatch rather than a silent re-derivation.",
-        "reproduce": "tools/jlc_orientation.py report   (offline, from fixtures)",
-        "recheck": "tools/jlc_orientation.py check    (registry vs evidence)"
+        "fixture_contents": "A NORMALISED EXTRACT of the raw body - not the body, and not described as one. Pad centres in millimetres in a top view keyed by pad number, plus the source URL, the retrieval date, and the length and SHA-256 of the raw file it was derived from. It is a convenience, never an authority: report and check re-derive the pads from the raw body and fail if this file disagrees with them.",
+        "reproduce": "tools/jlc_orientation.py report        (offline)",
+        "recheck": "tools/jlc_orientation.py check         (offline; registry vs evidence)",
+        "raw_evidence": "fabrication/jlc_orientation/raw/<LCSC>.json",
+        "raw_evidence_contents": "The response body exactly as EasyEDA served it, byte for byte: one line of JSON, no re-encoding and no trailing newline. This is the evidence. Its SHA-256 and length are recorded in the extract beside it.",
+        "tamper_resistance": "Three ways to move an offset, all of which fail: editing the raw body breaks its recorded digest; editing the extract makes it disagree with what the raw body derives; editing the registry's offset makes it disagree with what the evidence scores.",
+        "upstream_drift": "tools/jlc_orientation.py check-live    (the only routine reader of the network; exit 1 means the committed evidence is corrupt, exit 2 means JLC's library has moved since it was frozen. Drift is a prompt to re-freeze and re-review, not a release failure, and neither the test suite nor a clean release reaches upstream.)",
+        "schema": "fabrication/jlc_orientation/README.md"
       },
       "undocumented_production_edits": {
         "summary": "JLCPCB flagged 52 references on the first upload. Four were genuine library-zero offsets and are registered below. The other 48 are listed here because their angles were changed by JLCPCB and the revised numeric rotations were never supplied, so what those 48 became cannot be reproduced or verified from anything in this repository.",
@@ -908,6 +918,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C1017.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C1017.json",
           "evidence_sha256": "eb9c74fc0f842cb4e15c5906c3cad5f6994f1ee5419e3bb3c33615976a37cfd3",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -925,6 +936,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C106858.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C106858.json",
           "evidence_sha256": "0f7bcb02453589522f7a02d0c693e0173b0482ec293d806adab05c8e58bca4c8",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -945,6 +957,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is -90 degrees with a worst pad disagreement of 0.287 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB corrected this part during production review of the first upload",
           "evidence_file": "fabrication/jlc_orientation/C111212.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C111212.json",
           "evidence_sha256": "64c78a657f8808e550ba8acabd2c356f21423b21b1b5a5d202d9d2adf991334b",
           "derived_worst_deg": 0.287,
           "derived_margin_deg": 90.0,
@@ -963,6 +976,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C1525.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C1525.json",
           "evidence_sha256": "7826a74f5dd3b0c4acd30493446620c66ae1674a91d666a280de8b66d02da7a0",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -998,6 +1012,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C15850.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C15850.json",
           "evidence_sha256": "21a4f1747d41d4dc8f6811e22acf055edba9db2065f92edd8da4f9f17a763e73",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1019,6 +1034,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 1.493 and the next candidate 89.998 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C22390138.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C22390138.json",
           "evidence_sha256": "2109971b08f0bfd875f82b08e1f69ad1e10a328c71e7472350318f28eccbb901",
           "derived_worst_deg": 1.493,
           "derived_margin_deg": 89.998,
@@ -1051,6 +1067,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C2480.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C2480.json",
           "evidence_sha256": "a2bb7f5f87fb31f23388595a35c936e164c713a38e7cba6cc4691f923349aaa5",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1068,6 +1085,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C25076.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C25076.json",
           "evidence_sha256": "b6018e059d6b5196b64a22556bc81215ccc4bd0e0755fa072d5688a0c4b8a99e",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1100,6 +1118,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C25092.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C25092.json",
           "evidence_sha256": "401495402819ed289cc1590eee32bbaec62de5698286f475c8e49b2f3e09013b",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1132,6 +1151,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C25105.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C25105.json",
           "evidence_sha256": "a1f32245e3c97176ad644a7bef1187c3a7de52f81c765a36ffc5820425f45e85",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1166,6 +1186,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 3.638 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C2831388.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C2831388.json",
           "evidence_sha256": "e0f1b9a1b92975c8fe0bec4e6380ca723288bc986423bcf15047b1b6c98e07e2",
           "derived_worst_deg": 3.638,
           "derived_margin_deg": 90.0,
@@ -1183,6 +1204,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C369168.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C369168.json",
           "evidence_sha256": "9436b402a53d10e02b8677f0b5206937c1473526b3ff903aa4d02b0728671e5d",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1200,6 +1222,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 0 degrees with a worst pad disagreement of 0.0 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB requested no orientation correction for this part",
           "evidence_file": "fabrication/jlc_orientation/C76637.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C76637.json",
           "evidence_sha256": "68b9c125a117de357534fb672df66db3cc9308993de46fddf0a769c29df7a5de",
           "derived_worst_deg": 0.0,
           "derived_margin_deg": 90.0,
@@ -1217,6 +1240,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is -90 degrees with a worst pad disagreement of 0.084 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB corrected this part during production review of the first upload",
           "evidence_file": "fabrication/jlc_orientation/C7668.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C7668.json",
           "evidence_sha256": "42b44827f1d7fc58a317738b0c528698a76ad94bdfb01ee9204f28852055a75e",
           "derived_worst_deg": 0.084,
           "derived_margin_deg": 90.0,
@@ -1234,6 +1258,7 @@
           "review_basis": "re-derived from JLCPCB's own library footprint, pad by pad, against this board's KiCad footprint; the winning candidate is 180 degrees with a worst pad disagreement of 3.825 and the next candidate 90.0 degrees behind",
           "production_review": "JLCPCB corrected this part during production review of the first upload",
           "evidence_file": "fabrication/jlc_orientation/C80670.json",
+          "raw_file": "fabrication/jlc_orientation/raw/C80670.json",
           "evidence_sha256": "941b9b453f30661c2b87ca90ada2b5ddd6f10c63ef6203a4ac89e88b928f7610",
           "derived_worst_deg": 3.825,
           "derived_margin_deg": 90.0,
@@ -1241,7 +1266,21 @@
             "U1"
           ]
         }
-      ]
+      ],
+      "reproduction_inputs": {
+        "description": "Everything a third party needs to arrive at the same offsets. Each of these must appear in the release's source closure; PROV.SOURCE_CLOSURE fails if one disappears, which is how an evidence file silently dropping out of the closure is caught rather than noticed later.",
+        "required_globs": [
+          "tools/jlc_orientation.py",
+          "fabrication/jlc_orientation/README.md",
+          "fabrication/jlc_orientation/*.json",
+          "fabrication/jlc_orientation/raw/*.json"
+        ],
+        "per_entry_files": "every registry entry's evidence_file and raw_file, checked individually rather than by glob",
+        "configuration": "this manifest, whose digest enters the closure as <manifest>",
+        "implementation_note": "The registry implementation is verification/pcbqa/orientation.py, which is validator code rather than project data. A clean room copies the project and not the validator, so it cannot be in the copied closure; it is covered by the validator's own self-test instead. Listing it here would produce a closure that resolves differently inside and outside the run, which is worse than not listing it."
+      },
+      "review_status_policy": "An entry is usable only when review_status is exactly 'reviewed'. 'pending', 'unreviewed', an empty string and a missing field all block generation and fail validation. Enforced in the shared registry so generation and validation cannot disagree about it.",
+      "normalize_range_note": "Half-open, and enforced as half-open: 0 is a placement angle and 360 is not. Generation normalises 360 to 0, including when rounding to angle_decimals would otherwise carry a value up to it."
     }
   },
   "advisory_gates": [

@@ -34,7 +34,6 @@ import os
 from ..core import gate
 from ..orientation import Registry
 
-TOLERANCE_DEG = 1e-6
 ANGLE_MATCH_DEG = 1e-3
 
 
@@ -92,13 +91,24 @@ def _rederive(ctx, spec):
         return None
     finally:
         sys.dont_write_bytecode = was_writing
+    # The tool addresses its evidence through module globals, and this gate
+    # points them at whichever project it is validating - which may be a
+    # clean-room copy. They are put back afterwards: leaving a shared module
+    # aimed at a temporary directory makes the next caller's answer depend on
+    # who ran first, which is not a property a validator may have.
+    saved = (jlc_orientation.HERE, jlc_orientation.FIXTURES,
+             jlc_orientation.BOARD)
     jlc_orientation.HERE = ctx.manifest.resolve(".")
     jlc_orientation.FIXTURES = ctx.manifest.resolve(
         spec["evidence"]["fixtures"].rsplit("/", 1)[0])
     jlc_orientation.BOARD = ctx.manifest.resolve(
         ctx.manifest.get("sources.pcb"))
-    return jlc_orientation.derive(spec.get("part_number_field", "MPN"),
-                                  jlc_orientation.BOARD)
+    try:
+        return jlc_orientation.derive(spec.get("part_number_field", "MPN"),
+                                      jlc_orientation.BOARD)
+    finally:
+        (jlc_orientation.HERE, jlc_orientation.FIXTURES,
+         jlc_orientation.BOARD) = saved
 
 
 @gate("CPL.ORIENTATION",
@@ -135,6 +145,9 @@ def cpl_orientation(ctx, res):
                                   "confirmed against anything"})
     else:
         checked = 0
+        for lcsc, evidence in sorted(derived.items()):
+            for problem in evidence.get("evidence_problems", []):
+                problems.append(dict(problem))
         for lcsc, row in sorted(registry.entries.items()):
             evidence = derived.get(lcsc)
             if evidence is None or "error" in evidence:
@@ -205,10 +218,15 @@ def cpl_orientation(ctx, res):
                              "issue": "rotation is not a number",
                              "value": row.get(fields["rotation"])})
             continue
-        if not (low - TOLERANCE_DEG <= shipped < high + TOLERANCE_DEG):
+        # Half-open, with no tolerance either side. Tolerance belongs to
+        # comparing two angles that should agree; applied to the range it
+        # would make 360 a shippable value for a file that says it never
+        # writes one, and -0.0001 a shippable negative.
+        if not low <= shipped < high:
             outside.append({"reference": ref, "rotation": shipped,
-                            "issue": "rotation is outside [{}, {})".format(
-                                low, high)})
+                            "issue": "rotation is outside [{}, {}); the range "
+                                     "is half-open, so {} is not a placement "
+                                     "angle".format(low, high, high)})
         number, rotation = board.get(ref, ("", None))
         if rotation is None:
             problems.append({"reference": ref,
@@ -240,6 +258,32 @@ def cpl_orientation(ctx, res):
 
     problems.extend(outside)
     problems.extend(wrong)
+
+    # What the release actually shipped, recorded rather than left to be
+    # recomputed from the CSV by whoever reads this later.
+    shipped_angle = {}
+    for row in rows:
+        ref = row.get(fields["designator"], "").strip()
+        try:
+            shipped_angle[ref] = round(float(row.get(fields["rotation"], "")), 4)
+        except (TypeError, ValueError):
+            continue
+    res.measurements["corrected_placement_angles"] = {
+        ref: shipped_angle[ref] for ref in sorted(shipped_angle)
+        if registry.covers(board.get(ref, ("", None))[0])
+        and registry.offset(board[ref][0])}
+    off_grid = sorted(ref for ref, angle in shipped_angle.items()
+                      if angle % 45.0 > 1e-9)
+    res.measurements["fractional_placements"] = len(off_grid)
+    res.measurements["fractional_placements_preserved"] = (
+        off_grid == sorted(ref for ref, (_n, rot) in board.items()
+                           if ref in shipped_angle and rot % 45.0 != 0.0))
+    res.measurements["corrections_per_part"] = {
+        lcsc: sorted({round((s - r) % 360.0, 4) for _ref, s, r in entries})
+        for lcsc, entries in sorted(by_part.items())}
+    res.measurements["references_per_part"] = {
+        lcsc: sorted(ref for ref, _s, _r in entries)
+        for lcsc, entries in sorted(by_part.items()) if len(entries) > 1}
     res.measurements["parts_with_offset"] = sorted(
         lcsc for lcsc, row in registry.entries.items()
         if float(row["offset_deg"]))

@@ -37,6 +37,12 @@ sym-lib-table        text eol=lf
 generated/release/** -text
 verification/fixtures/reva/project/generated/release/** -text
 
+# --- Frozen upstream evidence: exact bytes --------------------------------
+# The SHA-256 of these response bodies is the evidence. They happen to contain
+# no line endings at all today, so normalisation would be a no-op - but the
+# point is that Git is never in a position to touch them.
+fabrication/jlc_orientation/raw/** -text
+
 *.gbr                binary
 *.gbrjob             binary
 *.drl                binary

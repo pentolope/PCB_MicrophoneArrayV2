@@ -28,8 +28,15 @@ class OrientationError(Exception):
 
 
 def normalise(angle, low=0.0, high=360.0):
-    """Put an angle in [low, high). Same orientation, said the expected way."""
-    return low + (float(angle) - low) % (high - low)
+    """Put an angle in [low, high). Same orientation, said the expected way.
+
+    Half-open means half-open: 360 is not a placement angle, it is 0 written
+    the way the range excludes. Python's float remainder can land exactly on
+    the divisor for a very small negative input, so the open end is closed off
+    explicitly rather than left to rounding.
+    """
+    value = low + (float(angle) - low) % (high - low)
+    return low if value >= high else value
 
 
 class Registry:
@@ -42,7 +49,12 @@ class Registry:
 
     REQUIRED_FIELDS = ("lcsc", "mpn", "package", "kicad_footprint",
                        "offset_deg", "review_status", "evidence_file",
-                       "evidence_sha256")
+                       "raw_file", "evidence_sha256")
+    #: The only value that lets an entry be used. Not a prefix, not a
+    #: case-insensitive match, not "anything non-empty": "pending" and
+    #: "unreviewed" are entries somebody wrote down and has not finished, and
+    #: shipping them would be exactly the silent assumption this prevents.
+    USABLE_STATUS = "reviewed"
 
     def __init__(self, spec):
         self.spec = spec or {}
@@ -50,10 +62,14 @@ class Registry:
         low, high = self.spec.get("normalize_range_deg", [0, 360])
         self.low, self.high = float(low), float(high)
         self.entries = {}
+        self.unusable = {}
         self.duplicates = []
         for row in self.spec.get("registry", []):
             lcsc = str(row.get("lcsc", "")).strip()
             if not lcsc:
+                continue
+            if str(row.get("review_status", "")).strip() != self.USABLE_STATUS:
+                self.unusable[lcsc] = row
                 continue
             if lcsc in self.entries:
                 if float(self.entries[lcsc]["offset_deg"]) != float(
@@ -61,6 +77,11 @@ class Registry:
                     self.duplicates.append(lcsc)
                 continue
             self.entries[lcsc] = row
+
+    def _status_of(self, lcsc):
+        row = self.unusable.get(lcsc) or {}
+        text = str(row.get("review_status", "")).strip()
+        return text if text else "(no review_status field)"
 
     def defects(self):
         """Ways the registry is unusable as written, before any board is read."""
@@ -70,6 +91,13 @@ class Registry:
                 "lcsc": lcsc,
                 "issue": "declared twice with different offsets, so which one "
                          "applies depends on read order"})
+        for lcsc in sorted(self.unusable):
+            problems.append({
+                "lcsc": lcsc,
+                "review_status": self._status_of(lcsc),
+                "issue": "the entry is not marked '{}', so it may not be used; "
+                         "an offset nobody has finished reviewing is not a "
+                         "reviewed offset".format(self.USABLE_STATUS)})
         for lcsc, row in sorted(self.entries.items()):
             for field in self.REQUIRED_FIELDS:
                 if str(row.get(field, "")).strip() == "":
@@ -94,6 +122,11 @@ class Registry:
                 "orientation can be found for it")
         row = self.entries.get(lcsc)
         if row is None:
+            if lcsc in self.unusable:
+                raise OrientationError(
+                    "{} has an orientation entry whose review_status is {!r} "
+                    "rather than '{}', so it may not be used".format(
+                        lcsc, self._status_of(lcsc), self.USABLE_STATUS))
             raise OrientationError(
                 "{} has no reviewed orientation entry; a part whose library "
                 "zero nobody has checked must not be assumed to need no "
@@ -135,7 +168,13 @@ def apply_to_rows(rows, registry, part_numbers, designator_field,
             problems.append({"reference": reference, "lcsc": lcsc or None,
                              "issue": str(exc)})
             continue
-        row[rotation_field] = "{:.{}f}".format(final, decimals)
+        text = "{:.{}f}".format(final, decimals)
+        if float(text) >= registry.high:
+            # 359.99999 rounds to 360.0000 at four decimals, and what is
+            # written is what ships. The range applies to the stored value.
+            final = registry.low
+            text = "{:.{}f}".format(final, decimals)
+        row[rotation_field] = text
         applied[reference] = {
             "lcsc": lcsc,
             "board_deg": board_angle,

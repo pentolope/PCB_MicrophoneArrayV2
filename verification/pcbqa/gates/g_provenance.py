@@ -204,3 +204,103 @@ def report_freshness(ctx, res):
     return res.passed(
         "every committed report binds the canonical digest of all {} source "
         "inputs, and every one still matches".format(len(closure)))
+
+
+# ---------------------------------------------------------------------------
+# reproduction inputs
+# ---------------------------------------------------------------------------
+
+@gate("PROV.SOURCE_CLOSURE",
+      "Everything the result was derived from is inside the source closure",
+      requires=("reports.source_closure",
+                "release_generation.cpl_orientation.reproduction_inputs"))
+def source_closure_covers_derivations(ctx, res):
+    """A derived result is only as reproducible as its inputs are tracked.
+
+    The orientation offsets are not read off the board; they are derived from
+    frozen evidence by a script. If that script or that evidence can leave the
+    closure without anything objecting, the release keeps claiming a
+    provenance it no longer has - and the first sign would be a re-derivation
+    that quietly produces something else.
+
+    So the inputs are named in the manifest and checked to be closure members,
+    both as globs and per registry entry. Losing a single evidence file, or
+    dropping the glob that carries them, fails here rather than later.
+    """
+    from .. import canonical, cleanroom
+    from ..orientation import Registry
+
+    spec = ctx.manifest.get(
+        "release_generation.cpl_orientation.reproduction_inputs")
+    res.limit(ctx.manifest.constraint(
+        "release_generation.cpl_orientation.reproduction_inputs.required_globs",
+        units="path glob",
+        cid="cpl_orientation.reproduction_inputs.required_globs"))
+
+    policy = canonical.AttributePolicy.load(
+        ctx.manifest.resolve(ctx.manifest.get("fixture.attributes_file")))
+    closure = cleanroom.source_closure(ctx.manifest, policy)
+    res.measurements["source_closure_files"] = len(closure)
+
+    root = ctx.manifest.resolve(".")
+    problems = []
+    covered = set()
+    for pattern in spec.get("required_globs", []):
+        matched = [os.path.relpath(p, root).replace("\\", "/")
+                   for p in sorted(glob.glob(os.path.join(root, pattern),
+                                             recursive=True))
+                   if os.path.isfile(p)]
+        if not matched:
+            problems.append({
+                "glob": pattern,
+                "issue": "names no file at all, so whatever it was meant to "
+                         "keep in the closure is gone"})
+            continue
+        for rel in matched:
+            covered.add(rel)
+            if rel not in closure:
+                problems.append({
+                    "file": rel,
+                    "issue": "is a declared reproduction input but is not in "
+                             "the source closure, so a change to it would "
+                             "leave every committed result looking fresh"})
+
+    # per entry, because a glob that still matches fourteen of fifteen files
+    # is a glob that still matches
+    registry = Registry(ctx.manifest.get("release_generation.cpl_orientation"))
+    for lcsc, row in sorted(registry.entries.items()):
+        for field in ("evidence_file", "raw_file"):
+            rel = str(row.get(field, "")).strip()
+            if not rel:
+                problems.append({
+                    "lcsc": lcsc,
+                    "issue": "the entry names no {}, so its evidence cannot be "
+                             "located let alone tracked".format(field)})
+                continue
+            covered.add(rel)
+            if not os.path.isfile(os.path.join(root, rel)):
+                problems.append({"lcsc": lcsc, "file": rel,
+                                 "issue": "the entry's {} does not "
+                                          "exist".format(field)})
+            elif rel not in closure:
+                problems.append({"lcsc": lcsc, "file": rel,
+                                 "issue": "the entry's {} is outside the "
+                                          "source closure".format(field)})
+
+    if "<manifest>" not in closure:
+        problems.append({"issue": "the manifest itself is not in the closure, "
+                                  "so the registry's configuration is "
+                                  "untracked"})
+
+    res.measurements["reproduction_inputs"] = sorted(covered)
+    res.measurements["reproduction_inputs_tracked"] = len(covered)
+    for problem in problems[:40]:
+        res.finding(**problem)
+    if problems:
+        return res.failed("{} reproduction input(s) are not tracked by the "
+                          "source closure".format(len(problems)))
+    return res.passed(
+        "all {} declared reproduction inputs - the derivation script, its "
+        "schema, and both evidence files for each of the {} registry entries - "
+        "are inside the {}-file source closure".format(
+            len(covered), len(registry.entries), len(closure)))
