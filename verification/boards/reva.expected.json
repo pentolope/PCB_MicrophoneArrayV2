@@ -28,7 +28,8 @@
     "CFG.NO_RIVAL_THRESHOLDS": "FAIL",
     "CFG.THRESHOLD_PARITY": "PASS",
     "CPL.NATIVE_PARITY": "PASS",
-    "FAB.LAYER_IDENTITY": "NOT_APPLICABLE"
+    "FAB.LAYER_IDENTITY": "NOT_APPLICABLE",
+    "CPL.ORIENTATION": "NOT_APPLICABLE"
   },
   "anchors": {
     "VIA.MASK_CLEARANCE_TARGET.vias_total": 184,
@@ -70,6 +71,12 @@
       "was": "(did not exist)",
       "now": "NOT_APPLICABLE",
       "why": "The gate requires a fabrication_naming declaration. Rev A is frozen and has none, so it does not opt in."
+    },
+    {
+      "gate": "CPL.ORIENTATION",
+      "was": "(did not exist)",
+      "now": "NOT_APPLICABLE",
+      "why": "The gate requires a release_generation.cpl_orientation declaration. Rev A is frozen and has none, so it does not opt in - and its shipped CPL is the one that went to production before any of this was understood."
     }
   ]
 }

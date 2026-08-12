@@ -642,6 +642,7 @@
       "CONTRACT.PLACEMENT",
       "BOM.NATIVE_PARITY",
       "CPL.NATIVE_PARITY",
+      "CPL.ORIENTATION",
       "FAB.LAYER_IDENTITY",
       "ARCH.CONTENTS",
       "ARCH.PROVENANCE",
@@ -822,6 +823,48 @@
           "LCSC Part #"
         ]
       }
+    },
+    "cpl_orientation": {
+      "description": "What has to happen to a KiCad rotation before an assembly house can use it. Two separate things, and conflating them is how a board comes back with parts turned round.\n\nFirst, normalisation. KiCad writes rotations in (-180, 180]; the fab wants [0, 360). That is the same orientation said differently and is applied to every part. It is NOT an offset and must never be recorded as one.\n\nSecond, the library-zero offset. A footprint's zero orientation in KiCad and the same part's zero orientation in the fab's own library need not agree, and where they do not, every instance of that part is placed turned by the difference. This is a property of the part, not of the board, so it is keyed by LCSC number: two parts can share a KiCad footprint name and differ in the fab's library, and the same part in two places must always take the same offset.",
+      "part_number_field": "LCSC",
+      "part_number_field_note": "The footprint field carrying the distributor part number the offsets are keyed by. Named here rather than in the validator: which field holds a part number is a property of this project's libraries, not of the checking framework.",
+      "normalize_range_deg": [
+        0,
+        360
+      ],
+      "angle_decimals": 4,
+      "offset_source": "JLCPCB's own component library, read through the EasyEDA API (easyeda.com/api/products/<LCSC>/components), which serves the very footprint their placement machines use. For each part the pad coordinates were taken in the library frame - EasyEDA's canvas Y runs downward, so a pad with the larger Y sits lower in the top view - and compared against the same pads in the KiCad footprint as placed on this board. The offset is the rotation carrying the KiCad zero onto the library zero, and it is checked against every pad of the package, not just pin 1: a pin-1 match alone cannot tell a rotation from a mirror.",
+      "sign_convention": "offset_deg is ADDED to the KiCad rotation, then the sum is normalised. Positive is counter-clockwise, which is what both KiCad and the fab use for a top-side part.",
+      "parts": [
+        {
+          "lcsc": "C80670",
+          "mpn": "LP5907MFX-3.3/NOPB",
+          "package": "SOT-23-5",
+          "kicad_footprint": "Package_TO_SOT_SMD:SOT-23-5",
+          "offset_deg": 180.0,
+          "library_zero_vs_kicad_zero": "rotated 180 degrees",
+          "evidence": "KiCad places pins 1,2,3 down the LEFT side with pin 1 uppermost (pad 1 at -1.1375,+0.95). JLC's library places pins 1,2,3 down the RIGHT side with pin 1 lowest (pad 1 at +5.1185,-3.740 in library units, Y already flipped to a top view). All five pads coincide under a 180 degree rotation and under no other. Note the pin-pitch axis is vertical in both, which rules out any 90 degree answer on its own."
+        },
+        {
+          "lcsc": "C7668",
+          "mpn": "SN74LVC244APWR",
+          "package": "TSSOP-20",
+          "kicad_footprint": "Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm",
+          "offset_deg": -90.0,
+          "library_zero_vs_kicad_zero": "rotated +90 degrees counter-clockwise",
+          "evidence": "KiCad runs pins 1-10 down the LEFT side, long axis vertical (pad 1 at -2.8625,+2.925). JLC's library runs pins 1-10 along the BOTTOM, long axis horizontal (pad 1 at -11.516,-11.303 in library units, top view). Rotating the KiCad footprint +90 counter-clockwise carries pad 1 to down-left and pad 10 to down-right, matching; so the library zero leads the KiCad zero by 90 and the CPL angle is the KiCad angle minus 90."
+        },
+        {
+          "lcsc": "C111212",
+          "mpn": "USBLC6-4SC6",
+          "package": "SOT-23-6",
+          "kicad_footprint": "Package_TO_SOT_SMD:SOT-23-6",
+          "offset_deg": -90.0,
+          "library_zero_vs_kicad_zero": "rotated +90 degrees counter-clockwise",
+          "evidence": "KiCad runs pins 1,2,3 down the LEFT side, pin 1 uppermost (pad 1 at -1.1375,+0.95). JLC's library runs pins 1,2,3 along the BOTTOM, pin 1 leftmost (pad 1 at -3.74,-4.524 in library units, top view) - the conventional SOT-23-6 datasheet top view. All six pads coincide under +90 counter-clockwise and under no other rotation. U3 and U4 are both this part and therefore take the same offset by construction."
+        }
+      ],
+      "no_offset_finding": "Every other part on this board takes no offset, and that is a measurement rather than an assumption. JLCPCB revised 11 of the 16 MK microphones, 11 of 16 CM, 11 of 16 RD and 11 of 16 RV - and the five left alone in each family are exactly those sitting at 0, 45, 90, 135 or 180 degrees. A library-zero mismatch is a property of the part, so it would have turned every instance of that part, not a subset. The clearest case is C15850: C3 sits at 0 degrees and was untouched while CB1-CB4, the same LCSC part in the same footprint, sat at fractional angles and were revised. Likewise C22390138: MK5 at 0 degrees untouched, MK1 at -90 revised. Those 48 revisions are angle handling - normalisation of the 30 negative values, and whatever the fab does with a fractional angle - and creating an offset for any of them would turn a correctly placed part."
     }
   },
   "advisory_gates": [

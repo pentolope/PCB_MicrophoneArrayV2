@@ -65,11 +65,52 @@ Gerbers, drills and the CPL share one origin. Verified rather than assumed:
 270 degrees, which is exactly where the placement puts it, and the Edge.Cuts
 outline spans the matching 120 mm.
 
-**This is a release candidate, not an approved production file.** The one thing
-that cannot be checked locally is whether each LCSC part's zero orientation in
-JLCPCB's library matches the rotation in `cpl.csv` - their library models, not
-ours. Upload the package and step through their Gerber and pick-and-place
-previews before paying for it.
+### Placement angles
+
+Two separate things happen to a rotation on its way from KiCad into `cpl.csv`,
+and they are worth keeping apart because confusing them turns parts.
+
+**Normalisation** puts every angle in `[0, 360)`. KiCad writes rotations in
+`(-180, 180]`, so half the array arrived as negative numbers; -157.5 and 202.5
+are the same orientation, but only one of them goes through without an
+engineering query. This changes no part's orientation and applies to all 103
+placements.
+
+**Library-zero offsets** do change orientation, and only for parts whose zero
+in JLCPCB's library differs from the footprint's zero in KiCad. Three parts on
+this board are affected:
+
+| LCSC | Part | Package | Offset | JLC library zero vs KiCad |
+|---|---|---|---:|---|
+| `C80670` | LP5907MFX-3.3 | SOT-23-5 | +180 | pins 1-3 on the right, pin 1 lowest |
+| `C7668` | SN74LVC244APWR | TSSOP-20 | -90 | pins 1-10 along the bottom |
+| `C111212` | USBLC6-4SC6 | SOT-23-6 | -90 | pins 1-3 along the bottom, pin 1 left |
+
+The offsets are looked up by **LCSC number, not by footprint name**, because that
+is what the difference is a property of. It matters here: a footprint-regex
+table would lump SOT-23-5 in with SOT-23-6 and give the regulator -90 when it
+needs 180. Looking them up by part number also makes it impossible for U3 and U4 - the
+same device in two places - to be corrected differently.
+
+Each offset was derived from JLCPCB's own library footprint, read through the
+EasyEDA API, by comparing every pad against the KiCad footprint rather than
+just pin 1: a pin-1 match alone cannot tell a rotation from a mirror. The
+derivation is recorded per part in `release_generation.cpl_orientation` in
+[verification/boards/live.json](../verification/boards/live.json), and
+`CPL.ORIENTATION` re-checks after every release that each shipped angle is the
+board angle plus its part's declared offset, normalised.
+
+Nothing else takes an offset, and that is measured rather than assumed. When
+JLCPCB revised the first production upload they corrected 11 of the 16
+microphones, 11 of 16 damping resistors and so on - and the five left alone in
+each family were exactly those already sitting at a multiple of 45 degrees. A
+library mismatch is a property of the part, so it would have turned all 16.
+The clearest case is `C15850`: `C3` at 0 degrees was untouched while `CB1`-`CB4`
+- the same part in the same footprint, at fractional angles - were revised.
+
+**This is a release candidate, not an approved production file.** Upload the
+package and step through JLCPCB's Gerber and pick-and-place previews before
+paying for it.
 
 ## Order options
 

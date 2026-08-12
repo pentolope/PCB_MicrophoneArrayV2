@@ -324,6 +324,24 @@ def cpl_parity(ctx, res):
                         .tolerance("rotation_match_deg")).value
     origin = res.limit(ctx.manifest.constraint(
         "artifacts.cpl_origin", units="frame", cid="artifacts.cpl_origin")).value
+    # A packaged rotation is not required to equal the board's. Where the
+    # fab's library holds a part at a different zero orientation from the
+    # footprint, the placement file carries the difference, and that is the
+    # correction being shipped rather than a disagreement to report. What the
+    # board is compared against is the board angle plus that declared offset.
+    # CPL.ORIENTATION is what proves the offsets themselves are right.
+    offsets = {}
+    if ctx.manifest.has("release_generation.cpl_orientation"):
+        spec = ctx.manifest.get("release_generation.cpl_orientation")
+        offsets = {row["lcsc"]: float(row["offset_deg"])
+                   for row in spec.get("parts", [])}
+    lcsc_of = {}
+    if offsets:
+        key = spec.get("part_number_field", "MPN")
+        for fp in ctx.board().Footprints():
+            for field in fp.GetFields():
+                if field.GetName() == key and field.GetText().strip():
+                    lcsc_of[fp.GetReference()] = field.GetText().strip()
 
     try:
         truth = _assembly_truth(ctx)
@@ -380,9 +398,14 @@ def cpl_parity(ctx, res):
         except (KeyError, TypeError, ValueError):
             problems.append({"reference": ref, "issue": "unparseable rotation"})
         else:
-            if abs(((got - want["rotation_deg"] + 180) % 360) - 180) > rot_tol:
+            offset = offsets.get(lcsc_of.get(ref), 0.0)
+            want_rot = (want["rotation_deg"] + offset) % 360.0
+            if abs(((got - want_rot + 180) % 360) - 180) > rot_tol:
                 problems.append({"reference": ref, "issue": "rotation mismatch",
-                                 "board_deg": want["rotation_deg"], "packaged": got})
+                                 "board_deg": want["rotation_deg"],
+                                 "library_zero_offset_deg": offset,
+                                 "expected_deg": round(want_rot, 4),
+                                 "packaged": got})
     for p in problems[:80]:
         res.finding(**p)
     if problems:

@@ -290,7 +290,7 @@ class GenericSourceHygiene(unittest.TestCase):
         vocab = {Status.PASS, Status.FAIL, Status.ERROR, Status.NOT_APPLICABLE,
                  "REJECTED", "ACCEPTED",
                  "BOM", "CPL", "ERC", "DRC", "PTH", "NPTH", "SMD", "THT",
-                 "PCB", "JSON", "CSV", "UTC", "URL", "ID", "IU", "MM"}
+                 "PCB", "JSON", "CSV", "UTC", "URL", "API", "ID", "IU", "MM"}
         for entry in core.registered():
             vocab.update(re.split(r"[._]", entry["id"]))
         return vocab
