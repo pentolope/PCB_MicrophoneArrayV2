@@ -1,0 +1,20 @@
+{
+  "lcsc": "C2480",
+  "mpn": "SS14",
+  "package": "SMA_L4.2-W2.6-LS5.0-RD_1",
+  "source_url": "https://easyeda.com/api/products/C2480/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:27Z",
+  "response_sha256": "a2bb7f5f87fb31f23388595a35c936e164c713a38e7cba6cc4691f923349aaa5",
+  "response_bytes": 9767,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1013.552456,
+      -762.635
+    ],
+    "2": [
+      1017.482344,
+      -762.635
+    ]
+  }
+}

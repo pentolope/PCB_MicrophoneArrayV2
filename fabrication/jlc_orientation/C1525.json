@@ -1,0 +1,20 @@
+{
+  "lcsc": "C1525",
+  "mpn": "CL05B104KO5NNNC",
+  "package": "C0402",
+  "source_url": "https://easyeda.com/api/products/C1525/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:25Z",
+  "response_sha256": "7826a74f5dd3b0c4acd30493446620c66ae1674a91d666a280de8b66d02da7a0",
+  "response_bytes": 8564,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.579884,
+      -762.0
+    ],
+    "2": [
+      1016.420116,
+      -762.0
+    ]
+  }
+}

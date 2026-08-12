@@ -1,0 +1,20 @@
+{
+  "lcsc": "C1017",
+  "mpn": "GZ2012D601TF",
+  "package": "L0805",
+  "source_url": "https://easyeda.com/api/products/C1017/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:24Z",
+  "response_sha256": "eb9c74fc0f842cb4e15c5906c3cad5f6994f1ee5419e3bb3c33615976a37cfd3",
+  "response_bytes": 8358,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.634494,
+      -765.610102
+    ],
+    "2": [
+      1017.566926,
+      -765.610102
+    ]
+  }
+}

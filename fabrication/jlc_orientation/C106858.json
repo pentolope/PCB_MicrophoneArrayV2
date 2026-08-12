@@ -1,0 +1,20 @@
+{
+  "lcsc": "C106858",
+  "mpn": "CC0603KRX7R8BB105",
+  "package": "C0603",
+  "source_url": "https://easyeda.com/api/products/C106858/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:24Z",
+  "response_sha256": "0f7bcb02453589522f7a02d0c693e0173b0482ec293d806adab05c8e58bca4c8",
+  "response_bytes": 8636,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.299976,
+      -762.0
+    ],
+    "2": [
+      1016.700024,
+      -762.0
+    ]
+  }
+}

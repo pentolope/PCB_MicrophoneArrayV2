@@ -1,0 +1,20 @@
+{
+  "lcsc": "C25076",
+  "mpn": "0402WGF1000TCE",
+  "package": "R0402",
+  "source_url": "https://easyeda.com/api/products/C25076/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:27Z",
+  "response_sha256": "b6018e059d6b5196b64a22556bc81215ccc4bd0e0755fa072d5688a0c4b8a99e",
+  "response_bytes": 7943,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.567184,
+      -762.0
+    ],
+    "2": [
+      1016.432816,
+      -762.0
+    ]
+  }
+}

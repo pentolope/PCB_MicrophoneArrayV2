@@ -77,8 +77,15 @@ engineering query. This changes no part's orientation and applies to all 103
 placements.
 
 **Library-zero offsets** do change orientation, and only for parts whose zero
-in JLCPCB's library differs from the footprint's zero in KiCad. Three parts on
-this board are affected:
+in JLCPCB's library differs from the footprint's zero in KiCad.
+
+Every populated part carries an explicit reviewed entry in the registry at
+`release_generation.cpl_orientation.registry` in
+[verification/boards/live.json](../verification/boards/live.json) - all fifteen
+part numbers, **including the twelve whose offset is zero**. "Nobody has looked
+at this one" and "looked at, needs nothing" are different statements and only
+the second may ship, so there is no default: generation refuses a part with no
+entry rather than quietly assuming zero. Three parts need a turn:
 
 | LCSC | Part | Package | Offset | JLC library zero vs KiCad |
 |---|---|---|---:|---|
@@ -86,7 +93,7 @@ this board are affected:
 | `C7668` | SN74LVC244APWR | TSSOP-20 | -90 | pins 1-10 along the bottom |
 | `C111212` | USBLC6-4SC6 | SOT-23-6 | -90 | pins 1-3 along the bottom, pin 1 left |
 
-The offsets are looked up by **LCSC number, not by footprint name**, because that
+Entries are looked up by **LCSC number, not by footprint name**, because that
 is what the difference is a property of. It matters here: a footprint-regex
 table would lump SOT-23-5 in with SOT-23-6 and give the regulator -90 when it
 needs 180. Looking them up by part number also makes it impossible for U3 and U4 - the
@@ -95,10 +102,24 @@ same device in two places - to be corrected differently.
 Each offset was derived from JLCPCB's own library footprint, read through the
 EasyEDA API, by comparing every pad against the KiCad footprint rather than
 just pin 1: a pin-1 match alone cannot tell a rotation from a mirror. The
-derivation is recorded per part in `release_generation.cpl_orientation` in
-[verification/boards/live.json](../verification/boards/live.json), and
-`CPL.ORIENTATION` re-checks after every release that each shipped angle is the
-board angle plus its part's declared offset, normalised.
+retrieval and scoring live in
+[tools/jlc_orientation.py](../tools/jlc_orientation.py), and the pads it
+scored are frozen per part under
+[fabrication/jlc_orientation/](../fabrication/jlc_orientation) with the source
+URL, the retrieval date and the SHA-256 of the exact response body - so the
+derivation reruns offline, and a change to JLC's library shows up as a digest
+mismatch instead of a silent re-derivation:
+
+```bash
+"C:/Program Files/KiCad/10.0/bin/python.exe" tools/jlc_orientation.py check
+```
+
+`CPL.ORIENTATION` then re-scores that frozen evidence on every release and
+requires the registry to agree with it, checks the registry covers everything
+the BOM and the board say will be fitted, and recomputes each shipped angle as
+the board angle plus the reviewed offset, normalised. Checking the shipped file
+against the table the generator used would only prove a program can apply its
+own table twice.
 
 Nothing else takes an offset, and that is measured rather than assumed. When
 JLCPCB revised the first production upload they corrected 11 of the 16
@@ -106,7 +127,17 @@ microphones, 11 of 16 damping resistors and so on - and the five left alone in
 each family were exactly those already sitting at a multiple of 45 degrees. A
 library mismatch is a property of the part, so it would have turned all 16.
 The clearest case is `C15850`: `C3` at 0 degrees was untouched while `CB1`-`CB4`
-- the same part in the same footprint, at fractional angles - were revised.
+- the same part in the same footprint, at fractional angles - were revised. The
+frozen library evidence agrees, deriving a zero offset for every one of them.
+
+The other 48 references JLCPCB revised keep the fractional angles this board
+submitted - 22.5-degree multiples, because the array is 16-way polar - with
+negative values normalised into `[0, 360)` and nothing else done to them. No
+rounding policy is invented for them: rounding to a value nobody has seen would
+move sixteen microphones off the array geometry to match a guess. **It cannot
+be confirmed that those 48 now match what JLCPCB produced**; that would need
+their revised CPL, which was never supplied. The list is recorded under
+`undocumented_production_edits` in the manifest.
 
 **This is a release candidate, not an approved production file.** Upload the
 package and step through JLCPCB's Gerber and pick-and-place previews before

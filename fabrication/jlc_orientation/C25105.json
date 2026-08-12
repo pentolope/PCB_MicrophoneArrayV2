@@ -1,0 +1,20 @@
+{
+  "lcsc": "C25105",
+  "mpn": "0402WGF330JTCE",
+  "package": "R0402",
+  "source_url": "https://easyeda.com/api/products/C25105/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:27Z",
+  "response_sha256": "a1f32245e3c97176ad644a7bef1187c3a7de52f81c765a36ffc5820425f45e85",
+  "response_bytes": 7926,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.567184,
+      -762.0
+    ],
+    "2": [
+      1016.432816,
+      -762.0
+    ]
+  }
+}

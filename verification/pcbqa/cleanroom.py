@@ -448,69 +448,55 @@ class CleanRun:
                              "rows": len(out)})
 
     def orient_cpl(self, rows, rules):
-        """Put every placement angle in the frame the fab's machine works in.
+        """Put every placement angle in the frame the assembly machine uses.
 
-        Two corrections, and they are not the same kind of thing.
+        Normalisation into the range the fab reads, and the reviewed
+        library-zero offset for the part. Both live in pcbqa.orientation, which
+        is also what the validating gate uses, so the generator and the check
+        cannot drift apart on what "correct" means - what makes the check
+        independent is that it re-derives the offsets from the frozen library
+        evidence rather than trusting the registry.
 
-        Normalisation moves an angle into [0, 360). KiCad writes rotations in
-        (-180, 180]; -157.5 and 202.5 are the same orientation, but only one of
-        them is the one the fab reads without comment. This changes no part's
-        orientation and applies to everything.
-
-        The library-zero offset does change what the machine does, and only for
-        parts whose zero orientation in the fab's library differs from the
-        footprint's zero in KiCad. It is a property of the part, so it is
-        looked up by LCSC number: two parts can share a footprint name and
-        differ in the fab's library, and one part in two places must always
-        take the same offset. An offset must never be invented to make a
-        negative angle positive - that is what normalisation is for, and an
-        offset would turn the part.
+        A placement whose part has no reviewed entry stops the release. There
+        is deliberately no default: assuming zero for an unreviewed part is
+        indistinguishable, in the output, from having reviewed it and found
+        zero, and only one of those is safe to put on a machine.
         """
+        from .orientation import Registry, apply_to_rows
+
         spec = self.cfg.get("cpl_orientation")
         if not spec:
             return
-        offsets = {row["lcsc"]: float(row["offset_deg"])
-                   for row in spec.get("parts", [])}
-        low, high = spec.get("normalize_range_deg", [0, 360])
-        span = high - low
-        places = int(spec.get("angle_decimals", 4))
-        field = rules["field_map"]["rotation"]
-        designator = rules["field_map"]["designator"]
-        lcsc_of = self.part_numbers_by_designator(
-            spec.get("part_number_field", "MPN"))
-        applied, unknown = {}, []
-
-        for row in rows:
-            ref = row.get(designator, "")
-            try:
-                angle = float(row.get(field, ""))
-            except ValueError:
-                self.blockers.append((
-                    "release:cpl_orientation", "ERROR",
-                    "{} has no readable rotation".format(ref or "a placement")))
-                continue
-            lcsc = lcsc_of.get(ref)
-            if lcsc is None:
-                unknown.append(ref)
-            offset = offsets.get(lcsc, 0.0)
-            final = low + (angle + offset - low) % span
-            row[field] = "{:.{}f}".format(final, places)
-            applied[ref] = {"native": angle, "offset": offset, "final": final,
-                            "lcsc": lcsc}
-
-        if unknown:
-            # A part whose LCSC cannot be resolved cannot be checked against
-            # the offset table, so it might silently ship unturned.
+        registry = Registry(spec)
+        defects = registry.defects()
+        for defect in defects:
             self.blockers.append((
                 "release:cpl_orientation", "ERROR",
-                "no LCSC number for {}; the orientation table cannot be "
-                "applied to {}".format(", ".join(sorted(unknown)[:6]),
-                                       "them" if len(unknown) > 1 else "it")))
-        turned = {r: v for r, v in applied.items() if v["offset"]}
+                "{}: {}".format(defect.get("lcsc", "registry"),
+                                defect["issue"])))
+
+        part_numbers = self.part_numbers_by_designator(
+            registry.part_number_field)
+        applied, problems = apply_to_rows(
+            rows, registry, part_numbers,
+            rules["field_map"]["designator"], rules["field_map"]["rotation"],
+            int(spec.get("angle_decimals", 4)))
+        for problem in problems:
+            self.blockers.append((
+                "release:cpl_orientation", "ERROR",
+                "{}: {}".format(problem.get("reference") or "a placement",
+                                problem["issue"])))
+
+        turned = {ref: row["offset_deg"] for ref, row in applied.items()
+                  if row["offset_deg"]}
         self.log.append({
-            "step": "cpl_orientation", "exit": 0, "ok": not unknown,
-            "command": ["normalise", "{} placement(s)".format(len(applied))],
-            "offsets_applied": {r: v["offset"] for r, v in sorted(turned.items())},
+            "step": "cpl_orientation",
+            "exit": 0,
+            "ok": not problems and not defects,
+            "command": ["orient", "{} placement(s)".format(len(applied))],
+            "reviewed_parts": len(registry.entries),
+            "offsets_applied": dict(sorted(turned.items())),
+            "unreviewed": sorted(p.get("reference") for p in problems),
         })
 
     def part_numbers_by_designator(self, field_name):

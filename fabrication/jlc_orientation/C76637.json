@@ -1,0 +1,20 @@
+{
+  "lcsc": "C76637",
+  "mpn": "C2012X5R1C226KT000E",
+  "package": "C0805",
+  "source_url": "https://easyeda.com/api/products/C76637/components?version=6.4.19.5",
+  "retrieved_utc": "2026-08-12T11:26:28Z",
+  "response_sha256": "68b9c125a117de357534fb672df66db3cc9308993de46fddf0a769c29df7a5de",
+  "response_bytes": 9480,
+  "units": "millimetres, top view, Y up; EasyEDA stores 10-mil units with Y down and both conversions are applied here",
+  "pads": {
+    "1": [
+      1015.000002,
+      -762.0
+    ],
+    "2": [
+      1016.999998,
+      -762.0
+    ]
+  }
+}

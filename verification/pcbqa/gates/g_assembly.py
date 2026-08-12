@@ -26,6 +26,7 @@ import os
 from collections import Counter
 
 from ..core import gate
+from ..orientation import Registry
 
 
 # ---------------------------------------------------------------------------
@@ -330,14 +331,14 @@ def cpl_parity(ctx, res):
     # correction being shipped rather than a disagreement to report. What the
     # board is compared against is the board angle plus that declared offset.
     # CPL.ORIENTATION is what proves the offsets themselves are right.
-    offsets = {}
+    offsets, key = {}, None
     if ctx.manifest.has("release_generation.cpl_orientation"):
-        spec = ctx.manifest.get("release_generation.cpl_orientation")
-        offsets = {row["lcsc"]: float(row["offset_deg"])
-                   for row in spec.get("parts", [])}
+        registry = Registry(ctx.manifest.get("release_generation.cpl_orientation"))
+        offsets = {number: registry.offset(number)
+                   for number in registry.entries}
+        key = registry.part_number_field
     lcsc_of = {}
     if offsets:
-        key = spec.get("part_number_field", "MPN")
         for fp in ctx.board().Footprints():
             for field in fp.GetFields():
                 if field.GetName() == key and field.GetText().strip():
