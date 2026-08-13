@@ -56,6 +56,27 @@ class Registry:
     #: shipping them would be exactly the silent assumption this prevents.
     USABLE_STATUS = "reviewed"
 
+    @classmethod
+    def is_reviewed(cls, value):
+        """The one place the review status is decided. Exact JSON string only.
+
+        No strip, no case fold, no coercion. ``" reviewed "`` is a value
+        somebody typed by hand into a field that is read by a machine, and
+        ``"Reviewed"`` is a different string; treating either as equal to
+        ``"reviewed"`` invents a review nobody performed. A non-string - a
+        number, a list, ``null`` - is not the value either, and quietly
+        stringifying it would let ``True`` become a review.
+        """
+        return type(value) is str and value == cls.USABLE_STATUS
+
+    @classmethod
+    def describe_status(cls, row):
+        """How to name what an entry says, in a message a human will read."""
+        if "review_status" not in row:
+            return "(no review_status field)"
+        value = row["review_status"]
+        return "(null)" if value is None else repr(value)
+
     def __init__(self, spec):
         self.spec = spec or {}
         self.part_number_field = self.spec.get("part_number_field", "MPN")
@@ -68,7 +89,7 @@ class Registry:
             lcsc = str(row.get("lcsc", "")).strip()
             if not lcsc:
                 continue
-            if str(row.get("review_status", "")).strip() != self.USABLE_STATUS:
+            if not self.is_reviewed(row.get("review_status")):
                 self.unusable[lcsc] = row
                 continue
             if lcsc in self.entries:
@@ -79,9 +100,7 @@ class Registry:
             self.entries[lcsc] = row
 
     def _status_of(self, lcsc):
-        row = self.unusable.get(lcsc) or {}
-        text = str(row.get("review_status", "")).strip()
-        return text if text else "(no review_status field)"
+        return self.describe_status(self.unusable.get(lcsc) or {})
 
     def defects(self):
         """Ways the registry is unusable as written, before any board is read."""
@@ -95,9 +114,10 @@ class Registry:
             problems.append({
                 "lcsc": lcsc,
                 "review_status": self._status_of(lcsc),
-                "issue": "the entry is not marked '{}', so it may not be used; "
-                         "an offset nobody has finished reviewing is not a "
-                         "reviewed offset".format(self.USABLE_STATUS)})
+                "issue": "review_status is {} rather than exactly '{}', so no "
+                         "reviewed orientation mapping is available for this "
+                         "part".format(self._status_of(lcsc),
+                                       self.USABLE_STATUS)})
         for lcsc, row in sorted(self.entries.items()):
             for field in self.REQUIRED_FIELDS:
                 if str(row.get(field, "")).strip() == "":
@@ -124,8 +144,8 @@ class Registry:
         if row is None:
             if lcsc in self.unusable:
                 raise OrientationError(
-                    "{} has an orientation entry whose review_status is {!r} "
-                    "rather than '{}', so it may not be used".format(
+                    "{}: no reviewed orientation mapping is available - its "
+                    "review_status is {} rather than exactly '{}'".format(
                         lcsc, self._status_of(lcsc), self.USABLE_STATUS))
             raise OrientationError(
                 "{} has no reviewed orientation entry; a part whose library "

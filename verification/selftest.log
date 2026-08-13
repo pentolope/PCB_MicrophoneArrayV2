@@ -4,16 +4,16 @@
 
     command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs auto
     working dir  repository root
-    started      2026-08-12T17:03Z
+    started      2026-08-13T00:14Z
     interpreter  KiCad 10.0.5 bundled Python 3.11.5
 
-    tests discovered   205
-    passed             204
+    tests discovered   227
+    passed             226
     skipped            1
     failed               0
     errored              0
     worker processes     5
-    elapsed             875.2 s
+    elapsed             896.7 s
     exit code            0
 
 The single skip is
@@ -21,11 +21,11 @@ The single skip is
 which needs the Windows privilege to create a symbolic link and skips itself
 rather than reporting a pass it did not earn.
 
-    worker 0:  9 tests, 687.6s of test time
-    worker 1: 41 tests, 478.2s of test time
-    worker 2: 27 tests, 652.2s of test time
-    worker 3: 89 tests, 601.7s of test time
-    worker 4: 39 tests, 560.2s of test time
+    worker 0: 26 tests, 712.4s of test time
+    worker 1: 68 tests, 651.2s of test time
+    worker 2: 81 tests, 501.3s of test time
+    worker 3: 37 tests, 622.1s of test time
+    worker 4: 15 tests, 566.7s of test time
 
 Per-worker test time sums to more than the elapsed wall clock because the
 runner distributes individual test IDs, so a class fixture runs once per test
@@ -34,7 +34,28 @@ independently addressable and sharing no state.
 
 ## What this run covers that the last one did not
 
-Four things about placement orientation that the previous run took on trust.
+Whether the release package is one release. It was not: a validation report had
+been refreshed on its own and left beside an archive from an earlier run, with
+a note explaining the discrepancy. `tests/test_release_coherence.py` takes files
+from genuinely earlier published releases - the archive, the release manifest,
+a check report, the clean-room record, the validation report - and puts each in
+turn beside the current package. Every file is well formed and every swap must
+be caught. One test writes the prose note next to the mismatch and requires it
+to fail anyway, because that is what was tried before.
+
+Whether the code that derives the offsets is pinned. An offset is computed, not
+read, so `pcbqa.orientation`, `pcbqa.cleanroom` and `pcbqa.gates.g_orientation`
+are hashed from the modules that were imported and bound into the source
+closure. Tests require the recorded digest to equal the loaded module's, an edit
+to the implementation to change the closure digest, and a module dropping out of
+the declared set to fail the gate.
+
+Whether "reviewed" means reviewed. The status is now compared as an exact JSON
+string with no trimming and no coercion, and eighteen near misses -
+`" reviewed "`, `"reviewed\n"`, `"Reviewed"`, `null`, `true`, `1`, a list, a
+dict - are each required to block generation and name the part.
+
+And four things about placement orientation that an earlier run took on trust.
 
 *The evidence is committed, not described.* `fabrication/jlc_orientation/raw/`
 now holds each EasyEDA response body byte for byte, and the normalised extract

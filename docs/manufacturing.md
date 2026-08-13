@@ -19,11 +19,31 @@ derived from the thing being manufactured.
 | File | Contents |
 |---|---|
 | `microphone_array_v2-revA-fabrication.zip` | 11 Gerbers and 2 Excellon drills, Protel-named |
+| `gerbers/` | the same layers unzipped, as exported |
 | `bom.csv` | JLCPCB BOM, 15 lines |
 | `cpl.csv` | JLCPCB pick-and-place, 103 placements, all top side |
-| `schematic.pdf` | full schematic |
-| `renders/` | top, bottom, underside, the stacking plan and the four copper layers |
 | `MANIFEST.md` | SHA-256 of the archive, board and each data file |
+| `reports/` | the ERC and DRC JSON the gates were run against |
+| `validation.json`, `clean_room.json` | what was checked, and what produced it |
+| `RECEIPT.json` | every file above, with its digest, written last |
+
+Everything in that directory comes from one clean-room run, and
+`PROV.RELEASE_COHERENCE` enforces it rather than asserting it:
+
+```bash
+"C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py coherence verification/boards/live.json
+```
+
+The check fails if the release manifest describes an archive that is not there,
+if the validation report validated a different archive, if any file names a
+different source closure from the rest, or if a file is present that the
+receipt does not account for.
+
+The review renders - top, bottom, the stacking plan and the four copper
+layers - live in [generated/renders/](../generated/renders) rather than in the
+release package. The clean-room run purges and never regenerates them, so
+keeping them inside the package would contradict the statement in
+`UNSEALED.txt` that every file there came from that run.
 
 ### Why the layers are named the way they are
 
@@ -143,7 +163,14 @@ otherwise carry a value up to it. Checking the shipped file against the table
 the generator used would only prove a program can apply its own table twice.
 `PROV.SOURCE_CLOSURE` separately requires the script, this schema and both
 evidence files for all fifteen entries to be inside the release's source
-closure, so an input cannot quietly stop being tracked.
+closure, so an input cannot quietly stop being tracked - and, because these
+offsets are *derived* rather than read off the board, the code that derives
+them is tracked with them. `pcbqa.orientation`, `pcbqa.cleanroom`,
+`pcbqa.gates.g_orientation` and `tools/jlc_orientation.py` are hashed from the
+modules that were actually imported, not from files at a path, so a stale copy
+sitting at a tracked path cannot stand in for the code that ran. Editing any of
+them changes the source-closure digest and invalidates every report bound to
+it.
 
 Nothing else takes an offset, and that is measured rather than assumed. When
 JLCPCB revised the first production upload they corrected 11 of the 16

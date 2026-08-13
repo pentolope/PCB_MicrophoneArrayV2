@@ -10,6 +10,7 @@ import glob
 import json
 import os
 import re
+import sys
 
 from ..core import Status, gate, sha256_file
 
@@ -292,6 +293,50 @@ def source_closure_covers_derivations(ctx, res):
                                   "so the registry's configuration is "
                                   "untracked"})
 
+    # The code that derives the offsets, checked as code that ran rather than
+    # as a file lying at a path. Hashing an unused copy would prove nothing.
+    import importlib
+    executed = {}
+    for name in spec.get("required_modules", []):
+        key = "<executed>" + name
+        if key not in closure:
+            problems.append({
+                "module": name,
+                "issue": "is required to reproduce the offsets but is not in "
+                         "the source closure, so the code that computed them "
+                         "is untracked"})
+            continue
+        module = importlib.import_module(name)
+        path = getattr(module, "__file__", "")
+        digest = sha256_file(path) if path and os.path.isfile(path) else None
+        executed[name] = path
+        if digest != closure[key]:
+            problems.append({
+                "module": name, "file": path,
+                "issue": "the module that is loaded is not the one the closure "
+                         "recorded, so the recorded provenance is of code that "
+                         "did not run",
+                "closure": str(closure[key])[:16],
+                "loaded": str(digest)[:16]})
+    res.measurements["executed_implementation"] = {
+        name: os.path.basename(path) for name, path in sorted(executed.items())}
+
+    # And the derivation script, which travels inside the project: prove the
+    # copy that was imported is the copy the closure hashed.
+    tool_rel = next((rel for rel in covered
+                     if rel.endswith("jlc_orientation.py")), None)
+    imported = sys.modules.get("jlc_orientation")
+    if tool_rel and imported is not None:
+        loaded = os.path.realpath(getattr(imported, "__file__", ""))
+        tracked = os.path.realpath(os.path.join(root, tool_rel))
+        if loaded != tracked:
+            problems.append({
+                "file": tool_rel, "loaded": loaded,
+                "issue": "the derivation script that was imported is not the "
+                         "one inside this project, so the closure tracks a "
+                         "copy that did not run"})
+        res.measurements["executed_derivation_script"] = tool_rel
+
     res.measurements["reproduction_inputs"] = sorted(covered)
     res.measurements["reproduction_inputs_tracked"] = len(covered)
     for problem in problems[:40]:
@@ -304,3 +349,53 @@ def source_closure_covers_derivations(ctx, res):
         "schema, and both evidence files for each of the {} registry entries - "
         "are inside the {}-file source closure".format(
             len(covered), len(registry.entries), len(closure)))
+
+
+# ---------------------------------------------------------------------------
+# release coherence
+# ---------------------------------------------------------------------------
+
+@gate("PROV.RELEASE_COHERENCE",
+      "The release package is one run, and every file in it says so",
+      requires=("archive.zip", "archive.manifest", "artifacts.bom",
+                "artifacts.cpl"))
+def release_coherence(ctx, res):
+    """Do the files in the release directory agree about what they are?
+
+    Each of them makes checkable claims about the others, and a package can
+    reach a state where every file is individually well formed and the set is
+    a lie: a validation report describing an archive that is not there, beside
+    an archive no report describes. Prose explaining the mismatch does not fix
+    it; only a check does.
+
+    A package still being built has no reports yet, so there are two cases and
+    the discriminator is whether the package claims to have been validated. If
+    it carries a validation report it must also carry the receipt that says
+    which files belong to it - the report cannot contain its own digest, so
+    the receipt is written last and is the anchor for everything else.
+    """
+    from .. import coherence
+
+    names = coherence.member_names(ctx.manifest)
+    root = os.path.dirname(ctx.manifest.resolve(ctx.manifest.get("archive.zip")))
+    res.evidence_file(os.path.join(root, names["manifest"]))
+    validated = os.path.isfile(os.path.join(root, names["validation"]))
+    problems, facts = coherence.check(root, names, require_receipt=validated)
+
+    res.measurements.update(facts)
+    for problem in problems[:40]:
+        res.finding(**problem)
+    if problems:
+        return res.failed("{} incoherence(s) in the release package".format(
+            len(problems)))
+    if facts.get("stage") == "candidate":
+        return res.passed(
+            "the release manifest records the digests of the archive, BOM and "
+            "CPL beside it; this package is still a candidate, so it carries "
+            "no reports to cross-check yet")
+    return res.passed(
+        "all {} files in the release came from one run: the manifest, both "
+        "check reports, the clean-room record and the validation report name "
+        "one source closure, the validated archive and manifest are the "
+        "installed ones, and the receipt accounts for every file".format(
+            facts.get("files_in_package")))

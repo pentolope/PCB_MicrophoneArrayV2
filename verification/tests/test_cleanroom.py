@@ -126,17 +126,20 @@ class CleanRoomIsolation(unittest.TestCase):
     def test_altering_a_newly_generated_artifact_fails(self):
         work, _project, path = self._origin("altered")
         run, derived = _build(path, work)
-        # An inner copper layer, whichever name this board gives it.
+        # The layer as the package carries it, which is what would be shipped
+        # and what the gates read - not the export directory it was copied
+        # from. Tampering has to be done to the artifact under validation.
         from pcbqa.gates.g_contracts import _classify
+        shipped = derived.resolve(derived.get("artifacts.gerber_dir"))
         target = None
-        for name in sorted(os.listdir(run.gerbers)):
-            path = os.path.join(run.gerbers, name)
+        for name in sorted(os.listdir(shipped)):
+            path = os.path.join(shipped, name)
             with open(path, "rb") as fh:
                 _kind, function, _empty = _classify(name, fh.read())
             if function.startswith("Copper,L2"):
                 target = path
                 break
-        self.assertIsNotNone(target, os.listdir(run.gerbers))
+        self.assertIsNotNone(target, os.listdir(shipped))
         with open(target, "a", encoding="utf-8") as fh:
             fh.write("X150000000Y150000000D03*\n")      # one extra flash
 

@@ -441,14 +441,29 @@ def cmd_report(args):
     return 1 if bad else 0
 
 
+def _shared_registry(spec, registry_path):
+    """The validator's own Registry, not a second opinion about it.
+
+    Whether an entry may be used is one decision, and this command must not
+    make it differently from the code that generates and validates a release.
+    The registry document lives inside the validator's board directory, so the
+    validator is right there to import.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(registry_path)))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from pcbqa.orientation import Registry
+    return Registry(spec)
+
+
 def cmd_check(args):
     """Re-derive every offset and compare with what the registry declares."""
     with open(args.registry, encoding="utf-8") as fh:
         registry = json.load(fh)["release_generation"]["cpl_orientation"]
     declared = {row["lcsc"]: float(row["offset_deg"])
                 for row in registry["registry"]}
-    reviewed = {row["lcsc"] for row in registry["registry"]
-                if str(row.get("review_status", "")).strip() == "reviewed"}
+    shared = _shared_registry(registry, args.registry)
+    reviewed = set(shared.entries)
     derived = derive(registry.get("part_number_field", "LCSC"))
     problems = []
     for lcsc, row in sorted(derived.items()):
@@ -458,8 +473,12 @@ def cmd_check(args):
             problems.append("{}: {}".format(lcsc, row["error"]))
             continue
         if lcsc in declared and lcsc not in reviewed:
-            problems.append("{}: the entry is not marked reviewed, so it may "
-                            "not be used".format(lcsc))
+            problems.append(
+                "{}: no reviewed orientation mapping is available - "
+                "review_status is {} rather than exactly '{}'".format(
+                    lcsc, shared.describe_status(
+                        shared.unusable.get(lcsc, {})),
+                    shared.USABLE_STATUS))
         if lcsc not in declared:
             problems.append("{}: evidence is frozen but the registry has no "
                             "entry".format(lcsc))

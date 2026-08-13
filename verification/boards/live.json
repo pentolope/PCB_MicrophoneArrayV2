@@ -96,6 +96,13 @@
       "fabrication/jlc_orientation/raw/*.json",
       "fabrication/jlc_orientation/README.md"
     ],
+    "source_closure_note": "Project files, by glob, resolved against project_root. These travel with the copy a clean room makes, so the closure means the same thing inside the run and outside it.",
+    "implementation_closure": [
+      "pcbqa.orientation",
+      "pcbqa.cleanroom",
+      "pcbqa.gates.g_orientation"
+    ],
+    "implementation_closure_note": "Modules that DERIVE a shipped value rather than read one off the board, addressed by import name rather than by path. The orientation offsets are computed by this code, so a release is only reproducible if the code is pinned as well as its inputs. Each entry is hashed from the loaded module's own __file__, so what is recorded is the implementation that ran and not a copy of it that happened to be lying next to it. tools/jlc_orientation.py is not listed here because it travels with the project and is already a file-closure member; PROV.SOURCE_CLOSURE separately proves the imported copy is that same file.",
     "source_hash_field": "source_sha256",
     "closure_field": "source_closure_sha256"
   },
@@ -629,6 +636,7 @@
       "PROV.SOURCE_AUTHORITY",
       "PROV.REPORT_FRESHNESS",
       "PROV.SOURCE_CLOSURE",
+      "PROV.RELEASE_COHERENCE",
       "ERC.AUTHORITATIVE",
       "DRC.AUTHORITATIVE",
       "DRC.NO_SUPPRESSED_RULES",
@@ -1268,16 +1276,21 @@
         }
       ],
       "reproduction_inputs": {
-        "description": "Everything a third party needs to arrive at the same offsets. Each of these must appear in the release's source closure; PROV.SOURCE_CLOSURE fails if one disappears, which is how an evidence file silently dropping out of the closure is caught rather than noticed later.",
+        "description": "Everything a third party needs to arrive at the same offsets: the evidence, the registry, and the code that reads them. Each must appear in the release's source closure; PROV.SOURCE_CLOSURE fails if one disappears, which is how an input silently dropping out of the closure is caught rather than noticed later.",
         "required_globs": [
           "tools/jlc_orientation.py",
           "fabrication/jlc_orientation/README.md",
           "fabrication/jlc_orientation/*.json",
           "fabrication/jlc_orientation/raw/*.json"
         ],
+        "required_modules": [
+          "pcbqa.orientation",
+          "pcbqa.cleanroom",
+          "pcbqa.gates.g_orientation"
+        ],
         "per_entry_files": "every registry entry's evidence_file and raw_file, checked individually rather than by glob",
         "configuration": "this manifest, whose digest enters the closure as <manifest>",
-        "implementation_note": "The registry implementation is verification/pcbqa/orientation.py, which is validator code rather than project data. A clean room copies the project and not the validator, so it cannot be in the copied closure; it is covered by the validator's own self-test instead. Listing it here would produce a closure that resolves differently inside and outside the run, which is worse than not listing it."
+        "implementation": "The executable code that applies and validates these offsets is bound into the same closure through reports.implementation_closure: pcbqa.orientation (the registry and the arithmetic), pcbqa.cleanroom (where generation applies them), pcbqa.gates.g_orientation (where they are checked) and tools/jlc_orientation.py (where they are derived from the frozen evidence). Each is hashed from the module that was actually imported, and PROV.SOURCE_CLOSURE re-hashes them at validation time and requires agreement with what the closure recorded."
       },
       "review_status_policy": "An entry is usable only when review_status is exactly 'reviewed'. 'pending', 'unreviewed', an empty string and a missing field all block generation and fail validation. Enforced in the shared registry so generation and validation cannot disagree about it.",
       "normalize_range_note": "Half-open, and enforced as half-open: 0 is a placement angle and 360 is not. Generation normalises 360 to 0, including when rounding to angle_decimals would otherwise carry a value up to it."

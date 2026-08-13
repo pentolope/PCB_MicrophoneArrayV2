@@ -1,0 +1,42 @@
+{
+  "board_id": "microphone-array-v2-live",
+  "attempt_id": "20260813T001016Z-ce6e8bb9",
+  "verdict": "ACCEPTED",
+  "source_closure_sha256": "e2bad704dc3443bc678c964526c08b16a9796eefe5401c6c1d6662fc39d79fbc",
+  "members": {
+    "archive": "microphone_array_v2-revA-fabrication.zip",
+    "manifest": "MANIFEST.md",
+    "bom": "bom.csv",
+    "cpl": "cpl.csv",
+    "validation": "validation.json",
+    "clean_room": "clean_room.json",
+    "unsealed": "UNSEALED.txt"
+  },
+  "schema_version": 1,
+  "written_utc": "2026-08-13T00:11:41.100927+00:00",
+  "what_is_hashed": "sha256 of the raw bytes of every file in this directory except RECEIPT.json itself, taken after the package was assembled and after every mandatory gate passed. Paths are relative to this directory.",
+  "files": {
+    "MANIFEST.md": "d192d6ca3d953fe5be8b0719e59096b957f0618b9738b3414bd8928fe76715a2",
+    "UNSEALED.txt": "cce3cef1e435805450194423ff3ecdf5b50657e883231c1fb3e17f9fea34698e",
+    "bom.csv": "a3970d865b3b76677afe0b11b6061156e3be633a50613167887ef8a54fe14563",
+    "clean_room.json": "ba114ca124af526e225bed81330638480b694b9b33bb56ba7d0181edae164aaa",
+    "cpl.csv": "28091e4dbf5a05e30af72f833839194c67c0aa0f90c6f797d0434fce84e7e807",
+    "microphone_array_v2-revA-fabrication.zip": "a5bb278843d86cfcff492c3d6cd12415dc984286e9c58a83022ecd9b7df66001",
+    "validation.json": "321761246a72651373356d8f2ee2f530353b160136d3a277453fb0cf8e07c61d",
+    "gerbers/microphone_array_v2-NPTH.DRL": "04746260f1a15d597b6b23bb1c9414c7c7fbcdc6d7c9eaed16fa39489d776832",
+    "gerbers/microphone_array_v2-PTH.DRL": "ede18f801ddb7c934a85d68e26b5ddbb3e53ce8587e350fc3b22588905b4e295",
+    "gerbers/microphone_array_v2.G2L": "060ecda523cf4a24aa9112c16d3f2f552ce24b06528e54fa6e4a37a7c1cee70e",
+    "gerbers/microphone_array_v2.G3L": "75be0547ef2e6ef7ba1d544941f1c3b37c500c59d29da20cc67bf9266091fdf8",
+    "gerbers/microphone_array_v2.GBL": "cae0bb6fcf59be78de382de2933674b72cc1837a0e57bd5abc1678e9c4afbf8e",
+    "gerbers/microphone_array_v2.GBO": "cfb542d85665f923d6ea1ec139f3ee01d530f150785581c03f5ea779d4e68fcc",
+    "gerbers/microphone_array_v2.GBP": "8c4ee713263611a7a8319590f1d663d2e61ad041274f25fc89aa5e2f638b2c75",
+    "gerbers/microphone_array_v2.GBS": "7fbcbc2fc283fe8f4827673f2a623a424fc252e2d318f7fd7a3d7ed54c1283cf",
+    "gerbers/microphone_array_v2.GM1": "48263513470246f8812583f91bedfa6170ca71447c7fa91148314d09ddd31797",
+    "gerbers/microphone_array_v2.GTL": "08540d77b89a0f9c460929b0e29745d9513705177a32ae5dbd71d9937c24e65e",
+    "gerbers/microphone_array_v2.GTO": "b2f15d1f912771c1f1159330ff1b60c5ad9550d0c536c189b27124e66b553a16",
+    "gerbers/microphone_array_v2.GTP": "e3b82691d66bd2666c918366ed35f929cd767a62acf7afb0695ab8eab9b7c421",
+    "gerbers/microphone_array_v2.GTS": "1e9ae30ea1fb81b808b73ecb85a34affd3145dd72bddfa8496dd4e0ed1a5f611",
+    "reports/drc.json": "9a7440b97b3cfb020a23b061a7c39db9168b4b5335c7daecbfb35bdcd0752477",
+    "reports/erc.json": "e0f9dd71aa7048206bc1a1d05be214b44f681b6763ac147c80a970ddc4e168f3"
+  }
+}

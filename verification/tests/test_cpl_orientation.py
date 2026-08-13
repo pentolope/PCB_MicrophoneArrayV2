@@ -86,11 +86,17 @@ def _board_numbers_and_angles():
     return out
 
 
-def _run_gate(manifest_path):
+def _sha256_file(path):
+    from pcbqa.core import sha256_file
+    return sha256_file(path)
+
+
+def _run_gate(manifest_path, gate_id=GATE):
+    from pcbqa.gates import g_provenance                       # noqa: F401
     ctx = Context(Manifest(manifest_path),
                   tempfile.mkdtemp(prefix="pcbqa_orient_work_"))
-    results = core.run_all(ctx, only={GATE})
-    return {r.gate_id: r.to_dict() for r in results}[GATE]
+    results = core.run_all(ctx, only={gate_id})
+    return {r.gate_id: r.to_dict() for r in results}[gate_id]
 
 
 # ---------------------------------------------------------------------------
@@ -363,19 +369,67 @@ class OnlyReviewedEntriesMayBeUsed(unittest.TestCase):
         with self.assertRaises(OrientationError) as caught:
             registry.offset("C7668")
         self.assertIn("unreviewed", str(caught.exception))
+        self.assertIn("C7668", str(caught.exception))
         self.assertFalse(registry.covers("C7668"))
+
+    def test_a_defect_names_the_part_and_what_it_said(self):
+        for status in (" reviewed ", "Reviewed", None, 7):
+            spec = copy.deepcopy(_spec())
+            for row in spec["registry"]:
+                if row["lcsc"] == "C7668":
+                    row["review_status"] = status
+            defects = [d for d in Registry(spec).defects()
+                       if d.get("lcsc") == "C7668"]
+            self.assertTrue(defects, "{!r} produced no defect".format(status))
+            self.assertIn("no reviewed orientation mapping is available",
+                          defects[0]["issue"])
+            self.assertIn(repr(status) if status is not None else "(null)",
+                          defects[0]["issue"] + defects[0]["review_status"])
 
     def test_a_missing_status_cannot_be_used(self):
         registry = Registry(self._spec_with_status(None))
         with self.assertRaises(OrientationError):
             registry.offset("C7668")
 
-    def test_pending_and_empty_are_no_better(self):
-        for status in ("pending", "", "   ", "Reviewed", "reviewed?"):
-            registry = Registry(self._spec_with_status(status))
+    #: Every way of nearly saying "reviewed". None of them says it.
+    NOT_REVIEWED = (" reviewed ", "reviewed\n", "reviewed ", " reviewed",
+                    "\treviewed", "Reviewed", "REVIEWED", "reviewed?",
+                    "unreviewed", "pending", "", "   ", None, True, 1, 0,
+                    ["reviewed"], {"status": "reviewed"})
+
+    def test_nothing_but_the_exact_string_is_accepted(self):
+        for status in self.NOT_REVIEWED:
+            spec = copy.deepcopy(_spec())
+            for row in spec["registry"]:
+                if row["lcsc"] == "C7668":
+                    row["review_status"] = status
+            registry = Registry(spec)
+            self.assertFalse(registry.covers("C7668"),
+                             "{!r} was accepted as a review".format(status))
             with self.assertRaises(OrientationError,
                                    msg="{!r} was accepted".format(status)):
                 registry.offset("C7668")
+            message = ""
+            try:
+                registry.offset("C7668")
+            except OrientationError as exc:
+                message = str(exc)
+            self.assertIn("C7668", message)
+            self.assertIn("no reviewed orientation mapping is available",
+                          message)
+
+    def test_whitespace_is_not_trimmed_away(self):
+        """The value is JSON, not something to be tidied up before reading."""
+        self.assertTrue(Registry.is_reviewed("reviewed"))
+        for near in (" reviewed", "reviewed ", " reviewed ", "reviewed\n",
+                     "reviewed\t", "\nreviewed"):
+            self.assertFalse(Registry.is_reviewed(near),
+                             "{!r} was trimmed into a review".format(near))
+
+    def test_a_non_string_is_not_coerced(self):
+        for value in (None, True, 1, 1.0, ["reviewed"], {"a": "reviewed"}):
+            self.assertFalse(Registry.is_reviewed(value),
+                             "{!r} was coerced into a review".format(value))
 
     def test_an_unusable_entry_is_reported_as_a_defect(self):
         registry = Registry(self._spec_with_status("pending"))
@@ -630,6 +684,89 @@ class TheEvidenceIsTheCommittedResponse(unittest.TestCase):
         self.assertEqual(len(derived), 15)
         for lcsc, row in derived.items():
             self.assertEqual(row["evidence_problems"], [], lcsc)
+
+
+# ---------------------------------------------------------------------------
+# the code that derives the offsets
+# ---------------------------------------------------------------------------
+
+class TheImplementationIsPinnedToo(unittest.TestCase):
+    """An offset is derived, not read, so the deriving code is an input.
+
+    Pinning the evidence and leaving the program that reads it unpinned would
+    make the result reproducible only by accident. And hashing the code by
+    path would not do it either: what has to be recorded is the module that
+    was imported, because a stale copy at a tracked path is exactly the thing
+    that would go unnoticed.
+    """
+
+    def setUp(self):
+        from pcbqa import canonical, cleanroom
+        from pcbqa.core import Manifest
+        self.cleanroom = cleanroom
+        self.manifest = Manifest(LIVE)
+        self.policy = canonical.AttributePolicy.load(
+            self.manifest.resolve(self.manifest.get("fixture.attributes_file")))
+        self.required = _spec()["reproduction_inputs"]["required_modules"]
+
+    def _closure(self):
+        return self.cleanroom.source_closure(self.manifest, self.policy)
+
+    def test_every_required_module_is_in_the_closure(self):
+        closure = self._closure()
+        for name in self.required:
+            self.assertIn("<executed>" + name, closure)
+
+    def test_the_recorded_digest_is_the_loaded_module(self):
+        import importlib
+        closure = self._closure()
+        for name in self.required:
+            module = importlib.import_module(name)
+            self.assertEqual(closure["<executed>" + name],
+                             _sha256_file(module.__file__), name)
+
+    def test_modifying_an_implementation_file_changes_the_closure(self):
+        """Provenance must not survive an edit to the code it describes."""
+        import importlib
+        before = self.cleanroom.closure_digest(self._closure())
+        name = "pcbqa.orientation"
+        module = importlib.import_module(name)
+        original = module.__file__
+        work = tempfile.mkdtemp(prefix="pcbqa_impl_")
+        edited = os.path.join(work, "orientation.py")
+        with open(original, "rb") as fh:
+            body = fh.read()
+        with open(edited, "wb") as fh:
+            fh.write(body + b"\n# one comment, and the release is a different one\n")
+        module.__file__ = edited
+        try:
+            after = self.cleanroom.closure_digest(self._closure())
+        finally:
+            module.__file__ = original
+        self.assertNotEqual(before, after,
+                            "editing the orientation implementation left the "
+                            "source closure unchanged")
+
+    def test_removing_one_from_the_closure_fails_the_gate(self):
+        doc = _manifest_doc()
+        doc["reports"]["implementation_closure"] = [
+            name for name in doc["reports"]["implementation_closure"]
+            if name != "pcbqa.orientation"]
+        work = tempfile.mkdtemp(prefix="pcbqa_impl_gate_")
+        doc["project_root"] = PROJECT
+        doc["fixture"] = {"attributes_file": os.path.join(PROJECT,
+                                                          ".gitattributes")}
+        path = os.path.join(work, "manifest.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(doc, fh, indent=2)
+        gate = _run_gate(path, "PROV.SOURCE_CLOSURE")
+        self.assertEqual(gate["status"], Status.FAIL)
+        self.assertTrue(any(f.get("module") == "pcbqa.orientation"
+                            for f in gate["findings"]), gate["findings"])
+
+    def test_a_module_that_cannot_be_imported_is_refused(self):
+        with self.assertRaises(Exception):
+            self.cleanroom.executed_implementation(["pcbqa.not_a_module"])
 
 
 # ---------------------------------------------------------------------------

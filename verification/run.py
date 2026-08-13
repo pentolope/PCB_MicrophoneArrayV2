@@ -5,6 +5,7 @@
     python run.py selftest [--jobs auto|N] run the validator's own test suite
     python run.py validate <manifest>      validate a board; nonzero if rejected
     python run.py release  <manifest>      clean-room release attempt
+    python run.py coherence <manifest>     is the installed release one run?
     python run.py gates                    list gate IDs
 
 Run everything with KiCad's own Python. pcbnew, Shapely and kicad-cli are
@@ -255,6 +256,36 @@ def _release_attempt(manifest, layout, attempt, profile, mandatory):
               encoding="utf-8") as fh:
         fh.write(_unsealed_text(profile))
 
+    # The package is complete only now, so this is the first moment an
+    # inventory of it can be true. The receipt is written last and is what
+    # makes the set checkable later: a validation report cannot carry its own
+    # digest, so without a receipt nothing says which files belong together.
+    from pcbqa import coherence
+    names = coherence.member_names(manifest)
+    coherence.write_receipt(attempt.build, {
+        "board_id": manifest.board_id,
+        "attempt_id": attempt.id,
+        "verdict": doc["summary"]["verdict"],
+        "source_closure_sha256": run.summary()["source_closure_sha256"],
+        "members": names,
+    })
+    incoherent, facts = coherence.check(attempt.build, names)
+    if incoherent:
+        for problem in incoherent[:25]:
+            blockers.append(("release:coherence", "ERROR",
+                             "{}: {}".format(problem.get("file", "package"),
+                                             problem["issue"])))
+        _write_diagnostics(attempt, manifest, profile, blockers, jpath, mpath)
+        print(chr(10) + "RELEASE BLOCKED: the assembled package does not agree "
+                        "with itself")
+        for gate_id, status, why in blockers[-25:]:
+            print("  {}: {} - {}".format(gate_id, status, why))
+        print("Published release created: NO")
+        return 1
+    print("  package coherent: {} files, one source closure {}".format(
+        facts["files_in_package"],
+        str(facts.get("source_closure_sha256"))[:16]))
+
     release_id, destination = attempt.publish()
     pointer = layout.write_latest(release_id, {
         "board_id": manifest.board_id,
@@ -275,9 +306,16 @@ def _unsealed_text(profile):
               "mandatory gate passed against these exact artifacts before this "
               "directory was published. It was assembled under the attempt "
               "that produced it and moved here by a single rename, so it has "
-              "never existed in a partly-written state. Sealing additionally "
-              "requires recorded visual-review evidence ({}).".format(
-                  profile.get("visual_review_evidence")) + chr(10))
+              "never existed in a partly-written state." + chr(10) + chr(10)
+            + "RECEIPT.json lists every other file here with its digest, "
+              "written after the gates passed. PROV.RELEASE_COHERENCE checks "
+              "that claim rather than asking you to take it: run "
+              "`run.py coherence <manifest>` against an installed package and "
+              "it will fail if any file came from a different run." + chr(10)
+            + chr(10)
+            + "Sealing additionally requires recorded visual-review evidence "
+              "({}).".format(profile.get("visual_review_evidence"))
+            + chr(10))
 
 
 def _write_diagnostics(attempt, manifest, profile, blockers, jpath, mpath):
@@ -353,6 +391,38 @@ def cmd_gates():
     return 0
 
 
+def cmd_coherence(manifest_path):
+    """Is the installed release package one run? Nonzero if not.
+
+    The same check the release runs before publishing, pointed at whatever is
+    installed now. Worth running on its own because a package can be made
+    incoherent long after it was published - by refreshing one report, or by
+    keeping one file from a previous release - and nothing else notices.
+    """
+    from pcbqa import coherence
+    from pcbqa.core import ManifestError
+
+    try:
+        manifest, _layout = open_board(manifest_path)
+    except (ManifestError, Exception) as exc:                # noqa: BLE001
+        return _refuse(exc)
+    names = coherence.member_names(manifest)
+    root = os.path.dirname(manifest.resolve(manifest.get("archive.zip")))
+    print("package: " + root)
+    problems, facts = coherence.check(root, names)
+    for key, value in sorted(facts.items()):
+        print("  {:34s} {}".format(key, value))
+    for problem in problems:
+        print("  INCOHERENT  {}: {}".format(problem.get("file", "package"),
+                                            problem["issue"]))
+    if problems:
+        print(chr(10) + "{} incoherence(s): this directory is not one "
+                        "release.".format(len(problems)))
+        return 1
+    print(chr(10) + "Coherent: every file here came from one clean-room run.")
+    return 0
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__)
@@ -364,7 +434,7 @@ def main(argv):
         return cmd_selftest(argv)
     if cmd == "gates":
         return cmd_gates()
-    if cmd in ("validate", "release"):
+    if cmd in ("validate", "release", "coherence"):
         if len(argv) < 3:
             print("usage: run.py {} <manifest.json>".format(cmd))
             return 2
@@ -373,6 +443,8 @@ def main(argv):
             path = os.path.join(HERE, "boards", argv[2])
         if cmd == "validate":
             return cmd_validate(path)[0]
+        if cmd == "coherence":
+            return cmd_coherence(path)
         return cmd_release(path)
     print(__doc__)
     return 2

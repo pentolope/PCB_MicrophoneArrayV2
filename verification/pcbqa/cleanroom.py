@@ -101,12 +101,40 @@ def closure_digest(entries):
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
+def executed_implementation(names):
+    """Digests of the code that is running, taken from the loaded modules.
+
+    A result that a program derived rather than read off the board is only
+    reproducible if the program is pinned too, and hashing a file by path
+    proves nothing about what was imported: the path could be a stale copy,
+    or a different one from the copy on sys.path. So each module is resolved
+    through the import system and its ``__file__`` is what gets hashed - the
+    bytes that actually ran.
+
+    Raw bytes, not canonicalised: this is source that the interpreter read,
+    not a design file whose line endings a checkout is allowed to change.
+    """
+    import importlib
+    entries = {}
+    for name in names:
+        module = importlib.import_module(name)
+        path = getattr(module, "__file__", None)
+        if not path or not os.path.isfile(path):
+            raise CleanRoomError(
+                "{} declares no importable file, so the implementation that "
+                "ran cannot be recorded".format(name))
+        entries["<executed>" + name] = sha256_file(path)
+    return entries
+
+
 def source_closure(manifest, policy):
     """Canonical digests of every input a check result depends on.
 
-    Schematic sheets, the board, project settings, design rules and the
-    manifest itself. A report that was produced before any of these changed is
-    not describing the design that is about to be manufactured.
+    Schematic sheets, the board, project settings, design rules, the manifest
+    itself - and the modules that derive rather than read, which are addressed
+    by import name because they are not part of the project being copied. A
+    report that was produced before any of these changed is not describing the
+    design that is about to be manufactured.
     """
     root = manifest.resolve(".")
     entries = {}
@@ -116,6 +144,8 @@ def source_closure(manifest, policy):
                 continue
             rel = os.path.relpath(path, root).replace("\\", "/")
             entries[rel] = canonical.digest(path, policy.classify(rel))
+    entries.update(executed_implementation(
+        manifest.get("reports.implementation_closure", [])))
     entries["<manifest>"] = manifest.sha256
     return entries
 
@@ -570,6 +600,15 @@ class CleanRun:
             for path in chosen:
                 zf.write(path, os.path.basename(path))
         self.archive_zip = zpath
+
+        # The approved layers also go into the package unzipped. They are what
+        # the gates read, and a release directory that cannot be validated
+        # without reaching back into the run that produced it is not a package.
+        loose = os.path.join(self.release, "gerbers")
+        os.makedirs(loose, exist_ok=True)
+        for path in chosen:
+            shutil.copy2(path, os.path.join(loose, os.path.basename(path)))
+        self.package_gerbers = loose
         self.log.append({"step": "package", "entries": len(chosen),
                          "excluded": len(rejected)})
 
@@ -617,7 +656,9 @@ class CleanRun:
         data["fixture"]["hash_file"] = "../HASHES.json"
         data["fixture"]["attributes_file"] = "../.gitattributes"
         up = "../.."                       # fixture/project -> run root
-        data["artifacts"]["gerber_dir"] = f"{up}/generated/gerbers"
+        # The package's own copy, not the export directory it was taken from:
+        # what gets validated has to be what gets installed.
+        data["artifacts"]["gerber_dir"] = os.path.join(self.release, "gerbers")
         data["artifacts"]["bom"] = os.path.join(self.release,
                                                 cfg["bom"]["output"])
         data["artifacts"]["cpl"] = os.path.join(self.release,
