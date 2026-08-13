@@ -395,7 +395,10 @@ class ReportFreshness(unittest.TestCase):
             path = os.path.join(box.project, "generated", name)
             with open(path, encoding="utf-8") as fh:
                 report = json.load(fh)
-            report["source_sha256"] = core.sha256_file(source)
+            # Canonical, as the clean room binds it: the identity of a design
+            # source must not depend on the checkout's line endings.
+            report["source_sha256"] = canonical.digest(
+                source, policy.classify(os.path.basename(source)))
             report["source_closure_sha256"] = digest
             report["source_closure"] = closure
             doctor(name, report)

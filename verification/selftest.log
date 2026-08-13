@@ -4,16 +4,16 @@
 
     command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs auto
     working dir  repository root
-    started      2026-08-13T00:14Z
+    started      2026-08-13T03:05Z
     interpreter  KiCad 10.0.5 bundled Python 3.11.5
 
-    tests discovered   227
-    passed             226
+    tests discovered   249
+    passed             248
     skipped            1
     failed               0
     errored              0
     worker processes     5
-    elapsed             896.7 s
+    elapsed            1014.8 s
     exit code            0
 
 The single skip is
@@ -21,11 +21,11 @@ The single skip is
 which needs the Windows privilege to create a symbolic link and skips itself
 rather than reporting a pass it did not earn.
 
-    worker 0: 26 tests, 712.4s of test time
-    worker 1: 68 tests, 651.2s of test time
-    worker 2: 81 tests, 501.3s of test time
-    worker 3: 37 tests, 622.1s of test time
-    worker 4: 15 tests, 566.7s of test time
+    worker 0: 72 tests, 723.5s of test time
+    worker 1: 52 tests, 613.9s of test time
+    worker 2: 27 tests, 761.0s of test time
+    worker 3: 22 tests,  93.0s of test time
+    worker 4: 76 tests, 715.5s of test time
 
 Per-worker test time sums to more than the elapsed wall clock because the
 runner distributes individual test IDs, so a class fixture runs once per test
@@ -34,14 +34,44 @@ independently addressable and sharing no state.
 
 ## What this run covers that the last one did not
 
+Whether any of this works on a machine that is not this one. An independent
+run of the previous commit from a fresh Linux checkout found four things that
+were true only here: evidence paths matched with `os.path.basename`, which
+turns a Windows path into one long filename on Linux and loses the archive the
+report validated; report source hashes taken over raw bytes, so a checkout with
+the other line ending looked stale before anyone had edited anything; a
+recursive schematic glob that swept the validator's own fixtures and every past
+attempt into the closure, so its value depended on what was left on disk; and a
+mutation-test class that skipped entirely when no previous release happened to
+be lying around.
+
+`tests/test_source_closure.py` fixes the closure in place: it builds the same
+project twice, once with LF and once with CRLF, and requires one identity while
+a real edit still changes it; it requires the origin and clean-room
+configuration identities to survive the path rewrites a clean room must make;
+and it requires nothing under `verification/`, `generated/`, `build/` or
+`candidates/` to be in the live closure at all. The release itself now compares
+the two closures and refuses to publish if they disagree.
+
+`tests/test_release_coherence.py` matches evidence recorded in Windows, POSIX
+and mixed-separator forms - on this host, without pretending it is another one -
+and requires a wrong digest to still fail in each. Its swap tests build a second
+internally coherent package rather than looking for one in `verification/out`,
+so they run in a checkout with no history and never skip. And a new test injects
+an incoherence after the receipt is written, which is after every gate has
+passed, and requires the release to refuse to publish it.
+
+
 Whether the release package is one release. It was not: a validation report had
 been refreshed on its own and left beside an archive from an earlier run, with
-a note explaining the discrepancy. `tests/test_release_coherence.py` takes files
-from genuinely earlier published releases - the archive, the release manifest,
-a check report, the clean-room record, the validation report - and puts each in
-turn beside the current package. Every file is well formed and every swap must
-be caught. One test writes the prose note next to the mismatch and requires it
-to fail anyway, because that is what was tried before.
+a note explaining the discrepancy. The swap tests described above take the
+archive, the release manifest, a check report, the clean-room record and the
+validation report from a second package that is itself completely coherent, and
+put each in turn beside the installed one. Every file is well formed and every
+swap must be caught. One test writes the prose note next to the mismatch and
+requires it to fail anyway, because that is what was tried before. Others
+remove each check report, reissue a receipt that accurately inventories what is
+left, and require the package to be rejected as incomplete anyway.
 
 Whether the code that derives the offsets is pinned. An offset is computed, not
 read, so `pcbqa.orientation`, `pcbqa.cleanroom` and `pcbqa.gates.g_orientation`

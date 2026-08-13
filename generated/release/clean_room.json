@@ -1,6 +1,6 @@
 {
-  "run_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run",
-  "build_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build",
+  "run_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run",
+  "build_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build",
   "origin": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2",
   "purged": [
     "generated",
@@ -67,13 +67,13 @@
         "sch",
         "erc",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\reports\\erc.json",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\reports\\erc.json",
         "--format",
         "json",
         "--severity-all",
         "--severity-exclusions",
         "--exit-code-violations",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
       ],
       "stderr": ""
     },
@@ -86,7 +86,7 @@
         "pcb",
         "drc",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\reports\\drc.json",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\reports\\drc.json",
         "--format",
         "json",
         "--severity-all",
@@ -96,7 +96,7 @@
         "--refill-zones",
         "--save-board",
         "--exit-code-violations",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
       ],
       "stderr": ""
     },
@@ -110,14 +110,14 @@
         "export",
         "gerbers",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\generated\\gerbers",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\generated\\gerbers",
         "--layers",
         "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts",
         "--no-x2",
         "--no-netlist",
         "--use-drill-file-origin",
         "--subtract-soldermask",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
       ],
       "stderr": ""
     },
@@ -131,13 +131,13 @@
         "export",
         "drill",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\generated\\gerbers",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\generated\\gerbers",
         "--format",
         "excellon",
         "--excellon-separate-th",
         "--drill-origin",
         "plot",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
       ],
       "stderr": ""
     },
@@ -151,7 +151,7 @@
         "export",
         "pos",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\cpl.csv",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv",
         "--format",
         "csv",
         "--units",
@@ -159,7 +159,7 @@
         "--side",
         "both",
         "--exclude-dnp",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
       ],
       "stderr": ""
     },
@@ -173,7 +173,7 @@
         "export",
         "bom",
         "--output",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\bom.csv",
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\bom.csv",
         "--fields",
         "${QUANTITY},Reference,Value,Footprint,LCSC",
         "--labels",
@@ -183,7 +183,7 @@
         "--exclude-dnp",
         "--ref-range-delimiter",
         "",
-        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+        "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
       ],
       "stderr": ""
     },
@@ -264,53 +264,53 @@
   "authoritative_paths": [
     {
       "key": "archive.manifest",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\MANIFEST.md"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\MANIFEST.md"
     },
     {
       "key": "archive.zip",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\microphone_array_v2-revA-fabrication.zip"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\microphone_array_v2-revA-fabrication.zip"
     },
     {
       "key": "artifacts.bom",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\bom.csv"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\bom.csv"
     },
     {
       "key": "artifacts.cpl",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\cpl.csv"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv"
     },
     {
       "key": "artifacts.gerber_dir",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\build\\gerbers"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\gerbers"
     },
     {
       "key": "fixture.attributes_file",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\.gitattributes"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\.gitattributes"
     },
     {
       "key": "fixture.hash_file",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\HASHES.json"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\HASHES.json"
     },
     {
       "key": "reports:drc.json",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\../../reports\\drc.json"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\../../reports\\drc.json"
     },
     {
       "key": "reports:erc.json",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\../../reports\\erc.json"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\../../reports\\erc.json"
     },
     {
       "key": "sources.pcb",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
     },
     {
       "key": "sources.project",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro"
     },
     {
       "key": "sources.schematic",
-      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T001016Z-ce6e8bb9\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+      "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
     }
   ],
   "excluded_layers": [],
-  "source_closure_sha256": "e2bad704dc3443bc678c964526c08b16a9796eefe5401c6c1d6662fc39d79fbc"
+  "source_closure_sha256": "f7afed273eb2a688ace8e5b4167449283b08aacec0f8d84e2901d994594aee47"
 }

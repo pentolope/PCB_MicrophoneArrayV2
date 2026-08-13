@@ -13,6 +13,7 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -99,9 +100,20 @@ class GateResult:
         self.limits[constraint.id] = constraint.to_dict()
         return constraint
 
-    def evidence_file(self, path, digest=None):
+    def evidence_file(self, path, digest=None, name=None):
+        """Record a file this gate examined.
+
+        `path` is absolute and therefore host-shaped: it carries the separator
+        and the drive letter of whichever machine ran the gate, which makes it
+        useless for finding the same file again somewhere else. `name` is the
+        stable identity - a package-relative, forward-slash name - and is what
+        a later reader should match on. It defaults to the basename, split on
+        both separators so a report written on one platform can be read on the
+        other.
+        """
         self.evidence.append({
             "path": path,
+            "name": name or re.split(r"[\\/]", str(path))[-1],
             "sha256": digest if digest else (sha256_file(path) if os.path.isfile(path) else None),
         })
         return self

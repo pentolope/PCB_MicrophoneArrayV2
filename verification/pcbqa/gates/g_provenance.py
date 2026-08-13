@@ -126,9 +126,14 @@ def report_freshness(ctx, res):
     res.measurements["source_closure_files"] = len(closure)
     res.measurements["source_closure_sha256"] = closure_hash
 
+    def identity(path):
+        """The same canonical digest the binding side records."""
+        rel = os.path.relpath(path, root).replace("\\", "/")
+        return canonical.digest(path, policy.classify(rel))
+
     sources = {"pcb": ctx.board_path(), "schematic": ctx.schematic_path()}
-    live = {k: sha256_file(v) for k, v in sources.items() if os.path.isfile(v)}
-    by_basename = {os.path.basename(v): sha256_file(v)
+    live = {k: identity(v) for k, v in sources.items() if os.path.isfile(v)}
+    by_basename = {os.path.basename(v): identity(v)
                    for v in sources.values() if os.path.isfile(v)}
     res.measurements["source_sha256"] = {k: v[:16] for k, v in live.items()}
 
@@ -196,15 +201,38 @@ def report_freshness(ctx, res):
                 entry["removed_inputs"] = sorted(set(bound) - set(closure))[:8]
             stale.append(entry)
 
+    # A gate that examines nothing passes for the wrong reason. The reports a
+    # release must produce are named by the generation steps that produce
+    # them, so "the glob found nothing" and "this board has no reports" are
+    # told apart by configuration rather than by an empty result.
+    from ..coherence import leaf, required_report_files
+    required = [leaf(name) for name in required_report_files(ctx.manifest)]
+    seen = {leaf(rel) for rel in examined}
+    res.measurements["reports_required"] = required
+    res.measurements["reports_examined"] = len(examined)
+    res.measurements["reports_examined_files"] = sorted(examined)
+    for name in required:
+        if name not in seen:
+            stale.append({
+                "file": name,
+                "issue": "the release generates this check report, but "
+                         "reports.files finds no such file to check; a "
+                         "freshness gate that never sees a report cannot "
+                         "report staleness"})
+    if not examined:
+        stale.append({"issue": "no reports were examined at all, so this gate "
+                               "passed without checking anything",
+                      "patterns": spec["files"]})
+
     for s_ in stale:
         res.finding(**s_)
-    res.measurements["reports_examined"] = len(examined)
     if stale:
         return res.failed("{} committed report(s) cannot be tied to the current "
                           "sources".format(len(stale)))
     return res.passed(
-        "every committed report binds the canonical digest of all {} source "
-        "inputs, and every one still matches".format(len(closure)))
+        "all {} committed report(s) bind the canonical digest of all {} source "
+        "inputs, and every one still matches".format(len(examined),
+                                                     len(closure)))
 
 
 # ---------------------------------------------------------------------------
@@ -288,10 +316,10 @@ def source_closure_covers_derivations(ctx, res):
                                  "issue": "the entry's {} is outside the "
                                           "source closure".format(field)})
 
-    if "<manifest>" not in closure:
-        problems.append({"issue": "the manifest itself is not in the closure, "
-                                  "so the registry's configuration is "
-                                  "untracked"})
+    if "<configuration>" not in closure:
+        problems.append({"issue": "the manifest's configuration identity is "
+                                  "not in the closure, so the registry's "
+                                  "configuration is untracked"})
 
     # The code that derives the offsets, checked as code that ran rather than
     # as a file lying at a path. Hashing an unused copy would prove nothing.

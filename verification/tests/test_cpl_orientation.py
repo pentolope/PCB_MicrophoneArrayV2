@@ -58,6 +58,41 @@ _NOT_THE_PROJECT = shutil.ignore_patterns(".git", "verification", "build",
                                           "candidates", "__pycache__", "*.pyc")
 
 
+# Scratch directories, cleaned up when the module finishes. tempfile puts them
+# wherever TMPDIR points, which on some machines is inside the checkout, so
+# leaving them behind litters the repository the tests are checking.
+_SCRATCH = []
+
+
+def _scratch(prefix):
+    path = tempfile.mkdtemp(prefix=prefix)
+    _SCRATCH.append(path)
+    return path
+
+
+def tearDownModule():
+    for path in _SCRATCH:
+        shutil.rmtree(path, ignore_errors=True)
+    del _SCRATCH[:]
+
+
+def _copy_project_safely(destination):
+    """Copy the project without the copy chasing its own tail.
+
+    tempfile puts its directories wherever TMPDIR says, and on a machine where
+    that is inside the repository a plain copytree descends into the copy it is
+    writing until the path length gives out. The shared helper blocks the
+    destination and every ancestor of it, so the copy terminates regardless of
+    where the temporary directory landed.
+    """
+    from pcbqa.core import copy_project
+    copy_project(PROJECT, destination)
+    for unwanted in ("verification", "build", "candidates"):
+        path = os.path.join(destination, unwanted)
+        if os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+
+
 def _manifest_doc():
     with open(LIVE, encoding="utf-8") as fh:
         return json.load(fh)
@@ -94,7 +129,7 @@ def _sha256_file(path):
 def _run_gate(manifest_path, gate_id=GATE):
     from pcbqa.gates import g_provenance                       # noqa: F401
     ctx = Context(Manifest(manifest_path),
-                  tempfile.mkdtemp(prefix="pcbqa_orient_work_"))
+                  _scratch("pcbqa_orient_work_"))
     results = core.run_all(ctx, only={gate_id})
     return {r.gate_id: r.to_dict() for r in results}[gate_id]
 
@@ -253,7 +288,7 @@ class GenerationRefusesAnUnreviewedPart(unittest.TestCase):
             row for row
             in spec_doc["release_generation"]["cpl_orientation"]["registry"]
             if row["lcsc"] != "C7668"]
-        work = tempfile.mkdtemp(prefix="pcbqa_orient_missing_")
+        work = _scratch("pcbqa_orient_missing_")
         spec_doc["project_root"] = PROJECT
         spec_doc["fixture"] = {
             "attributes_file": os.path.join(PROJECT, ".gitattributes")}
@@ -457,7 +492,7 @@ class OnlyReviewedEntriesMayBeUsed(unittest.TestCase):
         for row in doc["release_generation"]["cpl_orientation"]["registry"]:
             if row["lcsc"] == "C7668":
                 row["review_status"] = "unreviewed"
-        work = tempfile.mkdtemp(prefix="pcbqa_orient_status_")
+        work = _scratch("pcbqa_orient_status_")
         doc["project_root"] = PROJECT
         doc["fixture"] = {"attributes_file": os.path.join(PROJECT,
                                                           ".gitattributes")}
@@ -491,7 +526,7 @@ class TheAngleRangeIsHalfOpen(unittest.TestCase):
 
     def _gate_with_rotation(self, value):
         """Run the gate over a CPL whose one row carries `value`."""
-        work = tempfile.mkdtemp(prefix="pcbqa_orient_range_")
+        work = _scratch("pcbqa_orient_range_")
         release = os.path.join(work, "generated", "release")
         os.makedirs(release)
         shutil.copytree(os.path.join(PROJECT, "generated", "release"),
@@ -596,7 +631,7 @@ class TheEvidenceIsTheCommittedResponse(unittest.TestCase):
 
     def _sandbox(self):
         """A private copy of the frozen evidence, safe to damage."""
-        work = tempfile.mkdtemp(prefix="pcbqa_evidence_")
+        work = _scratch("pcbqa_evidence_")
         shutil.copytree(self.saved, os.path.join(work, "jlc_orientation"))
         self.jo.FIXTURES = os.path.join(work, "jlc_orientation")
         return self.jo.FIXTURES
@@ -732,7 +767,7 @@ class TheImplementationIsPinnedToo(unittest.TestCase):
         name = "pcbqa.orientation"
         module = importlib.import_module(name)
         original = module.__file__
-        work = tempfile.mkdtemp(prefix="pcbqa_impl_")
+        work = _scratch("pcbqa_impl_")
         edited = os.path.join(work, "orientation.py")
         with open(original, "rb") as fh:
             body = fh.read()
@@ -752,7 +787,7 @@ class TheImplementationIsPinnedToo(unittest.TestCase):
         doc["reports"]["implementation_closure"] = [
             name for name in doc["reports"]["implementation_closure"]
             if name != "pcbqa.orientation"]
-        work = tempfile.mkdtemp(prefix="pcbqa_impl_gate_")
+        work = _scratch("pcbqa_impl_gate_")
         doc["project_root"] = PROJECT
         doc["fixture"] = {"attributes_file": os.path.join(PROJECT,
                                                           ".gitattributes")}
@@ -799,9 +834,9 @@ class ACleanReleaseRefusesAnUnreviewedPart(unittest.TestCase):
         committed = os.path.join(PROJECT, "generated", "release")
         before = self._tree_digest(committed)
 
-        work = tempfile.mkdtemp(prefix="pcbqa_release_missing_")
+        work = _scratch("pcbqa_release_missing_")
         project = os.path.join(work, "project")
-        shutil.copytree(PROJECT, project, ignore=_NOT_THE_PROJECT)
+        _copy_project_safely(project)
 
         doc = _manifest_doc()
         doc["board_id"] = "orientation-missing-mapping"

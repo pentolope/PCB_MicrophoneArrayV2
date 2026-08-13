@@ -40,6 +40,8 @@ import re
 from .core import sha256_file, utcnow
 
 RECEIPT_NAME = "RECEIPT.json"
+#: Where a published package keeps the check reports, relative to itself.
+REPORTS_DIR = "reports"
 
 #: What a complete package must contain, by role. The names themselves come
 #: from the manifest, because they are a property of the board and not of this
@@ -99,10 +101,28 @@ def _gate(document, gate_id):
     return None
 
 
-def _evidence_digest(gate, basename):
-    """The digest a gate recorded for the file it examined."""
+def leaf(path):
+    """The last segment of a path, whichever separator wrote it.
+
+    os.path.basename answers with the host's separator rules, so a report
+    written on Windows reads as one long filename on Linux and the file it
+    names can never be found. The recorded path is data, not a path on this
+    machine, and is split on both separators everywhere.
+    """
+    return re.split(r"[\\/]", str(path or ""))[-1]
+
+
+def _evidence_digest(gate, member):
+    """The digest a gate recorded for the package member it examined.
+
+    Matched on the stable `name` a gate records where there is one, and
+    otherwise on the tail of the recorded path. The comparison of digests
+    themselves is untouched: this only decides which record is about which
+    file.
+    """
     for item in (gate or {}).get("evidence", []):
-        if os.path.basename(str(item.get("path", ""))) == basename:
+        recorded = item.get("name") or item.get("path")
+        if leaf(recorded) == leaf(member):
             return item.get("sha256")
     return None
 
@@ -208,6 +228,26 @@ def check(root, names, require_receipt=True):
     for role in ("validation", "clean_room", "unsealed"):
         if names.get(role) and names[role] not in present:
             missing(names[role], "a complete release must contain it")
+
+    # The check reports are not optional decoration: without them the package
+    # asserts that ERC and DRC passed and carries nothing that says so. A
+    # receipt that faithfully inventories a package with no reports is an
+    # accurate inventory of an incomplete release.
+    required_reports = names.get("reports") or []
+    facts["required_reports"] = list(required_reports)
+    found_reports = sorted(rel for rel in present
+                           if rel.startswith("reports/") and
+                           rel.endswith(".json"))
+    facts["reports_present"] = found_reports
+    for rel in required_reports:
+        if rel not in present:
+            missing(rel, "a complete release must carry this check report; "
+                         "without it nothing in the package says the check "
+                         "was run against these artifacts")
+    if required_reports and not found_reports:
+        problems.append({"file": "reports/",
+                         "issue": "the package carries no check reports at "
+                                  "all"})
     if names["validation"] not in present or names["clean_room"] not in present:
         # Absent, so there is nothing to read. A file that is merely *wrong*
         # is still read: "it changed since the receipt" and "it accepted a
@@ -306,13 +346,38 @@ def check(root, names, require_receipt=True):
 
 
 def member_names(manifest):
-    """The package's file names, as this board declares them."""
-    return {
-        "archive": os.path.basename(manifest.get("archive.zip")),
-        "manifest": os.path.basename(manifest.get("archive.manifest")),
-        "bom": os.path.basename(manifest.get("artifacts.bom")),
-        "cpl": os.path.basename(manifest.get("artifacts.cpl")),
+    """The package's file names, as this board declares them.
+
+    Nothing here is a filename this framework chose for the board: the
+    artifact names come from the manifest, and the check reports are named by
+    the generation steps that produce them, so a board that calls its DRC
+    report something else is still covered.
+    """
+    names = {
+        "archive": leaf(manifest.get("archive.zip")),
+        "manifest": leaf(manifest.get("archive.manifest")),
+        "bom": leaf(manifest.get("artifacts.bom")),
+        "cpl": leaf(manifest.get("artifacts.cpl")),
         "validation": "validation.json",
         "clean_room": "clean_room.json",
         "unsealed": "UNSEALED.txt",
     }
+    names["reports"] = ["{}/{}".format(REPORTS_DIR, leaf(name))
+                        for name in required_report_files(manifest)]
+    return names
+
+
+def required_report_files(manifest):
+    """The check reports this board's release generates, by configuration.
+
+    Read from the generation steps rather than written down again here: the
+    same block that tells the release to run ERC and DRC is what says which
+    files must come out of it.
+    """
+    steps = manifest.get("reports.required_steps", [])
+    out = []
+    for step in steps:
+        key = "release_generation.{}.output".format(step)
+        if manifest.has(key):
+            out.append(manifest.get(key))
+    return out

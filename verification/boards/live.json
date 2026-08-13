@@ -79,7 +79,7 @@
   },
   "reports": {
     "files": [
-      "generated/*.json"
+      "generated/release/reports/*.json"
     ],
     "source_field": "source",
     "date_field": "date",
@@ -87,16 +87,19 @@
     "tolerance_seconds": 0,
     "source_closure": [
       "*.kicad_sch",
-      "**/*.kicad_sch",
       "*.kicad_pcb",
       "*.kicad_pro",
       "*.kicad_dru",
+      "*.kicad_sym",
+      "fp-lib-table",
+      "sym-lib-table",
+      "constraints.json",
       "tools/jlc_orientation.py",
       "fabrication/jlc_orientation/*.json",
       "fabrication/jlc_orientation/raw/*.json",
       "fabrication/jlc_orientation/README.md"
     ],
-    "source_closure_note": "Project files, by glob, resolved against project_root. These travel with the copy a clean room makes, so the closure means the same thing inside the run and outside it.",
+    "source_closure_note": "The design as it is manufactured, plus what the offsets are derived from. The schematic is one sheet, so the hierarchy is the root file; a recursive **/*.kicad_sch glob used to pull in every other board's fixture and every past attempt's copy, which made the closure depend on what happened to be lying in the output tree.",
     "implementation_closure": [
       "pcbqa.orientation",
       "pcbqa.cleanroom",
@@ -104,7 +107,39 @@
     ],
     "implementation_closure_note": "Modules that DERIVE a shipped value rather than read one off the board, addressed by import name rather than by path. The orientation offsets are computed by this code, so a release is only reproducible if the code is pinned as well as its inputs. Each entry is hashed from the loaded module's own __file__, so what is recorded is the implementation that ran and not a copy of it that happened to be lying next to it. tools/jlc_orientation.py is not listed here because it travels with the project and is already a file-closure member; PROV.SOURCE_CLOSURE separately proves the imported copy is that same file.",
     "source_hash_field": "source_sha256",
-    "closure_field": "source_closure_sha256"
+    "closure_field": "source_closure_sha256",
+    "files_note": "Where the installed release keeps the check reports it shipped. This used to name a directory that held none, so the freshness gate passed by examining nothing.",
+    "required_steps": [
+      "erc",
+      "drc"
+    ],
+    "required_steps_note": "Which generation steps must have left a report in the package. The file names come from release_generation.<step>.output rather than being written down twice.",
+    "source_closure_exclude": [
+      "verification/**",
+      "generated/**",
+      "build/**",
+      "candidates/**",
+      ".git/**"
+    ],
+    "source_closure_exclude_note": "Never inputs to the released design, and present on some machines and not others: the validator's own tree and its fixtures, this board's own output, and the routing scratch that produced the board rather than being produced from it. A closure that changed depending on whether a previous attempt was still on disk would identify nothing.",
+    "configuration_excludes": [
+      "board_id",
+      "project_root",
+      "tools",
+      "fixture",
+      "sources",
+      "reports.files",
+      "artifacts.gerber_dir",
+      "artifacts.bom",
+      "artifacts.cpl",
+      "artifacts.cpl_fields",
+      "artifacts.cpl_origin",
+      "assembly.bom_fields",
+      "archive.zip",
+      "archive.manifest",
+      "archive.pre_normalization_digests"
+    ],
+    "configuration_excludes_note": "The manifest enters provenance as its CONTENT, not as its file digest. A clean room must rewrite where everything is - the project moves, the outputs move, the board id gains a suffix - so hashing the manifest file would guarantee that the reports a run produced could never be checked against the repository that produced them. These are exactly the pointers the clean room is entitled to rewrite; every other key, including ones added later, is covered. The values excluded here that are not pure paths (cpl_fields, cpl_origin, bom_fields) are copied from release_generation, which is covered."
   },
   "stackup": {
     "description": "Both inner layers are ground. The board draws about 200 mA, which the 0.6 mm supply tracks carry comfortably, so an unbroken reference plane under every outer trace is worth more here than a power plane - and no PDM clock or data line can cross a plane split. This entry used to say the second inner layer carried +3V3A, which the board has never done.",

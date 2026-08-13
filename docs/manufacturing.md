@@ -172,6 +172,16 @@ sitting at a tracked path cannot stand in for the code that ran. Editing any of
 them changes the source-closure digest and invalidates every report bound to
 it.
 
+The closure is an identity, so it has to mean the same thing on every machine.
+Three things make that true. Its globs are explicit and exclude the validator's
+own tree, this board's output and the routing scratch, so it cannot change
+because a previous attempt is still on disk. Its digests are canonical, so a
+checkout with either line ending is the same design. And the manifest enters it
+as its *content* rather than as its file digest, with the pointers a clean room
+must rewrite - where the project is, where the outputs go - removed, so the
+reports a run produces can still be checked from the repository that produced
+them. The release compares the two and refuses to publish if they disagree.
+
 Nothing else takes an offset, and that is measured rather than assumed. When
 JLCPCB revised the first production upload they corrected 11 of the 16
 microphones, 11 of 16 damping resistors and so on - and the five left alone in

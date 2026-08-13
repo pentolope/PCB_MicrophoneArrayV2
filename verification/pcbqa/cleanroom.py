@@ -127,26 +127,93 @@ def executed_implementation(names):
     return entries
 
 
+#: The manifest pointers `derive_manifest` below is entitled to rewrite, and
+#: therefore the ones that cannot be part of a configuration identity. This
+#: lives beside the code that rewrites them rather than in a board file: which
+#: keys move when a project is copied is a property of the clean room, not of
+#: any particular board. A manifest may still declare its own list.
+REWRITTEN_BY_THE_CLEAN_ROOM = (
+    "board_id",
+    "project_root",
+    "tools",
+    "fixture",
+    "sources",
+    "reports.files",
+    "artifacts.gerber_dir",
+    "artifacts.bom",
+    "artifacts.cpl",
+    "artifacts.cpl_fields",
+    "artifacts.cpl_origin",
+    "assembly.bom_fields",
+    "archive.zip",
+    "archive.manifest",
+    "archive.pre_normalization_digests",
+)
+
+
+def configuration_identity(manifest):
+    """The manifest's release-affecting content, without its paths.
+
+    A clean room has to rewrite where things are - the project moves, the
+    outputs move, the board gets a different id - so the manifest file's own
+    digest is different inside the run and outside it, and using it as
+    provenance means the reports a run produced can never be checked against
+    the repository that produced them.
+
+    What matters is not where the files were but what the configuration said:
+    the thresholds, the profiles, the registry, the generation steps. So the
+    pointers the clean room is *entitled* to rewrite are declared in the
+    manifest and removed, and what is left is hashed. Everything else is
+    covered, including keys nobody has thought of yet, because the exclusion
+    list is the short one.
+    """
+    data = copy.deepcopy(manifest.data)
+    for pointer in manifest.get("reports.configuration_excludes",
+                                REWRITTEN_BY_THE_CLEAN_ROOM):
+        node, _, leaf = pointer.rpartition(".")
+        target = data
+        for step in node.split(".") if node else []:
+            target = target.get(step) if isinstance(target, dict) else None
+            if target is None:
+                break
+        if isinstance(target, dict):
+            target.pop(leaf, None)
+    blob = json.dumps(data, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
 def source_closure(manifest, policy):
     """Canonical digests of every input a check result depends on.
 
-    Schematic sheets, the board, project settings, design rules, the manifest
-    itself - and the modules that derive rather than read, which are addressed
-    by import name because they are not part of the project being copied. A
-    report that was produced before any of these changed is not describing the
-    design that is about to be manufactured.
+    The board, its schematic hierarchy, project settings, the frozen
+    orientation evidence and the script that reads it - plus the modules that
+    derive rather than read, addressed by import name because they are not
+    part of the project being copied, and the manifest's configuration
+    identity. A report produced before any of these changed is not describing
+    the design that is about to be manufactured.
+
+    Two things keep this stable across machines and across the clean room.
+    Digests are canonical, so a checkout with either line ending gives the
+    same identity for a text file. And the globs are matched against an
+    explicit exclusion list, so directories that exist only on some machines -
+    the validator's own output tree, routing scratch, other boards' fixtures -
+    cannot wander into a board's provenance and change it.
     """
     root = manifest.resolve(".")
+    excluded = manifest.get("reports.source_closure_exclude", [])
     entries = {}
     for pattern in manifest.get("reports.source_closure"):
         for path in sorted(glob.glob(os.path.join(root, pattern), recursive=True)):
             if not os.path.isfile(path):
                 continue
             rel = os.path.relpath(path, root).replace("\\", "/")
+            if _matches(rel, excluded):
+                continue
             entries[rel] = canonical.digest(path, policy.classify(rel))
     entries.update(executed_implementation(
         manifest.get("reports.implementation_closure", [])))
-    entries["<manifest>"] = manifest.sha256
+    entries["<configuration>"] = configuration_identity(manifest)
     return entries
 
 
@@ -551,6 +618,25 @@ class CleanRun:
         """
         entries = source_closure(manifest, self.policy)
         digest = closure_digest(entries)
+
+        # The reports this run writes will later be checked from the origin
+        # manifest, against the installed package. If the two manifests do not
+        # produce the same closure the reports are stale the moment they are
+        # installed, and the failure would surface as an unexplained hash
+        # mismatch weeks later. Compare them here, while the difference can
+        # still be named.
+        origin = source_closure(self.manifest, self.policy)
+        if closure_digest(origin) != digest:
+            only_here = sorted(set(entries) - set(origin))
+            only_there = sorted(set(origin) - set(entries))
+            changed = sorted(k for k in set(entries) & set(origin)
+                             if entries[k] != origin[k])
+            self.blockers.append((
+                "release:closure_identity", "ERROR",
+                "the clean room and the origin do not agree on the source "
+                "closure: only in the run {}; only in the origin {}; "
+                "differing {}".format(only_here[:6], only_there[:6],
+                                      changed[:6])))
         board = os.path.join(self.project, self.manifest.get("sources.pcb"))
         sch = os.path.join(self.project, self.manifest.get("sources.schematic"))
         for name, source in (("erc", sch), ("drc", board)):
@@ -559,7 +645,13 @@ class CleanRun:
                 continue
             with open(path, encoding="utf-8") as fh:
                 doc = json.load(fh)
-            doc["source_sha256"] = sha256_file(source)
+            # Canonical, like every other identity this project records: a
+            # checkout is allowed to have either line ending, and a report
+            # bound to the raw bytes of one of them is stale on the other
+            # machine before anyone has changed anything.
+            doc["source_sha256"] = canonical.digest(
+                source, self.policy.classify(
+                    os.path.relpath(source, self.project).replace("\\", "/")))
             doc["source_closure_sha256"] = digest
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(doc, fh, indent=2)
