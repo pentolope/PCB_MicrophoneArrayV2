@@ -172,15 +172,24 @@ sitting at a tracked path cannot stand in for the code that ran. Editing any of
 them changes the source-closure digest and invalidates every report bound to
 it.
 
-The closure is an identity, so it has to mean the same thing on every machine.
-Three things make that true. Its globs are explicit and exclude the validator's
-own tree, this board's output and the routing scratch, so it cannot change
-because a previous attempt is still on disk. Its digests are canonical, so a
-checkout with either line ending is the same design. And the manifest enters it
-as its *content* rather than as its file digest, with the pointers a clean room
-must rewrite - where the project is, where the outputs go - removed, so the
-reports a run produces can still be checked from the repository that produced
-them. The release compares the two and refuses to publish if they disagree.
+The closure is an identity, so it has to mean the same thing on every machine
+and a different thing whenever the release would differ. Four things make that
+true. Its globs are explicit and exclude the validator's own tree, this board's
+output and the routing scratch, so it cannot change because a previous attempt
+is still on disk. The files named in `sources` are added by name as well, so
+the selected board and schematic are covered because they were selected and not
+because a glob happened to reach them - point the release at a different board
+and the closure changes. Its digests are canonical, so a checkout with either
+line ending is the same design. And the manifest enters as its *content* rather
+than as its file digest, minus exactly the leaves the clean room assigns, so
+the reports a run produces can still be checked from the repository that
+produced them.
+
+That exclusion list is owned by `pcbqa.cleanroom`, not by the board file: a
+manifest may name a subset of it and nothing else, so no board can excuse its
+own release-affecting configuration from its own provenance. The release
+compares the origin and clean-room closures and refuses to publish if they
+disagree.
 
 Nothing else takes an offset, and that is measured rather than assumed. When
 JLCPCB revised the first production upload they corrected 11 of the 16

@@ -99,7 +99,7 @@
       "fabrication/jlc_orientation/raw/*.json",
       "fabrication/jlc_orientation/README.md"
     ],
-    "source_closure_note": "The design as it is manufactured, plus what the offsets are derived from. The schematic is one sheet, so the hierarchy is the root file; a recursive **/*.kicad_sch glob used to pull in every other board's fixture and every past attempt's copy, which made the closure depend on what happened to be lying in the output tree.",
+    "source_closure_note": "The design as it is manufactured, plus what the offsets are derived from. The schematic is one sheet, so the hierarchy is the root file; a recursive **/*.kicad_sch glob used to pull in every other board's fixture and every past attempt's copy, which made the closure depend on what happened to be lying in the output tree. Whatever these globs reach, every file named in `sources` is added to the closure by name as well, so the selected board and schematic are covered because they were selected and not because a glob happened to find them.",
     "implementation_closure": [
       "pcbqa.orientation",
       "pcbqa.cleanroom",
@@ -125,9 +125,8 @@
     "configuration_excludes": [
       "board_id",
       "project_root",
-      "tools",
-      "fixture",
-      "sources",
+      "fixture.hash_file",
+      "fixture.attributes_file",
       "reports.files",
       "artifacts.gerber_dir",
       "artifacts.bom",
@@ -139,7 +138,7 @@
       "archive.manifest",
       "archive.pre_normalization_digests"
     ],
-    "configuration_excludes_note": "The manifest enters provenance as its CONTENT, not as its file digest. A clean room must rewrite where everything is - the project moves, the outputs move, the board id gains a suffix - so hashing the manifest file would guarantee that the reports a run produced could never be checked against the repository that produced them. These are exactly the pointers the clean room is entitled to rewrite; every other key, including ones added later, is covered. The values excluded here that are not pure paths (cpl_fields, cpl_origin, bom_fields) are copied from release_generation, which is covered."
+    "configuration_excludes_note": "The manifest enters provenance as its CONTENT, not as its file digest, because a clean room must rewrite where everything is - the project moves, the outputs move, the board id gains a suffix - and hashing the manifest file would guarantee that the reports a run produced could never be checked against the repository that produced them.\n\nThese are the exact leaves derive_manifest assigns, and nothing else. Whole objects are deliberately not listed: sources and tools are copied through untouched, and only two of fixture's leaves move, so excluding those objects would let the selected board, the selected schematic, the toolchain and the fixture rejection policy change without changing the identity of the result.\n\nThe permitted set is owned by pcbqa.cleanroom, not by this file. A board may name a subset of it and nothing more: a manifest that could exclude release_generation would be a manifest that could change the reviewed offsets without changing what the closure says about them. The three values listed here that are not pure paths - cpl_fields, cpl_origin, bom_fields - are copied by derive_manifest out of release_generation, which is covered."
   },
   "stackup": {
     "description": "Both inner layers are ground. The board draws about 200 mA, which the 0.6 mm supply tracks carry comfortably, so an unbroken reference plane under every outer trace is worth more here than a power plane - and no PDM clock or data line can cross a plane split. This entry used to say the second inner layer carried +3V3A, which the board has never done.",

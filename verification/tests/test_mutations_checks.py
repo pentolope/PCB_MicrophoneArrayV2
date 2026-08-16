@@ -66,14 +66,56 @@ def _copy(case, tag, mutate=None, keep_fixture=False):
     return box
 
 
-def _stub_cli(directory, name, body):
-    """A stand-in for kicad-cli that behaves exactly as badly as we need."""
-    path = os.path.join(directory, name + (".cmd" if os.name == "nt" else ".sh"))
-    with open(path, "w", encoding="utf-8", newline="\r\n") as fh:
-        fh.write(body)
-    if os.name != "nt":
+FAKE_CLI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "fake_kicad_cli.py")
+
+
+def _stub_cli(directory, name, *, exit_code=0, stderr="", runs=None):
+    """A stand-in for kicad-cli that behaves exactly as badly as we need.
+
+    Written for whichever platform is running: a batch file with CRLF on
+    Windows, and a shebang-equipped POSIX shell script with LF everywhere
+    else. It used to be batch with CRLF unconditionally, which meant these
+    tests only tested anything on Windows - elsewhere the "stub" was an
+    unexecutable file and the gate reported a failed invocation, which is what
+    two of these tests assert anyway.
+
+    `runs` names a Python script the stub hands its arguments to, which is how
+    a stub produces a report without KiCad.
+    """
+    windows = os.name == "nt"
+    path = os.path.join(directory, name + (".cmd" if windows else ".sh"))
+    lines = []
+    if windows:
+        lines.append("@echo off")
+        if stderr:
+            lines.append("echo {} 1>&2".format(stderr))
+        if runs:
+            lines.append('"{}" "{}" %*'.format(sys.executable, runs))
+            # A stub that swallowed the helper's exit code would report a
+            # clean run whatever the helper did.
+            lines.append("if errorlevel 1 exit /b 1")
+        lines.append("exit /b {}".format(exit_code))
+        text = "\r\n".join(lines) + "\r\n"
+    else:
+        lines.append("#!/bin/sh")
+        if stderr:
+            lines.append("echo {} >&2".format(stderr))
+        if runs:
+            lines.append('"{}" "{}" "$@" || exit 1'.format(sys.executable,
+                                                           runs))
+        lines.append("exit {}".format(exit_code))
+        text = "\n".join(lines) + "\n"
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
+    if not windows:
         os.chmod(path, 0o755)
     return path
+
+
+def _use_fake_cli(doc, _project, root):
+    """Point a copy at the fake tool instead of at this machine's KiCad."""
+    doc["tools"]["kicad_cli"] = _stub_cli(root, "fake_cli", runs=FAKE_CLI)
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +126,8 @@ class ToolFailureIsNotAVerdict(unittest.TestCase):
     def test_an_unexpected_exit_code_is_an_error_not_a_failure(self):
         def mutate(doc, _project, root):
             doc["tools"]["kicad_cli"] = _stub_cli(
-                root, "broken_cli",
-                "@echo off\r\necho simulated tool crash 1>&2\r\nexit /b 3\r\n")
+                root, "broken_cli", exit_code=3,
+                stderr="simulated tool crash")
         box = _copy(self, "toolfail", mutate)
         results = box.run({"DRC.AUTHORITATIVE", "ERC.AUTHORITATIVE"})
         for gate_id, result in results.items():
@@ -100,7 +142,7 @@ class ToolFailureIsNotAVerdict(unittest.TestCase):
         """Exit 5 means "ran, found things" - a verdict, not a crash."""
         def mutate(doc, _project, root):
             doc["tools"]["kicad_cli"] = _stub_cli(
-                root, "violating_cli", "@echo off\r\nexit /b 5\r\n")
+                root, "violating_cli", exit_code=5)
         box = _copy(self, "exit5", mutate)
         result = box.run({"DRC.AUTHORITATIVE"})["DRC.AUTHORITATIVE"]
         # No report was written, so this is still an ERROR - but for the
@@ -110,7 +152,7 @@ class ToolFailureIsNotAVerdict(unittest.TestCase):
         self.assertNotIn("invocation failed", result.reason)
 
     def test_an_unsupported_report_schema_is_an_error(self):
-        box = _copy(self, "schema")
+        box = _copy(self, "schema", _use_fake_cli)
         with mock.patch.object(g_checks.reports, "parse_drc",
                                side_effect=reports.ReportSchemaError(
                                    "top-level `violations` is absent")):
@@ -143,21 +185,24 @@ class IgnoredAndExcludedChecks(unittest.TestCase):
     """A check that did not run is not evidence that it would have passed."""
 
     @staticmethod
-    def _project_edit(edit):
-        def mutate(_doc, project, _root):
+    def _project_edit(edit, also=None):
+        def mutate(doc, project, root):
             path = os.path.join(project, "microphone_array_v2.kicad_pro")
             with open(path, encoding="utf-8") as fh:
                 pro = json.load(fh)
             edit(pro)
             with open(path, "w", encoding="utf-8") as fh:
                 json.dump(pro, fh, indent=2)
+            if also:
+                also(doc, project, root)
         return mutate
 
     def test_an_ignored_rule_fails_the_authoritative_gate(self):
         def edit(pro):
             pro["board"]["design_settings"]["rule_severities"][
                 "copper_edge_clearance"] = "ignore"
-        box = _copy(self, "ignored", self._project_edit(edit))
+        box = _copy(self, "ignored", self._project_edit(edit,
+                                                        _use_fake_cli))
         result = box.run({"DRC.AUTHORITATIVE"})["DRC.AUTHORITATIVE"]
         self.assertEqual(result.status, Status.FAIL)
         ignored = next((f for f in result.findings

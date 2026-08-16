@@ -4,16 +4,16 @@
 
     command      "C:/Program Files/KiCad/10.0/bin/python.exe" verification/run.py selftest --jobs auto
     working dir  repository root
-    started      2026-08-13T03:05Z
+    started      2026-08-16T20:44Z
     interpreter  KiCad 10.0.5 bundled Python 3.11.5
 
-    tests discovered   249
-    passed             248
+    tests discovered   261
+    passed             260
     skipped            1
     failed               0
     errored              0
     worker processes     5
-    elapsed            1014.8 s
+    elapsed            1446.4 s
     exit code            0
 
 The single skip is
@@ -21,11 +21,11 @@ The single skip is
 which needs the Windows privilege to create a symbolic link and skips itself
 rather than reporting a pass it did not earn.
 
-    worker 0: 72 tests, 723.5s of test time
-    worker 1: 52 tests, 613.9s of test time
-    worker 2: 27 tests, 761.0s of test time
-    worker 3: 22 tests,  93.0s of test time
-    worker 4: 76 tests, 715.5s of test time
+    worker 0:  41 tests, 1120.4s of test time
+    worker 1:  43 tests,  885.4s of test time
+    worker 2:  57 tests,  876.9s of test time
+    worker 3:  13 tests,  949.4s of test time
+    worker 4: 107 tests,  932.2s of test time
 
 Per-worker test time sums to more than the elapsed wall clock because the
 runner distributes individual test IDs, so a class fixture runs once per test
@@ -33,6 +33,34 @@ method rather than once per class. That is the cost of every test being
 independently addressable and sharing no state.
 
 ## What this run covers that the last one did not
+
+Whether the closure notices being pointed at something else. Excluding whole
+manifest objects because they contained a path meant `sources`, `tools` and the
+whole of `fixture` were outside the identity, so changing which board the
+release builds, or emptying `fixture.reject_globs`, left the source-closure
+digest untouched. The exclusion list is now exactly the leaves derive_manifest
+assigns - a test reads them back out of derive_manifest's own source and
+requires the two to agree - and a board may name a subset of it and nothing
+more. The files named in `sources` are added to the closure by name, so a board
+selected from a directory the globs exclude is still covered, and a selected
+source that does not exist is refused rather than quietly missing.
+
+Whether the frozen fixture reproduces anywhere. Its nested `.gitattributes`
+said `* text=auto`, which beat the root's `-text` rule for the paths under it,
+so the twenty frozen production artifacts were stored LF-normalised while
+HASHES.json recorded the CRLF bytes they were frozen from. The fixture
+therefore verified only on a checkout that happened not to rewrite them. The
+nested file now says `generated/release/** -text` and the twenty blobs were
+restored to the exact bytes already recorded; only the attributes file's own
+inventory entry changed.
+
+Whether the mutation harness runs anywhere. `_stub_cli` wrote a Windows batch
+file unconditionally, and two tests invoked the absolute Windows KiCad path out
+of the board manifest, so on any other machine they failed for the wrong
+reason. The stub is rendered per platform now, and those two tests use
+`tests/fake_kicad_cli.py` - a fake that reads the same project file KiCad reads
+and reports the same ignored checks, so "edit the project, the gate fails
+naming the rule" still holds without KiCad being installed.
 
 Whether any of this works on a machine that is not this one. An independent
 run of the previous commit from a fresh Linux checkout found four things that
@@ -78,7 +106,12 @@ read, so `pcbqa.orientation`, `pcbqa.cleanroom` and `pcbqa.gates.g_orientation`
 are hashed from the modules that were imported and bound into the source
 closure. Tests require the recorded digest to equal the loaded module's, an edit
 to the implementation to change the closure digest, and a module dropping out of
-the declared set to fail the gate.
+the declared set to fail the gate. `tools/jlc_orientation.py` is checked
+differently, and now correctly: it is loaded from the project under validation
+by path rather than by name, and provenance compares the content of the file
+that ran against the closure entry. Comparing `sys.modules` instead made the
+answer depend on which project a worker had loaded first, and failed a release
+that was fine.
 
 Whether "reviewed" means reviewed. The status is now compared as an exact JSON
 string with no trimming and no coercion, and eighteen near misses -

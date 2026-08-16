@@ -350,19 +350,27 @@ def source_closure_covers_derivations(ctx, res):
         name: os.path.basename(path) for name, path in sorted(executed.items())}
 
     # And the derivation script, which travels inside the project: prove the
-    # copy that was imported is the copy the closure hashed.
+    # file that ran has the content the closure recorded.
+    #
+    # Asked of what CPL.ORIENTATION loaded, not of sys.modules. The import
+    # cache is per process, and a process that had already loaded another
+    # project's copy under the same module name would answer about that one -
+    # which is a fact about the process, not about the release.
+    from .g_orientation import LAST_DERIVATION
     tool_rel = next((rel for rel in covered
                      if rel.endswith("jlc_orientation.py")), None)
-    imported = sys.modules.get("jlc_orientation")
-    if tool_rel and imported is not None:
-        loaded = os.path.realpath(getattr(imported, "__file__", ""))
-        tracked = os.path.realpath(os.path.join(root, tool_rel))
-        if loaded != tracked:
+    if tool_rel and LAST_DERIVATION:
+        ran = LAST_DERIVATION["file"]
+        recorded = closure.get(tool_rel)
+        actual = (canonical.digest(ran, policy.classify(tool_rel))
+                  if os.path.isfile(ran) else None)
+        if actual != recorded:
             problems.append({
-                "file": tool_rel, "loaded": loaded,
-                "issue": "the derivation script that was imported is not the "
-                         "one inside this project, so the closure tracks a "
-                         "copy that did not run"})
+                "file": tool_rel, "executed": ran,
+                "issue": "the derivation script that ran is not the one the "
+                         "closure recorded, so the recorded provenance is of "
+                         "code that did not derive these offsets",
+                "closure": str(recorded)[:16], "executed_sha256": str(actual)[:16]})
         res.measurements["executed_derivation_script"] = tool_rel
 
     res.measurements["reproduction_inputs"] = sorted(covered)

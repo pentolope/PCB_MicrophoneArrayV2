@@ -127,17 +127,23 @@ def executed_implementation(names):
     return entries
 
 
-#: The manifest pointers `derive_manifest` below is entitled to rewrite, and
-#: therefore the ones that cannot be part of a configuration identity. This
-#: lives beside the code that rewrites them rather than in a board file: which
-#: keys move when a project is copied is a property of the clean room, not of
-#: any particular board. A manifest may still declare its own list.
+#: Exactly the leaves `derive_manifest` below assigns, and therefore the only
+#: values that cannot be part of a configuration identity. This lives beside
+#: the code that rewrites them rather than in a board file: which keys move
+#: when a project is copied is a property of the clean room, not of any
+#: particular board, and a board must not be able to widen it.
+#:
+#: Every entry here is checked against derive_manifest by
+#: tests/test_source_closure.py. Whole objects are deliberately absent:
+#: `sources` and `tools` are copied through untouched, and only two of
+#: `fixture`'s leaves move, so excluding those objects wholesale would let the
+#: selected board, the selected schematic, the toolchain and the fixture
+#: rejection policy all change without changing the identity of the result.
 REWRITTEN_BY_THE_CLEAN_ROOM = (
     "board_id",
     "project_root",
-    "tools",
-    "fixture",
-    "sources",
+    "fixture.hash_file",
+    "fixture.attributes_file",
     "reports.files",
     "artifacts.gerber_dir",
     "artifacts.bom",
@@ -161,15 +167,32 @@ def configuration_identity(manifest):
     the repository that produced them.
 
     What matters is not where the files were but what the configuration said:
-    the thresholds, the profiles, the registry, the generation steps. So the
-    pointers the clean room is *entitled* to rewrite are declared in the
-    manifest and removed, and what is left is hashed. Everything else is
-    covered, including keys nobody has thought of yet, because the exclusion
-    list is the short one.
+    the thresholds, the profiles, the registry, the generation steps, which
+    board and schematic were selected, and which tools were used. So exactly
+    the leaves the clean room assigns are removed and everything else is
+    hashed - including keys nobody has thought of yet, because the exclusion
+    list is the short one and it is owned here.
+
+    A board may name a subset of these, to say which of them its own release
+    actually moves. It may not name anything else: a manifest that could add
+    `release_generation` to the list would be a manifest that could change the
+    reviewed offsets without changing the identity of the result.
     """
+    declared = manifest.get("reports.configuration_excludes", None)
+    if declared is None:
+        pointers = list(REWRITTEN_BY_THE_CLEAN_ROOM)
+    else:
+        widened = [p for p in declared
+                   if p not in REWRITTEN_BY_THE_CLEAN_ROOM]
+        if widened:
+            raise CleanRoomError(
+                "reports.configuration_excludes names {} which the clean room "
+                "does not rewrite; a board cannot exclude release-affecting "
+                "configuration from its own provenance".format(widened))
+        pointers = list(declared)
+
     data = copy.deepcopy(manifest.data)
-    for pointer in manifest.get("reports.configuration_excludes",
-                                REWRITTEN_BY_THE_CLEAN_ROOM):
+    for pointer in pointers:
         node, _, leaf = pointer.rpartition(".")
         target = data
         for step in node.split(".") if node else []:
@@ -199,6 +222,12 @@ def source_closure(manifest, policy):
     explicit exclusion list, so directories that exist only on some machines -
     the validator's own output tree, routing scratch, other boards' fixtures -
     cannot wander into a board's provenance and change it.
+
+    The declared sources are then added by name rather than left to whichever
+    glob happens to reach them. A glob that matches the selected board today
+    is a coincidence, not a guarantee: point `sources.pcb` at a board under a
+    directory the globs exclude and the closure would otherwise cover a file
+    the release never opened while ignoring the one it did.
     """
     root = manifest.resolve(".")
     excluded = manifest.get("reports.source_closure_exclude", [])
@@ -211,6 +240,16 @@ def source_closure(manifest, policy):
             if _matches(rel, excluded):
                 continue
             entries[rel] = canonical.digest(path, policy.classify(rel))
+
+    for role, declared in sorted((manifest.get("sources") or {}).items()):
+        path = manifest.resolve(declared)
+        if not os.path.isfile(path):
+            raise CleanRoomError(
+                "sources.{} names {} which does not exist, so the closure "
+                "cannot cover the design it selects".format(role, declared))
+        rel = os.path.relpath(path, root).replace("\\", "/")
+        entries[rel] = canonical.digest(path, policy.classify(rel))
+
     entries.update(executed_implementation(
         manifest.get("reports.implementation_closure", [])))
     entries["<configuration>"] = configuration_identity(manifest)

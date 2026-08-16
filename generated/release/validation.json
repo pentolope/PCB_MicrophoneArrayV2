@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
-  "generated_utc": "2026-08-13T02:44:24.246776+00:00",
+  "generated_utc": "2026-08-16T20:40:28.744096+00:00",
   "manifest": {
-    "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\manifest.json",
-    "sha256": "fd98525eea0305b8279ebebf1d875654bb31c2f99716fc6131b79a12f5c5ea6c",
+    "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\manifest.json",
+    "sha256": "1b5c66ec292941ba8868d3c1045a91419da5314791a9198239d2f7043813f7bc",
     "board_id": "microphone-array-v2-live-cleanroom",
     "constraint_version": "revA-frozen-2026-08-01"
   },
@@ -163,16 +163,16 @@
           "units": "file function",
           "kind": "policy",
           "manifest_key": "archive.allow",
-          "provenance": "manifest.json#archive.allow@fd98525eea03"
+          "provenance": "manifest.json#archive.allow@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\microphone_array_v2-revA-fabrication.zip",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\microphone_array_v2-revA-fabrication.zip",
           "name": "microphone_array_v2-revA-fabrication.zip",
-          "sha256": "599957e7c5144f9e2601ef9d57063ed2b912b9c31c38b1aba7f20ecc91ff4ee8"
+          "sha256": "2770680dd784fc3fad6d0e4c3f940c4180ad91361ebe8b3abbd9bba7cd0fa03d"
         }
       ]
     },
@@ -196,16 +196,16 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "archive.manifest_required_fields",
-          "provenance": "manifest.json#archive.manifest_required_fields@fd98525eea03"
+          "provenance": "manifest.json#archive.manifest_required_fields@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\MANIFEST.md",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\MANIFEST.md",
           "name": "MANIFEST.md",
-          "sha256": "02c66376ceb66ee2cdff8386d5934938dfa47358a0c5508179a7138089084a45"
+          "sha256": "8e0d984799b6d4c09b040aad29e7f07bd24d73f80124841525dd30f6a5f58ac4"
         }
       ]
     },
@@ -252,7 +252,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "assembly.required_part_fields",
-          "provenance": "manifest.json#assembly.required_part_fields@fd98525eea03"
+          "provenance": "manifest.json#assembly.required_part_fields@1b5c66ec2929"
         },
         "assembly.compared_part_fields": {
           "id": "assembly.compared_part_fields",
@@ -264,19 +264,19 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "assembly.compared_part_fields",
-          "provenance": "manifest.json#assembly.compared_part_fields@fd98525eea03"
+          "provenance": "manifest.json#assembly.compared_part_fields@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\bom.csv",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\bom.csv",
           "name": "bom.csv",
           "sha256": "a3970d865b3b76677afe0b11b6061156e3be633a50613167887ef8a54fe14563"
         },
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch",
           "name": "microphone_array_v2.kicad_sch",
           "sha256": "37135a846d9c262220819e357258deef3eb62b912046349fac988293b27c4997"
         }
@@ -305,7 +305,7 @@
           "units": "constant name",
           "kind": "policy",
           "manifest_key": "constraint_parity.rival_scan.watched_constants",
-          "provenance": "manifest.json#constraint_parity.rival_scan.watched_constants@fd98525eea03"
+          "provenance": "manifest.json#constraint_parity.rival_scan.watched_constants@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -385,7 +385,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "artifacts.position_tolerance_mm",
-          "provenance": "manifest.json#artifacts.position_tolerance_mm@fd98525eea03"
+          "provenance": "manifest.json#artifacts.position_tolerance_mm@1b5c66ec2929"
         },
         "geometry.rotation_match_deg": {
           "id": "geometry.rotation_match_deg",
@@ -393,7 +393,7 @@
           "units": "deg",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.rotation_match_deg.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.rotation_match_deg.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.rotation_match_deg.value@1b5c66ec2929"
         },
         "artifacts.cpl_origin": {
           "id": "artifacts.cpl_origin",
@@ -407,14 +407,14 @@
           "units": "frame",
           "kind": "policy",
           "manifest_key": "artifacts.cpl_origin",
-          "provenance": "manifest.json#artifacts.cpl_origin@fd98525eea03"
+          "provenance": "manifest.json#artifacts.cpl_origin@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\cpl.csv",
           "name": "cpl.csv",
           "sha256": "28091e4dbf5a05e30af72f833839194c67c0aa0f90c6f797d0434fce84e7e807"
         }
@@ -638,14 +638,14 @@
           "units": "degrees",
           "kind": "policy",
           "manifest_key": "release_generation.cpl_orientation.normalize_range_deg",
-          "provenance": "manifest.json#release_generation.cpl_orientation.normalize_range_deg@fd98525eea03"
+          "provenance": "manifest.json#release_generation.cpl_orientation.normalize_range_deg@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\cpl.csv",
           "name": "cpl.csv",
           "sha256": "28091e4dbf5a05e30af72f833839194c67c0aa0f90c6f797d0434fce84e7e807"
         }
@@ -674,12 +674,12 @@
         "source_sha256": "9ddb432333d39293ecb6979d842bef17efb9f38816494ef6f0fb7cf6e8c26f4f",
         "checked_copy_sha256": "9ddb432333d39293ecb6979d842bef17efb9f38816494ef6f0fb7cf6e8c26f4f",
         "rules_sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027",
-        "constraint_manifest_sha256": "fd98525eea0305b8279ebebf1d875654bb31c2f99716fc6131b79a12f5c5ea6c",
+        "constraint_manifest_sha256": "1b5c66ec292941ba8868d3c1045a91419da5314791a9198239d2f7043813f7bc",
         "kicad_version": "10.0.5",
-        "generated_utc": "2026-08-13T02:44:02.192315+00:00",
+        "generated_utc": "2026-08-16T20:39:41.432641+00:00",
         "report_meta": {
           "schema": "https://schemas.kicad.org/drc.v1.json",
-          "date": "2026-08-12T19:44:01",
+          "date": "2026-08-16T13:39:40",
           "kicad_version": "10.0.5",
           "source": "microphone_array_v2.kicad_pcb",
           "ignored_checks": [],
@@ -717,16 +717,16 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.waiver_location_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.waiver_location_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.waiver_location_mm.value@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\validation\\drc_authoritative.json",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\validation\\drc_authoritative.json",
           "name": "drc_authoritative.json",
-          "sha256": "a0dec2e661385119bde6d66a8e0c1aab6a670110fdb0be1d0956fb61d6035e0b"
+          "sha256": "1982267a41768098d6ef83fd83dbf6fb52e61e63af8e01c1ac54975ebd8b1d28"
         }
       ]
     },
@@ -750,14 +750,14 @@
           "units": "severity",
           "kind": "policy",
           "manifest_key": "checks.drc.forbidden_severities",
-          "provenance": "manifest.json#checks.drc.forbidden_severities@fd98525eea03"
+          "provenance": "manifest.json#checks.drc.forbidden_severities@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro",
           "name": "microphone_array_v2.kicad_pro",
           "sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027"
         }
@@ -782,12 +782,12 @@
         "source_sha256": "37135a846d9c262220819e357258deef3eb62b912046349fac988293b27c4997",
         "checked_copy_sha256": "37135a846d9c262220819e357258deef3eb62b912046349fac988293b27c4997",
         "rules_sha256": "c9b52fae0142d6900d0f81a0b722bc85aa0698a0935c5c5b036dc7989828b027",
-        "constraint_manifest_sha256": "fd98525eea0305b8279ebebf1d875654bb31c2f99716fc6131b79a12f5c5ea6c",
+        "constraint_manifest_sha256": "1b5c66ec292941ba8868d3c1045a91419da5314791a9198239d2f7043813f7bc",
         "kicad_version": "10.0.5",
-        "generated_utc": "2026-08-13T02:44:04.230544+00:00",
+        "generated_utc": "2026-08-16T20:39:47.385617+00:00",
         "report_meta": {
           "schema": "https://schemas.kicad.org/erc.v1.json",
-          "date": "2026-08-12T19:44:04",
+          "date": "2026-08-16T13:39:47",
           "kicad_version": "10.0.5",
           "source": "microphone_array_v2.kicad_sch",
           "ignored_checks": [],
@@ -814,16 +814,16 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.waiver_location_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.waiver_location_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.waiver_location_mm.value@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\validation\\erc_authoritative.json",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\validation\\erc_authoritative.json",
           "name": "erc_authoritative.json",
-          "sha256": "5e5dec2ca0b6ea99600475834c26fcc5c2862abefc9d6d47de3e736306addf36"
+          "sha256": "237c6052ceff2f1dc1aca1e2a6d2a9e7993a1e22ad2167d9fe1c6603faba7139"
         }
       ]
     },
@@ -884,16 +884,16 @@
           "units": "mm2",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.layer_symmetric_difference_mm2.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\microphone_array_v2-revA-fabrication.zip",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\microphone_array_v2-revA-fabrication.zip",
           "name": "microphone_array_v2-revA-fabrication.zip",
-          "sha256": "599957e7c5144f9e2601ef9d57063ed2b912b9c31c38b1aba7f20ecc91ff4ee8"
+          "sha256": "2770680dd784fc3fad6d0e4c3f940c4180ad91361ebe8b3abbd9bba7cd0fa03d"
         }
       ]
     },
@@ -1061,7 +1061,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@1b5c66ec2929"
         },
         "net_topology.PDM_CLOCK_BRANCHES.max_spread_mm": {
           "id": "net_topology.PDM_CLOCK_BRANCHES.max_spread_mm",
@@ -1069,7 +1069,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "net_topology.rules.0.max_spread_mm",
-          "provenance": "manifest.json#net_topology.rules.0.max_spread_mm@fd98525eea03"
+          "provenance": "manifest.json#net_topology.rules.0.max_spread_mm@1b5c66ec2929"
         },
         "net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net": {
           "id": "net_topology.PDM_CLOCK_BRANCHES.max_vias_per_net",
@@ -1077,7 +1077,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.0.max_vias_per_net",
-          "provenance": "manifest.json#net_topology.rules.0.max_vias_per_net@fd98525eea03"
+          "provenance": "manifest.json#net_topology.rules.0.max_vias_per_net@1b5c66ec2929"
         },
         "net_topology.PDM_CLOCK_ROOT.max_vias_per_net": {
           "id": "net_topology.PDM_CLOCK_ROOT.max_vias_per_net",
@@ -1085,7 +1085,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.1.max_vias_per_net",
-          "provenance": "manifest.json#net_topology.rules.1.max_vias_per_net@fd98525eea03"
+          "provenance": "manifest.json#net_topology.rules.1.max_vias_per_net@1b5c66ec2929"
         },
         "net_topology.AUDIO_MCLK.max_vias_per_net": {
           "id": "net_topology.AUDIO_MCLK.max_vias_per_net",
@@ -1093,7 +1093,7 @@
           "units": "vias",
           "kind": "policy",
           "manifest_key": "net_topology.rules.2.max_vias_per_net",
-          "provenance": "manifest.json#net_topology.rules.2.max_vias_per_net@fd98525eea03"
+          "provenance": "manifest.json#net_topology.rules.2.max_vias_per_net@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -1127,16 +1127,16 @@
           "units": "path glob",
           "kind": "policy",
           "manifest_key": "fixture.reject_globs",
-          "provenance": "manifest.json#fixture.reject_globs@fd98525eea03"
+          "provenance": "manifest.json#fixture.reject_globs@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\HASHES.json",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\HASHES.json",
           "name": "HASHES.json",
-          "sha256": "3463492a17cd6ebd2fc2cdd83740137c251e49175fc6422cc0d83ec7c6f68d75"
+          "sha256": "c28131f307e45e29cc3950c731c79bd4f9a7b1dd94a96541c5ef97fa7f1f4c10"
         }
       ]
     },
@@ -1147,8 +1147,8 @@
       "reason": "the release manifest records the digests of the archive, BOM and CPL beside it; this package is still a candidate, so it carries no reports to cross-check yet",
       "measurements": {
         "files_in_package": 17,
-        "manifest_source_closure_sha256": "f7afed273eb2a688ace8e5b4167449283b08aacec0f8d84e2901d994594aee47",
-        "archive_sha256": "599957e7c5144f9e2601ef9d57063ed2b912b9c31c38b1aba7f20ecc91ff4ee8",
+        "manifest_source_closure_sha256": "bd2afdef6dd0df0d8387ff560c4591d102f493100dba02cb8e9492ddbcf32d9b",
+        "archive_sha256": "2770680dd784fc3fad6d0e4c3f940c4180ad91361ebe8b3abbd9bba7cd0fa03d",
         "stage": "candidate"
       },
       "limits": {},
@@ -1156,9 +1156,9 @@
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\MANIFEST.md",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\MANIFEST.md",
           "name": "MANIFEST.md",
-          "sha256": "02c66376ceb66ee2cdff8386d5934938dfa47358a0c5508179a7138089084a45"
+          "sha256": "8e0d984799b6d4c09b040aad29e7f07bd24d73f80124841525dd30f6a5f58ac4"
         }
       ]
     },
@@ -1169,7 +1169,7 @@
       "reason": "all 2 committed report(s) bind the canonical digest of all 43 source inputs, and every one still matches",
       "measurements": {
         "source_closure_files": 43,
-        "source_closure_sha256": "f7afed273eb2a688ace8e5b4167449283b08aacec0f8d84e2901d994594aee47",
+        "source_closure_sha256": "bd2afdef6dd0df0d8387ff560c4591d102f493100dba02cb8e9492ddbcf32d9b",
         "source_sha256": {
           "pcb": "0ffd377c0ace66b1",
           "schematic": "e8283a2ba391bad6"
@@ -1204,7 +1204,7 @@
           "units": "path glob",
           "kind": "policy",
           "manifest_key": "reports.source_closure",
-          "provenance": "manifest.json#reports.source_closure@fd98525eea03"
+          "provenance": "manifest.json#reports.source_closure@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -1228,7 +1228,7 @@
           "units": "policy",
           "kind": "policy",
           "manifest_key": "source_authority.authority",
-          "provenance": "manifest.json#source_authority.authority@fd98525eea03"
+          "provenance": "manifest.json#source_authority.authority@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -1296,7 +1296,7 @@
           "units": "path glob",
           "kind": "policy",
           "manifest_key": "release_generation.cpl_orientation.reproduction_inputs.required_globs",
-          "provenance": "manifest.json#release_generation.cpl_orientation.reproduction_inputs.required_globs@fd98525eea03"
+          "provenance": "manifest.json#release_generation.cpl_orientation.reproduction_inputs.required_globs@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -1325,7 +1325,7 @@
           "units": "deg",
           "kind": "policy",
           "manifest_key": "routing.permitted_turn_degrees",
-          "provenance": "manifest.json#routing.permitted_turn_degrees@fd98525eea03"
+          "provenance": "manifest.json#routing.permitted_turn_degrees@1b5c66ec2929"
         },
         "routing.angle_tolerance_deg": {
           "id": "routing.angle_tolerance_deg",
@@ -1333,7 +1333,7 @@
           "units": "deg",
           "kind": "policy",
           "manifest_key": "routing.angle_tolerance_deg",
-          "provenance": "manifest.json#routing.angle_tolerance_deg@fd98525eea03"
+          "provenance": "manifest.json#routing.angle_tolerance_deg@1b5c66ec2929"
         }
       },
       "finding_count": 60,
@@ -1793,7 +1793,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "routing.min_segment_mm",
-          "provenance": "manifest.json#routing.min_segment_mm@fd98525eea03"
+          "provenance": "manifest.json#routing.min_segment_mm@1b5c66ec2929"
         }
       },
       "finding_count": 60,
@@ -2227,7 +2227,7 @@
       "status": "PASS",
       "reason": "4 shipped copper layers match a fresh export by geometric symmetric difference (limit 0.05 mm2)",
       "measurements": {
-        "fresh_export_command": "pcb export gerbers --output C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\validation\\fresh_gerbers --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts --no-x2 --no-netlist --use-drill-file-origin --subtract-soldermask C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\validation\\check_copy\\microphone_array_v2.kicad_pcb",
+        "fresh_export_command": "pcb export gerbers --output C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\validation\\fresh_gerbers --layers F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts --no-x2 --no-netlist --use-drill-file-origin --subtract-soldermask C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\validation\\check_copy\\microphone_array_v2.kicad_pcb",
         "fresh_export_exit": 0,
         "shipped_copper_layers": [
           "B.Cu",
@@ -2282,7 +2282,7 @@
           "units": "cli option",
           "kind": "policy",
           "manifest_key": "artifacts.gerber_export_flags",
-          "provenance": "manifest.json#artifacts.gerber_export_flags@fd98525eea03"
+          "provenance": "manifest.json#artifacts.gerber_export_flags@1b5c66ec2929"
         },
         "geometry.layer_symmetric_difference_mm2": {
           "id": "geometry.layer_symmetric_difference_mm2",
@@ -2290,7 +2290,7 @@
           "units": "mm2",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.layer_symmetric_difference_mm2.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.layer_symmetric_difference_mm2.value@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2357,7 +2357,7 @@
           "units": "layer roles",
           "kind": "policy",
           "manifest_key": "stackup.expected",
-          "provenance": "manifest.json#stackup.expected@fd98525eea03"
+          "provenance": "manifest.json#stackup.expected@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2382,7 +2382,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.contact_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.contact_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.contact_mm.value@1b5c66ec2929"
         },
         "geometry.polygon_chord_error_mm": {
           "id": "geometry.polygon_chord_error_mm",
@@ -2390,7 +2390,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2420,7 +2420,7 @@
           "units": "pad attribute",
           "kind": "policy",
           "manifest_key": "via_mask.pad_contact.populated_pad_attributes",
-          "provenance": "manifest.json#via_mask.pad_contact.populated_pad_attributes@fd98525eea03"
+          "provenance": "manifest.json#via_mask.pad_contact.populated_pad_attributes@1b5c66ec2929"
         },
         "via_mask.mask_dam_rule": {
           "id": "via_mask.mask_dam_rule",
@@ -2428,7 +2428,7 @@
           "units": "policy",
           "kind": "policy",
           "manifest_key": "via_mask.mask_dam_rule",
-          "provenance": "manifest.json#via_mask.mask_dam_rule@fd98525eea03"
+          "provenance": "manifest.json#via_mask.mask_dam_rule@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2458,7 +2458,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.process.limit_mm",
-          "provenance": "manifest.json#via_mask.process.limit_mm@fd98525eea03"
+          "provenance": "manifest.json#via_mask.process.limit_mm@1b5c66ec2929"
         },
         "geometry.polygon_chord_error_mm": {
           "id": "geometry.polygon_chord_error_mm",
@@ -2466,7 +2466,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@1b5c66ec2929"
         },
         "via_mask.metric": {
           "id": "via_mask.metric",
@@ -2474,7 +2474,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "via_mask.metric",
-          "provenance": "manifest.json#via_mask.metric@fd98525eea03"
+          "provenance": "manifest.json#via_mask.metric@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2497,7 +2497,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.design_target_mm",
-          "provenance": "manifest.json#via_mask.design_target_mm@fd98525eea03"
+          "provenance": "manifest.json#via_mask.design_target_mm@1b5c66ec2929"
         },
         "geometry.polygon_chord_error_mm": {
           "id": "geometry.polygon_chord_error_mm",
@@ -2505,7 +2505,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@1b5c66ec2929"
         },
         "via_mask.metric": {
           "id": "via_mask.metric",
@@ -2513,7 +2513,7 @@
           "units": "field name",
           "kind": "policy",
           "manifest_key": "via_mask.metric",
-          "provenance": "manifest.json#via_mask.metric@fd98525eea03"
+          "provenance": "manifest.json#via_mask.metric@1b5c66ec2929"
         }
       },
       "finding_count": 0,
@@ -2551,7 +2551,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.polygon_chord_error_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.polygon_chord_error_mm.value@1b5c66ec2929"
         },
         "geometry.coordinate_match_mm": {
           "id": "geometry.coordinate_match_mm",
@@ -2559,7 +2559,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.coordinate_match_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.coordinate_match_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.coordinate_match_mm.value@1b5c66ec2929"
         },
         "geometry.dimension_match_mm": {
           "id": "geometry.dimension_match_mm",
@@ -2567,7 +2567,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.dimension_match_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.dimension_match_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.dimension_match_mm.value@1b5c66ec2929"
         },
         "geometry.clearance_match_mm": {
           "id": "geometry.clearance_match_mm",
@@ -2575,7 +2575,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.clearance_match_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.clearance_match_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.clearance_match_mm.value@1b5c66ec2929"
         },
         "geometry.contact_mm": {
           "id": "geometry.contact_mm",
@@ -2583,7 +2583,7 @@
           "units": "mm",
           "kind": "tolerance",
           "manifest_key": "geometry_profile.tolerances.contact_mm.value",
-          "provenance": "manifest.json#geometry_profile.tolerances.contact_mm.value@fd98525eea03"
+          "provenance": "manifest.json#geometry_profile.tolerances.contact_mm.value@1b5c66ec2929"
         },
         "via_mask.design_target_mm": {
           "id": "via_mask.design_target_mm",
@@ -2591,7 +2591,7 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.design_target_mm",
-          "provenance": "manifest.json#via_mask.design_target_mm@fd98525eea03"
+          "provenance": "manifest.json#via_mask.design_target_mm@1b5c66ec2929"
         },
         "via_mask.process.limit_mm": {
           "id": "via_mask.process.limit_mm",
@@ -2599,21 +2599,21 @@
           "units": "mm",
           "kind": "policy",
           "manifest_key": "via_mask.process.limit_mm",
-          "provenance": "manifest.json#via_mask.process.limit_mm@fd98525eea03"
+          "provenance": "manifest.json#via_mask.process.limit_mm@1b5c66ec2929"
         }
       },
       "finding_count": 0,
       "findings": [],
       "evidence": [
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\gerbers\\microphone_array_v2.GTS",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\gerbers\\microphone_array_v2.GTS",
           "name": "microphone_array_v2.GTS",
-          "sha256": "5d572674ac3c1d036023836420c8df681de57b7a4c1b651e5183d9dbc71f7b7e"
+          "sha256": "ffae4d32d25b4b67aca3f31f07df61b53fa813db8973e28e0cce27c562848a54"
         },
         {
-          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\gerbers\\microphone_array_v2.GBS",
+          "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\gerbers\\microphone_array_v2.GBS",
           "name": "microphone_array_v2.GBS",
-          "sha256": "cc3d19368c3bf74975fa47beaed353398e02f86d909ebd5bd4483a2e88fad799"
+          "sha256": "4744ea3bf98a45495ed5d681fa5409d6eb7d8cbed0e3893d829b6ea2316d497c"
         }
       ]
     },
@@ -2636,8 +2636,8 @@
     }
   ],
   "clean_room": {
-    "run_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run",
-    "build_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build",
+    "run_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run",
+    "build_root": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build",
     "origin": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2",
     "purged": [
       "generated",
@@ -2704,13 +2704,13 @@
           "sch",
           "erc",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\reports\\erc.json",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\reports\\erc.json",
           "--format",
           "json",
           "--severity-all",
           "--severity-exclusions",
           "--exit-code-violations",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
         ],
         "stderr": ""
       },
@@ -2723,7 +2723,7 @@
           "pcb",
           "drc",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\reports\\drc.json",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\reports\\drc.json",
           "--format",
           "json",
           "--severity-all",
@@ -2733,7 +2733,7 @@
           "--refill-zones",
           "--save-board",
           "--exit-code-violations",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
         ],
         "stderr": ""
       },
@@ -2747,14 +2747,14 @@
           "export",
           "gerbers",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\generated\\gerbers",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\generated\\gerbers",
           "--layers",
           "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts",
           "--no-x2",
           "--no-netlist",
           "--use-drill-file-origin",
           "--subtract-soldermask",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
         ],
         "stderr": ""
       },
@@ -2768,13 +2768,13 @@
           "export",
           "drill",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\generated\\gerbers",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\generated\\gerbers",
           "--format",
           "excellon",
           "--excellon-separate-th",
           "--drill-origin",
           "plot",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
         ],
         "stderr": ""
       },
@@ -2788,7 +2788,7 @@
           "export",
           "pos",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\cpl.csv",
           "--format",
           "csv",
           "--units",
@@ -2796,7 +2796,7 @@
           "--side",
           "both",
           "--exclude-dnp",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
         ],
         "stderr": ""
       },
@@ -2810,7 +2810,7 @@
           "export",
           "bom",
           "--output",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\bom.csv",
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\bom.csv",
           "--fields",
           "${QUANTITY},Reference,Value,Footprint,LCSC",
           "--labels",
@@ -2820,7 +2820,7 @@
           "--exclude-dnp",
           "--ref-range-delimiter",
           "",
-          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+          "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
         ],
         "stderr": ""
       },
@@ -2901,54 +2901,54 @@
     "authoritative_paths": [
       {
         "key": "archive.manifest",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\MANIFEST.md"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\MANIFEST.md"
       },
       {
         "key": "archive.zip",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\microphone_array_v2-revA-fabrication.zip"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\microphone_array_v2-revA-fabrication.zip"
       },
       {
         "key": "artifacts.bom",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\bom.csv"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\bom.csv"
       },
       {
         "key": "artifacts.cpl",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\cpl.csv"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\cpl.csv"
       },
       {
         "key": "artifacts.gerber_dir",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\build\\gerbers"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\build\\gerbers"
       },
       {
         "key": "fixture.attributes_file",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\.gitattributes"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\.gitattributes"
       },
       {
         "key": "fixture.hash_file",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\HASHES.json"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\HASHES.json"
       },
       {
         "key": "reports:drc.json",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\../../reports\\drc.json"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\../../reports\\drc.json"
       },
       {
         "key": "reports:erc.json",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\../../reports\\erc.json"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\../../reports\\erc.json"
       },
       {
         "key": "sources.pcb",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pcb"
       },
       {
         "key": "sources.project",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_pro"
       },
       {
         "key": "sources.schematic",
-        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260813T024351Z-bba65f5d\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
+        "path": "C:\\Users\\pentolope\\Documents\\GitHub\\PCB_MicrophoneArrayV2\\verification\\out\\microphone-array-v2-live\\attempts\\20260816T203906Z-9bcc9db5\\work\\clean_run\\fixture\\project\\microphone_array_v2.kicad_sch"
       }
     ],
     "excluded_layers": [],
-    "source_closure_sha256": "f7afed273eb2a688ace8e5b4167449283b08aacec0f8d84e2901d994594aee47"
+    "source_closure_sha256": "bd2afdef6dd0df0d8387ff560c4591d102f493100dba02cb8e9492ddbcf32d9b"
   }
 }

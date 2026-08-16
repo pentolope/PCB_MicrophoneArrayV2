@@ -58,12 +58,46 @@ class _Copy:
         shutil.rmtree(self.work, ignore_errors=True)
 
 
-def _stub_cli(directory, name, body):
-    """A stand-in for kicad-cli that misbehaves in one specific way."""
-    path = os.path.join(directory, name + (".cmd" if os.name == "nt" else ".sh"))
-    with open(path, "w", encoding="utf-8", newline="\r\n") as fh:
-        fh.write(body)
-    if os.name != "nt":
+def _stub_cli(directory, name, *, exit_code=0, stderr="", writes=None,
+              writes_to_arg=6):
+    """A stand-in for kicad-cli that misbehaves in one specific way.
+
+    Rendered for whichever platform is running: batch with CRLF on Windows, a
+    shebang-equipped POSIX shell script with LF elsewhere. Written from a
+    description rather than from a literal script, because a literal batch
+    file is not a stub anywhere else - it is an unexecutable file, and the
+    gate then errors for a reason other than the one under test.
+
+    `writes` is text the stub puts in the file named by positional argument
+    `writes_to_arg`, which is how these tests hand the gate a report it
+    cannot read.
+    """
+    windows = os.name == "nt"
+    path = os.path.join(directory, name + (".cmd" if windows else ".sh"))
+    lines = []
+    if windows:
+        lines.append("@echo off")
+        if stderr:
+            lines.append("echo {} 1>&2".format(stderr))
+        if writes is not None:
+            # batch `echo` takes quotes literally; escaping them would put
+            # backslashes in the report and test the JSON reader on the wrong
+            # kind of garbage.
+            lines.append("echo {} > %{}".format(writes, writes_to_arg))
+        lines.append("exit /b {}".format(exit_code))
+        text = "\r\n".join(lines) + "\r\n"
+    else:
+        lines.append("#!/bin/sh")
+        if stderr:
+            lines.append("echo {} >&2".format(stderr))
+        if writes is not None:
+            lines.append("printf '%s\\n' '{}' > \"${}\"".format(
+                writes.replace("'", "'\\''"), writes_to_arg))
+        lines.append("exit {}".format(exit_code))
+        text = "\n".join(lines) + "\n"
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
+    if not windows:
         os.chmod(path, 0o755)
     return path
 
@@ -197,9 +231,10 @@ class RealMutations(_Base):
 # ---------------------------------------------------------------------------
 
 class UnusableInputsAreErrors(_Base):
-    def _cli_that(self, tag, body):
+    def _cli_that(self, tag, **behaviour):
         def mutate(doc, project):
-            doc["tools"]["kicad_cli"] = _stub_cli(project, "stub_cli", body)
+            doc["tools"]["kicad_cli"] = _stub_cli(project, "stub_cli",
+                                                  **behaviour)
         return self._copy(tag, mutate)
 
     def test_a_garbage_report_is_an_error_not_a_pass(self):
@@ -209,10 +244,7 @@ class UnusableInputsAreErrors(_Base):
         # so the output path the stub must write to is the sixth argument.
         # Writing to the wrong one produces no report at all, and the gate
         # would then error for a different reason than the one under test.
-        body = ("@echo off\r\n"
-                "echo {\"nonsense\": true} > %6\r\n"
-                "exit /b 0\r\n")
-        box = self._cli_that("garbage", body)
+        box = self._cli_that("garbage", writes='{"nonsense": true}')
         result = box.run({DRC_GATE})[DRC_GATE]
         self.assertEqual(result.status, Status.ERROR,
                          "an unreadable report must never be read as 'no "
@@ -225,10 +257,7 @@ class UnusableInputsAreErrors(_Base):
         self.assertNotIn("counts", result.measurements)
 
     def test_a_report_that_is_not_json_at_all_is_an_error(self):
-        body = ("@echo off\r\n"
-                "echo this is not json > %6\r\n"
-                "exit /b 0\r\n")
-        box = self._cli_that("notjson", body)
+        box = self._cli_that("notjson", writes="this is not json")
         result = box.run({DRC_GATE})[DRC_GATE]
         self.assertEqual(result.status, Status.ERROR)
         self.assertIn("not readable JSON", result.reason)
@@ -335,8 +364,7 @@ class UnusableInputsAreErrors(_Base):
         self.assertEqual(reports.parse_drc(doc)[0], [])
 
     def test_an_invocation_failure_is_an_error_and_is_never_waived(self):
-        box = self._cli_that(
-            "crash", "@echo off\r\necho simulated crash 1>&2\r\nexit /b 3\r\n")
+        box = self._cli_that("crash", exit_code=3, stderr="simulated crash")
         results = box.run({ERC_GATE, DRC_GATE})
         for gate_id, result in results.items():
             self.assertEqual(result.status, Status.ERROR, gate_id)
@@ -346,8 +374,8 @@ class UnusableInputsAreErrors(_Base):
     def test_a_waiver_cannot_rescue_a_failed_invocation(self):
         """Even a perfectly formed waiver is irrelevant to a tool that crashed."""
         def mutate(doc, project):
-            doc["tools"]["kicad_cli"] = _stub_cli(
-                project, "stub_cli", "@echo off\r\nexit /b 3\r\n")
+            doc["tools"]["kicad_cli"] = _stub_cli(project, "stub_cli",
+                                                  exit_code=3)
             doc["waivers"] = [{
                 "gate": DRC_GATE, "rule": "clearance", "category": "violations",
                 "items": [{"description": "T1", "location_mm": [1.0, 2.0]},
@@ -364,7 +392,7 @@ class UnusableInputsAreErrors(_Base):
         self.assertEqual(result.measurements.get("waived"), None)
 
     def test_a_missing_report_is_an_error_even_on_the_violations_exit_code(self):
-        box = self._cli_that("noreport", "@echo off\r\nexit /b 5\r\n")
+        box = self._cli_that("noreport", exit_code=5)
         result = box.run({DRC_GATE})[DRC_GATE]
         self.assertEqual(result.status, Status.ERROR)
         self.assertIn("produced no report", result.reason)

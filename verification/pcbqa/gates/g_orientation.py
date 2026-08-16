@@ -28,6 +28,7 @@ and it is checked from the shipped file rather than from the table.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 
@@ -35,6 +36,10 @@ from ..core import gate
 from ..orientation import Registry
 
 ANGLE_MATCH_DEG = 1e-3
+
+#: The derivation script the last CPL.ORIENTATION run actually executed, so
+#: provenance can check the file that ran rather than the import cache.
+LAST_DERIVATION = None
 
 
 def _read(path):
@@ -76,21 +81,35 @@ def _rederive(ctx, spec):
     is reported rather than passed over: an unverifiable registry is the thing
     this gate exists to prevent.
     """
+    import importlib.util
     import sys
-    tools = ctx.manifest.resolve("tools")
-    if tools not in sys.path:
-        sys.path.insert(0, tools)
-    # A clean run inventories the copied project and then holds it to that
-    # inventory exactly. Importing from inside it must not leave a __pycache__
-    # behind, or reading the evidence would itself be the thing that fails.
+    script = os.path.join(ctx.manifest.resolve("tools"), "jlc_orientation.py")
+    if not os.path.isfile(script):
+        return None
+    # Loaded from this project's path rather than by name. An import by name
+    # answers from sys.modules, so a process that had already imported some
+    # other project's copy would score this board's evidence with that copy -
+    # and the gate would be reporting on whichever project ran first.
+    #
+    # A clean run also inventories the copied project and holds it to that
+    # inventory exactly, so loading from inside it must leave no __pycache__.
     was_writing = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     try:
-        import jlc_orientation
-    except ImportError:
+        spec_ = importlib.util.spec_from_file_location(
+            "jlc_orientation_" + hashlib.sha1(
+                script.encode("utf-8")).hexdigest()[:12], script)
+        jlc_orientation = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(jlc_orientation)
+    except Exception:                                      # noqa: BLE001
         return None
     finally:
         sys.dont_write_bytecode = was_writing
+    # Recorded so provenance can ask what actually ran rather than guessing
+    # from the import cache.
+    global LAST_DERIVATION
+    LAST_DERIVATION = {"file": os.path.abspath(script),
+                       "project": os.path.abspath(ctx.manifest.resolve("."))}
     # The tool addresses its evidence through module globals, and this gate
     # points them at whichever project it is validating - which may be a
     # clean-room copy. They are put back afterwards: leaving a shared module

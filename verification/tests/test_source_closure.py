@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import os
 import shutil
 import sys
@@ -56,7 +57,15 @@ def _doc():
 
 
 def _manifest(document, directory=None):
+    """Write a manifest somewhere scratch, still pointed at the real project.
+
+    project_root is relative to the manifest file, so a copy written into a
+    temporary directory has to be re-anchored or it resolves to nothing and
+    every question about the design answers "no such file".
+    """
     directory = directory or _scratch("pcbqa_closure_")
+    if not os.path.isabs(document.get("project_root", "")):
+        document = dict(document, project_root=PROJECT)
     path = os.path.join(directory, "manifest.json")
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(document, fh, indent=2)
@@ -202,11 +211,9 @@ class TheConfigurationIdentitySurvivesTheCleanRoom(unittest.TestCase):
         out = copy.deepcopy(document)
         out["board_id"] = str(out["board_id"]) + "-cleanroom"
         out["project_root"] = "fixture/project"
-        out["tools"] = {"kicad_cli": "/usr/bin/kicad-cli"}
-        out["fixture"] = {"hash_file": "../HASHES.json",
-                          "attributes_file": "../.gitattributes"}
-        out["sources"] = {k: "/elsewhere/" + v
-                          for k, v in out["sources"].items()}
+        out["fixture"] = dict(out["fixture"])
+        out["fixture"]["hash_file"] = "../HASHES.json"
+        out["fixture"]["attributes_file"] = "../.gitattributes"
         out["reports"] = dict(out["reports"])
         out["reports"]["files"] = ["../../reports/*.json"]
         out["artifacts"] = dict(out["artifacts"])
@@ -258,6 +265,187 @@ class TheConfigurationIdentitySurvivesTheCleanRoom(unittest.TestCase):
                 "{} would exclude release-affecting configuration".format(
                     pointer))
             self.assertFalse(pointer.startswith("release_profile"), pointer)
+
+    def test_the_permitted_set_is_exactly_what_the_clean_room_rewrites(self):
+        """Read off derive_manifest rather than trusted.
+
+        Every permitted exclusion must correspond to an assignment in
+        derive_manifest, and every assignment there must be permitted. A leaf
+        that stops being rewritten should stop being excusable.
+        """
+        import inspect
+        source = inspect.getsource(cleanroom.CleanRun.derive_manifest)
+        assigned = set(re.findall(r'data\["(\w+)"\](?:\["(\w+)"\])?\s*(?:=|\.pop)',
+                                  source))
+        pointers = set()
+        for head, tail in assigned:
+            pointers.add("{}.{}".format(head, tail) if tail else head)
+        permitted = set(cleanroom.REWRITTEN_BY_THE_CLEAN_ROOM)
+
+        # derive_manifest also reassigns whole objects purely to copy them
+        # before editing a leaf; those are not rewrites of the object.
+        copied_before_editing = {"fixture", "artifacts", "assembly", "archive",
+                                 "reports"}
+        rewritten = {p for p in pointers if p not in copied_before_editing}
+        self.assertEqual(
+            rewritten - permitted, set(),
+            "derive_manifest rewrites values the identity still covers")
+        for pointer in permitted:
+            head = pointer.split(".")[0]
+            self.assertIn(head, pointers | copied_before_editing,
+                          "{} is excused but derive_manifest never touches "
+                          "it".format(pointer))
+
+    def test_whole_objects_that_are_not_rewritten_are_not_excused(self):
+        for pointer in cleanroom.REWRITTEN_BY_THE_CLEAN_ROOM:
+            self.assertNotIn(pointer, ("sources", "tools", "fixture"),
+                             "{} is copied through untouched or only partly "
+                             "rewritten; excusing the whole object hides real "
+                             "configuration".format(pointer))
+
+
+class TheIdentityCoversWhatWasSelected(unittest.TestCase):
+    """The closure has to change when the release would produce something else.
+
+    Excluding whole objects because they contain a path made three real
+    changes invisible: pointing the release at a different board, pointing it
+    at a different schematic, and changing which files the fixture rejects.
+    """
+
+    def _digest(self, document):
+        return cleanroom.closure_digest(
+            cleanroom.source_closure(_manifest(document), _policy()))
+
+    def test_changing_the_selected_pcb_changes_the_closure(self):
+        candidate = os.path.join(PROJECT, "candidates")
+        boards = sorted(f for f in os.listdir(candidate)
+                        if f.endswith(".kicad_pcb")) if os.path.isdir(
+                            candidate) else []
+        if not boards:
+            self.skipTest("this project keeps no candidate boards")
+        edited = _doc()
+        edited["sources"]["pcb"] = "candidates/" + boards[0]
+        self.assertNotEqual(
+            self._digest(_doc()), self._digest(edited),
+            "selecting a different board left the closure unchanged")
+
+    def test_changing_the_selected_schematic_changes_the_closure(self):
+        edited = _doc()
+        edited["sources"]["schematic"] = "MicArrayV2.kicad_sym"
+        self.assertNotEqual(self._digest(_doc()), self._digest(edited))
+
+    def test_changing_the_fixture_rejection_policy_changes_the_closure(self):
+        edited = _doc()
+        edited["fixture"]["reject_globs"] = []
+        self.assertNotEqual(
+            self._digest(_doc()), self._digest(edited),
+            "emptying fixture.reject_globs left the closure unchanged")
+
+    def test_changing_the_toolchain_changes_the_closure(self):
+        edited = _doc()
+        edited["tools"]["kicad_cli"] = "/somewhere/else/kicad-cli"
+        self.assertNotEqual(self._digest(_doc()), self._digest(edited))
+
+    def test_a_selected_source_outside_the_globs_is_still_covered(self):
+        """Included because it was selected, not because a glob reached it."""
+        candidate = os.path.join(PROJECT, "candidates")
+        boards = sorted(f for f in os.listdir(candidate)
+                        if f.endswith(".kicad_pcb")) if os.path.isdir(
+                            candidate) else []
+        if not boards:
+            self.skipTest("this project keeps no candidate boards")
+        rel = "candidates/" + boards[0]
+        edited = _doc()
+        edited["sources"]["pcb"] = rel
+        closure = cleanroom.source_closure(_manifest(edited), _policy())
+        self.assertIn(rel, closure,
+                      "the selected board is under an excluded directory and "
+                      "was not covered at all")
+        self.assertEqual(
+            closure[rel],
+            canonical.digest(os.path.join(PROJECT, rel),
+                             _policy().classify(rel)))
+
+    def test_a_selected_source_that_does_not_exist_is_refused(self):
+        edited = _doc()
+        edited["sources"]["pcb"] = "no_such_board.kicad_pcb"
+        with self.assertRaises(cleanroom.CleanRoomError) as caught:
+            self._digest(edited)
+        self.assertIn("sources.pcb", str(caught.exception))
+
+    def test_all_three_declared_sources_are_in_the_closure(self):
+        manifest = Manifest(LIVE)
+        closure = cleanroom.source_closure(manifest, _policy())
+        for role in ("pcb", "schematic", "project"):
+            declared = manifest.get("sources." + role)
+            rel = declared.replace("\\", "/")
+            self.assertIn(rel, closure,
+                          "sources.{} is not represented in the "
+                          "closure".format(role))
+
+    def test_a_board_cannot_widen_the_exclusions(self):
+        edited = _doc()
+        edited["reports"]["configuration_excludes"] = list(
+            edited["reports"]["configuration_excludes"]) + \
+            ["release_generation"]
+        with self.assertRaises(cleanroom.CleanRoomError) as caught:
+            cleanroom.configuration_identity(_manifest(edited))
+        self.assertIn("release_generation", str(caught.exception))
+
+    def test_the_script_that_ran_is_checked_by_content(self):
+        """Not by import cache, and not vacuously.
+
+        The check used to compare `sys.modules["jlc_orientation"].__file__`
+        against the tracked path. That is a fact about the process: a worker
+        that had already loaded another project's copy answered about that
+        copy, and the gate failed for a project that was perfectly fine. What
+        matters is whether the file that ran has the content the closure
+        recorded.
+        """
+        import tempfile as tf
+        from pcbqa.core import Context
+        from pcbqa.gates import g_orientation, g_provenance   # noqa: F401
+
+        def run():
+            ctx = Context(Manifest(LIVE), _scratch("pcbqa_ran_"))
+            from pcbqa import core as pcbqa_core
+            results = pcbqa_core.run_all(ctx, only={"PROV.SOURCE_CLOSURE"})
+            return {r.gate_id: r.to_dict()
+                    for r in results}["PROV.SOURCE_CLOSURE"]
+
+        edited = os.path.join(_scratch("pcbqa_ranfile_"), "jlc_orientation.py")
+        with open(os.path.join(PROJECT, "tools", "jlc_orientation.py"),
+                  "rb") as fh:
+            body = fh.read()
+        with open(edited, "wb") as fh:
+            fh.write(body + b"\n# not the script the closure recorded\n")
+
+        saved = g_orientation.LAST_DERIVATION
+        g_orientation.LAST_DERIVATION = {"file": edited, "project": PROJECT}
+        try:
+            result = run()
+        finally:
+            g_orientation.LAST_DERIVATION = saved
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(
+            any("did not derive these offsets" in f.get("issue", "")
+                for f in result["findings"]), result["findings"])
+
+        # And the same gate passes once the executed file is the tracked one.
+        g_orientation.LAST_DERIVATION = {
+            "file": os.path.join(PROJECT, "tools", "jlc_orientation.py"),
+            "project": PROJECT}
+        try:
+            self.assertEqual(run()["status"], "PASS")
+        finally:
+            g_orientation.LAST_DERIVATION = saved
+        del tf
+
+    def test_a_board_may_narrow_them(self):
+        edited = _doc()
+        edited["reports"]["configuration_excludes"] = ["board_id",
+                                                       "project_root"]
+        cleanroom.configuration_identity(_manifest(edited))
 
 
 if __name__ == "__main__":
