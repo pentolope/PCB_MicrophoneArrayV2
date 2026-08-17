@@ -8,12 +8,14 @@
 - Array: 16 JLCPCB-assembled `MSM261DHP006` PDM microphones running at 3.3 V,
   acoustic ports on a 54.00 mm radius at 22.5 degree intervals, channel 0 on
   +X, numbered counter-clockwise viewed from the component side.
-- FPGA: Sipeed Tang Nano 9K in two hand-soldered 1x24 female sockets on the
-  board bottom.
-- Host: 2012 Raspberry Pi Model B, 26-pin P1 header, SPI0 transport.
+- FPGA: Sipeed Tang Nano 9K in two hand-soldered 1x24 2.54 mm female sockets on
+  the board bottom, `J2` (upper row) and `J3` (lower row).
+- Host: 2012 Raspberry Pi Model B, 26-pin P1 header, SPI0 transport, on `J1` -
+  a 2x13 female socket on the bottom side that mates directly onto the Pi's P1
+  pins, no cable.
 - Power: Raspberry Pi 5 V only.
-- Assembly: every SMT part on the top side. The two module sockets and the
-  26-way host header are hand-fitted and marked DNP.
+- Assembly: every SMT part on the top side. `J1`, `J2` and `J3` are hand-fitted
+  and marked DNP; all three take a 1.00 mm drill on a 2.54 mm grid.
 
 ### How "outward-facing" is realised
 
@@ -82,8 +84,8 @@ resulting inter-channel sampling skew is far below one part in 10^4 of a
 The only supply path is:
 
 ```
-Pi P1 pins 2 and 4 (5 V) -> F1 500 mA PTC -> D1 SS14 -> +5V
-+5V -> Tang Nano 9K 5 V header pin
+J1.2 and J1.4 (Pi P1 5 V) -> F1 500 mA PTC -> D1 SS14 -> +5V
++5V -> J3.18, the Tang Nano 9K 5 V header pin
 +5V -> U1 LP5907MFX-3.3 -> +3V3A  (microphone ring)
 +3V3A -> FB1 600 ohm bead -> +3V3_CLK  (oscillator and clock buffer)
 ```
@@ -109,55 +111,76 @@ sequence.
 
 ## Tang Nano 9K assignments
 
-Only 3.3 V bank pins are used. J6 positions 2 to 9 are FPGA bank 3 at 1.8 V and
-are deliberately left unconnected, as are the TF-card and HDMI-multiplexed
-pins.
+Two sets of designators are in play and they are easy to confuse. Sipeed's own
+schematic calls the module's header rows **J5** and **J6**; the sockets on
+*this* board that receive them are **J2** and **J3**. `J2` takes the module's
+J5 row and `J3` takes its J6 row, position for position, position 1 being the
+USB-C end on both. The table below is in this board's designators, because the
+signal names in it are this board's nets - consult
+[sources.md](sources.md) when reading Sipeed's diagram alongside it.
 
-The eight data lines are spread across **both** header rows and ordered along
-each row to follow the azimuth of the channels they serve: the four upper pairs
-land on J5 and the four lower pairs on J6. Putting all eight on adjacent pins
-of one row forces every line from the lower rim to travel the length of the
-module and cross its neighbours.
+Only 3.3 V bank pins are used. `J3` positions 2 to 9 - the module's J6.2 to
+J6.9 - are FPGA bank 3 at 1.8 V and are deliberately left unconnected, as are
+the TF-card and HDMI-multiplexed pins.
+
+Two rules set the assignment. The eight data lines are spread across **both**
+header rows and ordered along each row to follow the azimuth of the channels
+they serve: the four upper pairs land on `J2` and the four lower pairs on `J3`.
+Putting all eight on adjacent pins of one row forces every line from the lower
+rim to travel the length of the module and cross its neighbours. Separately,
+**every host signal is on `J3`**, the row facing the Pi header, and **both
+clocks are on `J2`**; leaving SPI on the upper row made those lines cross the
+whole board, out from `J1` at the bottom, past the header and both socket rows,
+to reach it.
 
 | Carrier signal | Module header | FPGA pin | Direction |
 |---|---:|---:|---|
-| `PDM_D0` (CH0/1, azimuth 11 deg) | J5.5 | 25 | input |
-| `PDM_D1` (CH2/3, 56 deg) | J5.9 | 29 | input |
-| `PDM_D2` (CH4/5, 101 deg) | J5.19 | 54 | input |
-| `PDM_D3` (CH6/7, 146 deg) | J5.23 | 68 | input |
-| `SPI_SCLK` | J5.13 | 40 | input |
-| `PDM_CLK_FPGA` | J5.14 | 35 (`GCLKT_4`) | output |
-| `SPI_MOSI` | J5.15 | 41 | input |
-| `SPI_CS_N` | J5.16 | 42 | input |
-| `AUDIO_MCLK` | J5.17 | 51 (`GCLKC_3`) | input, global clock |
-| `HOST_SYNC` | J6.10 | 77 | output |
-| `PDM_D7` (CH14/15, 326 deg) | J6.12 | 75 | input |
-| `HOST_RESET_N` | J6.15 | 72 | input |
-| `PDM_D6` (CH12/13, 281 deg) | J6.16 | 71 | input |
-| `HOST_STATUS` | J6.17 | 70 | output |
-| `+5V` | J6.18 | power | input to module |
-| `SPI_MISO` | J6.19 | 48 | output |
-| `HOST_IRQ` | J6.20 | 49 | output |
-| `PDM_D5` (CH10/11, 236 deg) | J6.21 | 31 | input |
-| `PDM_D4` (CH8/9, 191 deg) | J6.22 | 32 | input |
-| `GND` | J6.23 | power | return |
-| `TANG_3V3` | J6.24 | power | ESD clamp reference only |
+| `PDM_D0` (CH0/1, azimuth 11 deg) | J2.5 | 25 | input |
+| `PDM_D1` (CH2/3, 56 deg) | J2.9 | 29 | input |
+| `PDM_CLK_FPGA` | J2.14 | 35 (`GCLKT_4`) | output |
+| `AUDIO_MCLK` | J2.17 | 51 (`GCLKC_3`) | input, global clock |
+| `PDM_D2` (CH4/5, 101 deg) | J2.19 | 54 | input |
+| `PDM_D3` (CH6/7, 146 deg) | J2.23 | 68 | input |
+| `PDM_D7` (CH14/15, 326 deg) | J3.1 | 63 | input |
+| `PDM_D6` (CH12/13, 281 deg) | J3.10 | 77 | input |
+| `HOST_SYNC` | J3.11 | 76 | output |
+| `HOST_STATUS` | J3.13 | 74 | output |
+| `SPI_MOSI` | J3.14 | 73 | input |
+| `HOST_IRQ` | J3.15 | 72 | output |
+| `SPI_CS_N` | J3.16 | 71 | input |
+| `HOST_RESET_N` | J3.17 | 70 | input |
+| `+5V` | J3.18 | power | input to module |
+| `SPI_SCLK` | J3.19 | 48 | input |
+| `SPI_MISO` | J3.20 | 49 | output |
+| `PDM_D5` (CH10/11, 236 deg) | J3.21 | 31 | input |
+| `PDM_D4` (CH8/9, 191 deg) | J3.22 | 32 | input |
+| `GND` | J3.23 | power | return |
+| `TANG_3V3` | J3.24 | power | ESD clamp reference only |
+
+The host block on `J3.11` to `J3.20` is in the same left-to-right order as the
+series-damping resistor row that feeds it, so those runs do not cross.
 
 FPGA pins 68, 70, 71, 72 and 75 are shared with the module's HDMI connector.
-Driven as ordinary 3.3 V GPIO they carry an unterminated stub to that
-connector, which is immaterial at the 3.072 MHz PDM rate and for the DC-ish
-control lines. The 25 MHz SPI is deliberately kept off them, as are both clock
-inputs. The microSD pins (J5.1-4) are left alone so the module's card socket
-stays usable.
+Four of them are used - 68 (`PDM_D3`), 70 (`HOST_RESET_N`), 71 (`SPI_CS_N`) and
+72 (`HOST_IRQ`) - and driven as ordinary 3.3 V GPIO they carry an unterminated
+stub to that connector, which is immaterial at the 3.072 MHz PDM rate and for
+the DC-ish control lines. Pin 75 is not used at all. Both clock inputs are kept
+off HDMI-shared pins, and so are the two 25 MHz SPI signals whose edges the
+link actually depends on, `SPI_SCLK` (48) and `SPI_MISO` (49). `SPI_CS_N` is
+the one SPI line on a shared pin; it is static for the duration of a burst. The
+microSD pins (`J2.1`-`J2.4`) are left alone so the module's card socket stays
+usable.
 
 Socket position 1 is the module's USB-C end on both rows, matching Sipeed's
-published pin diagram. `tools/check_placement.py` asserts every socket pin
-lands on its expected board coordinate.
+published pin diagram. `tools/check_placement.py` asserts that `J2` and `J3`
+land on their expected board coordinates, and the net assignment above is
+generated from `TANG_NET_MAP` in `tools/design.py`, which is the authority for
+it.
 
 ### Known limitation: module ground return
 
 The Tang Nano 9K exposes exactly one ground pin across both header rows
-(J6.23). Every signal between the carrier and the module shares that single
+(`J3.23`). Every signal between the carrier and the module shares that single
 return. This is a property of the module, not of this board. It is mitigated by
 keeping both inner layers as solid ground directly under the module, by series
 damping every fast net, and by keeping the SPI runs between the module socket
